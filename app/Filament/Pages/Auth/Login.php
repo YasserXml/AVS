@@ -2,16 +2,16 @@
 
 namespace App\Filament\Pages\Auth;
 
-use Filament\Pages\Auth\Login as BaseLogin;
-use Filament\Forms\Form;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Component;
-use Filament\Forms\Components\Actions\Action;
-use Filament\Pages\Auth\Login\Contracts\HasEmailVerification;
 use App\Models\User;
-use Illuminate\Validation\ValidationException;
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Pages\Auth\Login as BaseLogin;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Facades\Http;
 
 class Login extends BaseLogin
 {
@@ -19,82 +19,38 @@ class Login extends BaseLogin
     {
         return $form
             ->schema([
-                $this->getEmailFormComponent()
-                    ->required()
-                    ->autocomplete('username')
-                    ->autofocus()
-                    ->extraValidationAttributes(['email' => 'alamat email'])
-                    ->customValidateUsing(function (TextInput $component, string $state, callable $fail) {
-                        // Validasi email
-                        if (!filter_var($state, FILTER_VALIDATE_EMAIL)) {
-                            $fail('Format email tidak valid.');
-                            return;
-                        }
-
-                        // Cek apakah domain email adalah gmail.com
-                        $domain = explode('@', $state)[1] ?? '';
-                        if ($domain !== 'gmail.com') {
-                            $fail('Hanya email Google (Gmail) yang diperbolehkan.');
-                            return;
-                        }
-
-                        // Verifikasi apakah email benar-benar ada
-                        try {
-                            $response = $this->verifyEmailExists($state);
-                            if (!$response) {
-                                $fail('Email tidak terdaftar di Google.');
-                            }
-                        } catch (\Exception $e) {
-                            $fail('Terjadi kesalahan saat memverifikasi email: ' . $e->getMessage());
-                        }
-                    }),
+                $this->getEmailFormComponent(),
                 $this->getPasswordFormComponent(),
                 $this->getRememberFormComponent(),
             ])
-            ->statePath('data');
-    }
+            ->statePath('data')
+            ->after(function () {
+                return new HtmlString('
+                    <div class="mt-6">
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300 dark:border-gray-700"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white dark:bg-gray-900 text-gray-500">
+                                    ' . __('Atau login dengan') . '
+                                </span>
+                            </div>
+                        </div>
 
-    /**
-     * Memeriksa apakah email benar-benar ada di Google
-     * Menggunakan metode sederhana untuk pengecekan (diperlukan integrasi lebih lanjut dengan Socialite)
-     */
-    protected function verifyEmailExists(string $email): bool
-    {
-        // Metode 1: Pemeriksaan dasar menggunakan validasi dan format
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return false;
-        }
-
-        // Metode 2: Gunakan Socialite untuk Google Authentication
-        // Catatan: Metode ini tidak sepenuhnya memeriksa keberadaan email
-        // tetapi memerlukan autentikasi langsung pengguna
-        
-        // Untuk pemeriksaan yang lebih akurat, Anda dapat:
-        // 1. Gunakan SMTP verification (perlu library tambahan)
-        // 2. Implementasikan OAuth2 untuk autentikasi email
-
-        // Di sini kita hanya mengembalikan true untuk demonstrasi
-        // Implementasi sesungguhnya akan memerlukan integrasi dengan Google API
-        
-        return true;
-    }
-
-    /**
-     * Tambahkan opsi untuk login dengan Google
-     */
-    protected function getEmailFormComponent(): Component
-    {
-        $emailInput = parent::getEmailFormComponent();
-
-        // Menambahkan tombol "Login dengan Google" di bawah input email
-        $emailInput->suffixAction(
-            Action::make('loginWithGoogle')
-                ->label('Login dengan Google')
-                ->color('primary')
-                ->icon('heroicon-o-academic-cap')
-                ->url(route('socialite.redirect', ['provider' => 'google']))
-        );
-
-        return $emailInput;
+                        <div class="mt-6 grid grid-cols-1 gap-3">
+                            <a href="' . route('socialite.redirect', ['provider' => 'google']) . '" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <span class="sr-only">Sign in with Google</span>
+                                <svg class="w-5 h-5" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M47.532 24.5528C47.532 22.9214 47.3997 21.2811 47.1175 19.6761H24.48V28.9181H37.4434C36.9055 31.8988 35.177 34.5356 32.6461 36.2111V42.2078H40.3801C44.9217 38.0278 47.532 31.8547 47.532 24.5528Z" fill="#4285F4" />
+                                    <path d="M24.48 48.0016C30.9529 48.0016 36.4116 45.8764 40.3888 42.2078L32.6549 36.2111C30.5031 37.675 27.7252 38.5039 24.4888 38.5039C18.2275 38.5039 12.9187 34.2798 11.0139 28.6006H3.03296V34.7825C7.10718 42.8868 15.4056 48.0016 24.48 48.0016Z" fill="#34A853" />
+                                    <path d="M11.0051 28.6006C9.99973 25.6199 9.99973 22.3922 11.0051 19.4115V13.2296H3.03298C-0.371021 20.0112 -0.371021 28.0009 3.03298 34.7825L11.0051 28.6006Z" fill="#FBBC04" />
+                                    <path d="M24.48 9.49932C27.9016 9.44641 31.2086 10.7339 33.6866 13.0973L40.5387 6.24523C36.2 2.17101 30.4414 -0.068932 24.48 0.00161733C15.4055 0.00161733 7.10718 5.11644 3.03296 13.2296L11.005 19.4115C12.901 13.7235 18.2187 9.49932 24.48 9.49932Z" fill="#EA4335" />
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                ');
+            });
     }
 }
