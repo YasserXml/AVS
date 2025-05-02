@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Auth\Register;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -29,19 +30,18 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('web')
-            
             ->login(Login::class)
             ->registration()
             ->passwordReset()
-            ->emailVerification()
-            ->profile()
+            // ->emailVerification()
+            ->profile(isSimple: false)
             // ->loginRouteSlug('login')
             // ->registrationRouteSlug('register')
             // ->passwordResetRouteSlug('Reset Password')
             // ->emailVerificationRouteSlug('Verifikasi Email')
             // ->profileRouteSlug('Profile')
             ->topNavigation()
-            ->brandName('Alam Virtual Semesta')
+            ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
             ->favicon(asset('images/Logo.png'))
             ->colors([
