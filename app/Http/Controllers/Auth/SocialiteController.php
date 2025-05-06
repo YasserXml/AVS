@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendVerificationEmailJob;
 use App\Models\User;
 use App\Notifications\AdminNewUserNotification;
 use Filament\Facades\Filament;
@@ -16,12 +17,42 @@ use Spatie\Permission\Models\Role;
 class SocialiteController extends Controller
 {
     /**
+     * Redirect to provider for authentication.
+     */
+    public function redirect(string $provider)
+    {
+        // Validate if the provider is supported
+        if (!in_array($provider, ['google'])) {
+            Notification::make()
+                ->title('Provider tidak didukung')
+                ->body('Saat ini hanya login dengan Google yang didukung.')
+                ->danger()
+                ->send();
+                
+            return redirect()->route('filament.admin.auth.login');
+        }
+        
+        return Socialite::driver($provider)->redirect();
+    }
+
+    /**
      * Handle the incoming request for socialite callback.
      */
     public function handleCallback(string $provider)
     {
         try {
             $socialiteUser = Socialite::driver($provider)->user();
+            
+            // Periksa apakah email dari domain Google
+            if ($provider === 'google' && !Str::endsWith($socialiteUser->getEmail(), '@gmail.com')) {
+                Notification::make()
+                    ->title('Pendaftaran Gagal')
+                    ->body('Hanya email Gmail yang diperbolehkan untuk pendaftaran.')
+                    ->danger()
+                    ->send();
+                
+                return redirect()->route('filament.admin.auth.login');
+            }
             
             // Cari user berdasarkan provider_id dan provider
             $user = User::where([
@@ -62,7 +93,18 @@ class SocialiteController extends Controller
                             $user->assignRole($defaultRole);
                         }
                     }
-
+                    
+                    // Kirim notifikasi ke admin menggunakan job
+                    SendVerificationEmailJob::dispatch($user);
+                    
+                    // Berikan pesan ke user
+                    Notification::make()
+                        ->title('Pendaftaran Berhasil')
+                        ->body('Akun Anda berhasil didaftarkan. Silakan tunggu verifikasi dari admin sebelum dapat login.')
+                        ->success()
+                        ->send();
+                        
+                    return redirect()->route('filament.admin.auth.login');
                 }
             }
             

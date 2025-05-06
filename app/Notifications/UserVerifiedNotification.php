@@ -11,37 +11,19 @@ class UserVerifiedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
+    public function via($notifiable): array
     {
         return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail($notifiable): MailMessage
     {
-        $loginUrl = route('filament.admin.auth.login');
-
         return (new MailMessage)
             ->subject('Akun Anda Telah Diverifikasi')
             ->greeting('Halo ' . $notifiable->name . '!')
-            ->line('Akun Anda telah diverifikasi oleh admin.')
-            ->line('Sekarang Anda dapat masuk ke sistem menggunakan email dan kata sandi Anda.')
-            ->action('Login Sekarang', $loginUrl)
+            ->line('Akun Anda telah diverifikasi oleh administrator.')
+            ->line('Sekarang Anda dapat masuk ke aplikasi dengan email dan password yang telah Anda daftarkan.')
+            ->action('Login Sekarang', url('/login'))
             ->line('Terima kasih telah menggunakan aplikasi kami!');
     }
 }

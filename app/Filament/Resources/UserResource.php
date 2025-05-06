@@ -3,123 +3,64 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
-use App\Notifications\UserApprovedNotification;
-use Carbon\Carbon;
-use Filament\Actions\Action;
+use App\Notifications\UserVerifiedNotification;
 use Filament\Forms;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Actions\Action as ActionsAction;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
+use Filament\Tables\Actions\Action;
+use Filament\Notifications\Notification;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
-
-    protected static ?string $navigationGroup = 'Hak Akses';
-
-    protected static ?string $navigationLabel = 'Pengguna Aplikasi';
-
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+    
+    protected static ?string $navigationGroup = 'Manajemen Pengguna';
+    
     protected static ?int $navigationSort = 1;
-
-    protected static ?string $slug = 'pengguna';
-
-    protected static ?string $modelLabel = 'Pengguna';
-
-    protected static ?string $pluralModelLabel = 'Pengguna';
-
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
-
-    public static function getNavigationBadgeColor(): ?string
-    {
-        return 'info';
-    }
-
-
+    
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Section::make('Informasi Pengguna')
-                    ->description('Masukkan data untuk pengguna baru')
-                    ->icon('heroicon-o-user')
-                    ->schema([
-                        Grid::make()
-                            ->columns(2)
-                            ->schema([
-                                TextInput::make('name')
-                                    ->label('Nama Pengguna')
-                                    ->placeholder('Masukkan nama lengkap pengguna')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->prefixIcon('heroicon-o-user-circle'),
-
-                                TextInput::make('email')
-                                    ->label('Email Pengguna')
-                                    ->placeholder('Masukkan alamat email aktif')
-                                    ->email()
-                                    ->required()
-                                    ->unique(ignoreRecord: true)
-                                    ->maxLength(255)
-                                    ->prefixIcon('heroicon-o-envelope'),
-
-                                TextInput::make('password')
-                                    ->label('Kata Sandi')
-                                    ->placeholder('Masukkan kata sandi yang kuat')
-                                    ->password()
-                                    ->required(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
-                                    ->confirmed()
-                                    ->revealable()
-                                    ->dehydrateStateUsing(fn($state) => Hash::make($state))
-                                    ->dehydrated(fn($state) => filled($state))
-                                    ->prefixIcon('heroicon-o-lock-closed'),
-
-                                TextInput::make('password_confirmation')
-                                    ->label('Konfirmasi Kata Sandi')
-                                    ->placeholder('Ketik ulang kata sandi')
-                                    ->password()
-                                    ->required(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
-                                    ->revealable()
-                                    ->dehydrated(false)
-                                    ->visible(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
-                                    ->prefixIcon('heroicon-o-lock-closed'),
-                            ]),
-                    ]),
-                Section::make('Peran dan Hak Akses')
-                    ->description('Tetapkan peran untuk pengguna ini')
-                    ->icon('heroicon-o-shield-check')
-                    ->schema([
-                        Select::make('role')
-                            ->label('Peran Pengguna')
-                            ->placeholder('Pilih peran yang sesuai')
-                            ->relationship('roles', 'name')
-                            ->preload()
-                            ->searchable()
-                            ->required()
-                            ->native(false)
-                    ]),
-            ])
-            ->columns(1);
+                Forms\Components\TextInput::make('name')
+                    ->label('Nama')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->unique(ignoreRecord: true)
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('password')
+                    ->password()
+                    ->dehydrateStateUsing(fn ($state) => Hash::make($state))
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->required(fn (string $operation): bool => $operation === 'create'),
+                Forms\Components\Toggle::make('admin_verified')
+                    ->label('Terverifikasi Admin')
+                    ->helperText('Pengguna yang belum diverifikasi admin tidak dapat login')
+                    ->default(false),
+                Forms\Components\Toggle::make('is_admin')
+                    ->label('Admin')
+                    ->helperText('Berikan hak akses admin ke pengguna ini')
+                    ->default(false),
+                Forms\Components\Select::make('roles')
+                    ->label('Peran')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
+            ]);
     }
 
     public static function table(Table $table): Table
@@ -130,62 +71,81 @@ class UserResource extends Resource
                     ->label('Nama')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('email')
-                    ->label('Email')
                     ->searchable(),
                 Tables\Columns\IconColumn::make('email_verified_at')
                     ->label('Email Terverifikasi')
                     ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle'),
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-x-mark')
+                    ->getStateUsing(fn (User $record): bool => $record->hasVerifiedEmail()),
                 Tables\Columns\IconColumn::make('admin_verified')
-                    ->label('Verifikasi Admin')
+                    ->label('Diverifikasi Admin')
                     ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle'),
-                Tables\Columns\IconColumn::make('is_admin')
-                    ->label('Admin')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle'),
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-x-mark'),
+                Tables\Columns\TextColumn::make('roles.name')
+                    ->label('Peran')
+                    ->badge()
+                    ->color('primary'),
+                Tables\Columns\TextColumn::make('provider')
+                    ->label('Provider'),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Tanggal Daftar')
-                    ->dateTime('d-m-Y H:i')
+                    ->label('Terdaftar Pada')
+                    ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\Filter::make('verified')
-                    ->query(fn (Builder $query): Builder => $query->where('admin_verified', true))
-                    ->label('Terverifikasi'),
                 Tables\Filters\Filter::make('unverified')
-                    ->query(fn (Builder $query): Builder => $query->where('admin_verified', false))
-                    ->label('Belum Terverifikasi'),
+                    ->label('Belum Diverifikasi')
+                    ->query(fn (Builder $query): Builder => $query->where('admin_verified', false)),
+                Tables\Filters\Filter::make('verified')
+                    ->label('Sudah Diverifikasi')
+                    ->query(fn (Builder $query): Builder => $query->where('admin_verified', true)),
                 Tables\Filters\Filter::make('admin')
-                    ->query(fn (Builder $query): Builder => $query->where('is_admin', true))
-                    ->label('Admin'),
+                    ->label('Admin')
+                    ->query(fn (Builder $query): Builder => $query->where('is_admin', true)),
             ])
             ->actions([
-                ActionsAction::make('verify')
+                Action::make('verify')
                     ->label('Verifikasi')
-                    ->icon('heroicon-o-check')
+                    ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (User $record) => !$record->admin_verified)
-                    ->action(function (User $record) {
+                    ->visible(fn (User $record): bool => !$record->admin_verified)
+                    ->action(function (User $record): void {
                         $record->admin_verified = true;
                         $record->save();
                         
-                        // Notify the user that their account has been verified
-                        self::notifyUserVerified($record);
+                        // Kirim notifikasi ke user
+                        $record->notify(new UserVerifiedNotification());
                         
                         Notification::make()
-                            ->title('Pengguna berhasil diverifikasi')
+                            ->title('Pengguna Berhasil Diverifikasi')
                             ->success()
                             ->send();
                     }),
+                    
+                Action::make('reject')
+                    ->label('Tolak')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (User $record): bool => !$record->admin_verified)
+                    ->requiresConfirmation()
+                    ->action(function (User $record): void {
+                        $record->delete();
+                        
+                        Notification::make()
+                            ->title('Pendaftaran Pengguna Ditolak')
+                            ->success()
+                            ->send();
+                    }),
+                    
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('verify_selected')
+                    Tables\Actions\DeleteBulkAction::make(),
+                    
+                    Tables\Actions\BulkAction::make('verifySelected')
                         ->label('Verifikasi Terpilih')
                         ->icon('heroicon-o-check-circle')
                         ->action(function ($records) {
@@ -194,19 +154,16 @@ class UserResource extends Resource
                                     $record->admin_verified = true;
                                     $record->save();
                                     
-                                    // Notify each user
-                                    self::notifyUserVerified($record);
+                                    // Kirim notifikasi ke user
+                                    $record->notify(new UserVerifiedNotification());
                                 }
                             }
                             
                             Notification::make()
-                                ->title('Semua pengguna terpilih berhasil diverifikasi')
+                                ->title('Semua Pengguna Terpilih Berhasil Diverifikasi')
                                 ->success()
                                 ->send();
-                        })
-                        ->requiresConfirmation()
-                        ->deselectRecordsAfterCompletion(),
-                    Tables\Actions\DeleteBulkAction::make(),
+                        }),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

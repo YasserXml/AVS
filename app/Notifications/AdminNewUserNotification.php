@@ -7,13 +7,12 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\HtmlString;
 
 class AdminNewUserNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    protected User $newUser;
+    protected $newUser;
 
     /**
      * Create a new notification instance.
@@ -30,7 +29,7 @@ class AdminNewUserNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', 'database']; // Kirim melalui email dan simpan di database
     }
 
     /**
@@ -38,17 +37,22 @@ class AdminNewUserNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $verificationUrl = route('filament.admin.resources.users.verify', $this->newUser->id);
+        $verificationUrl = route('admin.user.verify', [
+            'user' => $this->newUser->id,
+            'token' => sha1($this->newUser->email),
+        ]);
 
         return (new MailMessage)
-            ->subject('Pendaftaran Pengguna Baru - Perlu Verifikasi')
-            ->greeting('Halo Admin!')
-            ->line('Seorang pengguna baru telah mendaftar dan memerlukan verifikasi Anda.')
-            ->line(new HtmlString('Nama: <strong>' . $this->newUser->name . '</strong>'))
-            ->line(new HtmlString('Email: <strong>' . $this->newUser->email . '</strong>'))
-            ->line(new HtmlString('Tanggal Pendaftaran: <strong>' . $this->newUser->created_at->format('d-m-Y H:i') . '</strong>'))
-            ->action('Verifikasi Sekarang', $verificationUrl)
-            ->line('Terima kasih telah menggunakan aplikasi kami!');
+            ->subject('Permintaan Verifikasi Pengguna Baru')
+            ->greeting('Halo Admin,')
+            ->line('Ada pengguna baru yang mendaftar di sistem dan membutuhkan verifikasi Anda.')
+            ->line('Detail Pengguna:')
+            ->line('Nama: ' . $this->newUser->name)
+            ->line('Email: ' . $this->newUser->email)
+            ->line('Waktu Pendaftaran: ' . $this->newUser->created_at->format('d M Y H:i'))
+            ->action('Verifikasi Pengguna', $verificationUrl)
+            ->line('Jika Anda tidak ingin menyetujui pendaftaran ini, tidak diperlukan tindakan lebih lanjut.')
+            ->salutation('Terima kasih, ' . config('app.name'));
     }
 
     /**
@@ -59,11 +63,10 @@ class AdminNewUserNotification extends Notification implements ShouldQueue
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => 'Pendaftaran Pengguna Baru',
-            'message' => 'Pengguna baru "' . $this->newUser->name . '" memerlukan verifikasi',
+            'message' => 'Pengguna baru mendaftar dan membutuhkan verifikasi',
             'user_id' => $this->newUser->id,
-            'icon' => 'heroicon-o-user-plus',
-            'url' => route('filament.admin.resources.users.verify', $this->newUser->id),
+            'user_name' => $this->newUser->name,
+            'user_email' => $this->newUser->email,
         ];
     }
 }
