@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('barangs', function (Blueprint $table) {
-            $table->foreignId('kategori_id')->constrained('kategoris');
+        Schema::table('users', function (Blueprint $table) {
+            $table->boolean('admin_verified')->default(false)->after('email_verified_at');
+            $table->boolean('is_admin')->default(false)->after('admin_verified');
         });
     }
 
@@ -21,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('barangs', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table) {
             //
         });
     }

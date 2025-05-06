@@ -16,9 +16,15 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('password')->nullable()->change();
             $table->rememberToken();
             $table->timestamps();
+            $table->string('provider')->nullable()->after('password');
+            $table->string('provider_id')->nullable()->after('provider');
+            $table->string('provider_token')->nullable()->after('provider_id');
+            $table->string('provider_refresh_token')->nullable()->after('provider_token');
+            $table->boolean('admin_verified')->default(false)->after('email_verified_at');
+            $table->boolean('is_admin')->default(false)->after('admin_verified');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

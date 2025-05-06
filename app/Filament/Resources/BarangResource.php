@@ -41,7 +41,7 @@ class BarangResource extends Resource
     {
         return $form
             ->schema([
-                //
+                
             ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\EmailVerification;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Auth\Register;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -31,16 +32,17 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->authGuard('web')
             ->login(Login::class)
-            ->registration()
+            ->registration(Register::class)
             ->passwordReset()
-            // ->emailVerification()
+            // ->emailVerification(EmailVerification::class)
             ->profile(isSimple: false)
-            // ->loginRouteSlug('login')
-            // ->registrationRouteSlug('register')
-            // ->passwordResetRouteSlug('Reset Password')
-            // ->emailVerificationRouteSlug('Verifikasi Email')
-            // ->profileRouteSlug('Profile')
-            ->topNavigation()
+            ->loginRouteSlug('login')
+            ->registrationRouteSlug('registrasi')
+            ->passwordResetRouteSlug('reset-password')
+            ->emailVerificationRouteSlug('verifikasi-email')
+            // ->topNavigation()
+            ->spa()
+            ->databaseNotifications()
             ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
             ->favicon(asset('images/Logo.png'))
@@ -74,5 +76,5 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
                 'auth',
             ]);
-        }
     }
+}

@@ -56,20 +56,7 @@ class CreateRole extends CreateRecord
 
     public function getTitle(): string|Htmlable
     {
-        return "Tambah peran dan hak akses baru";
+        return "Tambah Peran dan Hak Akses";
     }
 
-    protected function getCreatedNotification(): ?Notification
-    {
-        return Notification::make()
-            ->title('Peran dan hak akses baru berhasil ditambahkan')
-            ->body('Peran dan hak akses baru berhasil ditambahkan')
-            ->success()
-            ->actions([
-                Action::make('view')
-                    ->url($this->getResource()::getUrl('index'))
-                    ->label('Lihat'),
-            ])
-            ->seconds(5);
-    }
 }

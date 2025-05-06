@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Auth;
 
 use App\Models\User;
+use App\Notifications\AdminNewUserNotification;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use DanHarrin\LivewireRateLimiting\WithRateLimiting;
 use Filament\Facades\Filament;
@@ -17,6 +18,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Role;
 
 class Register extends BaseRegister
 {
@@ -32,14 +34,23 @@ class Register extends BaseRegister
                 $this->getPasswordConfirmationFormComponent(),
                 // Add a custom view component to display the social login options
                 View::make('pages.auth.social-login-buttons')
+                    ->columnSpanFull() // Make it full width for responsive design
             ])
+            ->columns([
+                'default' => 1,
+                'sm' => 1,
+                'md' => 1,
+                'lg' => 1,
+            ]) // Make form responsive
             ->statePath('data');
     }
 
     protected function getNameFormComponent(): Component
     {
         return TextInput::make('name')
-            ->label(__('filament-panels::register.form.name.label'))
+            ->label('Nama Pengguna')
+            ->placeholder('Tuliskan Nama Pengguna Anda')
+            ->helperText('Nama Pengguna atau Nama Lengkap Anda')
             ->required()
             ->maxLength(255)
             ->autofocus();
@@ -48,7 +59,9 @@ class Register extends BaseRegister
     protected function getEmailFormComponent(): Component
     {
         return TextInput::make('email')
-            ->label(__('filament-panels::register.form.email.label'))
+            ->label('Email')
+            ->placeholder('Tuliskan Email Anda')
+            ->helperText('Email Anda akan digunakan untuk login. Admin akan memverifikasi akun Anda.')
             ->email()
             ->required()
             ->maxLength(255)
@@ -58,22 +71,39 @@ class Register extends BaseRegister
     protected function getPasswordFormComponent(): Component
     {
         return TextInput::make('password')
-            ->label(__('filament-panels::register.form.password.label'))
+            ->label('Kata Sandi')
+            ->placeholder('Tuliskan kata sandi Anda')
+            ->helperText('Kata sandi Anda harus terdiri dari minimal 8 karakter')
             ->password()
             ->required()
             ->rule(Password::default())
-            ->dehydrateStateUsing(fn ($state) => Hash::make($state))
+            ->dehydrateStateUsing(fn($state) => Hash::make($state))
             ->same('passwordConfirmation')
-            ->validationAttribute(__('filament-panels::register.form.password.validation_attribute'));
+            ->validationAttribute('kata sandi');
     }
 
     protected function getPasswordConfirmationFormComponent(): Component
     {
         return TextInput::make('passwordConfirmation')
-            ->label(__('filament-panels::register.form.password_confirmation.label'))
+            ->label('Konfirmasi Kata Sandi')
+            ->placeholder('Tulis ulang kata sandi Anda')
+            ->helperText('Konfirmasi kata sandi Anda')
             ->password()
             ->required()
             ->dehydrated(false);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getFormState(): array
+    {
+        return [
+            'name' => $this->data['name'],
+            'email' => $this->data['email'],
+            'password' => $this->data['password'],
+            'admin_verified' => false, // User baru belum diverifikasi admin
+        ];
     }
 
     public function register(): ?RegistrationResponse
@@ -82,14 +112,8 @@ class Register extends BaseRegister
             $this->rateLimit(5);
         } catch (TooManyRequestsException $exception) {
             Notification::make()
-                ->title(__('filament-panels::register.notifications.throttled.title', [
-                    'seconds' => $exception->secondsUntilAvailable,
-                    'minutes' => ceil($exception->secondsUntilAvailable / 60),
-                ]))
-                ->body(__('filament-panels::register.notifications.throttled.body', [
-                    'seconds' => $exception->secondsUntilAvailable,
-                    'minutes' => ceil($exception->secondsUntilAvailable / 60),
-                ]))
+                ->title('Batas percobaan tercapai')
+                ->body('Terlalu banyak percobaan pendaftaran. Silakan coba lagi dalam ' . $exception->secondsUntilAvailable . ' detik.')
                 ->danger()
                 ->send();
 
@@ -100,17 +124,40 @@ class Register extends BaseRegister
 
         $user = User::create($data);
 
+        // Assign default role (user)
+        if (class_exists(Role::class)) {
+            $defaultRole = Role::where('name', 'user')->first();
+            if ($defaultRole) {
+                $user->assignRole($defaultRole);
+            }
+        }
+
+        // Kirim notifikasi ke admin bahwa ada user baru yang mendaftar
+        $this->notifyAdmins($user);
+
         event(new Registered($user));
 
+        // Tampilkan informasi kepada pengguna bahwa akun mereka perlu diverifikasi
         Notification::make()
-            ->title(__('filament-panels::register.notifications.registered.title'))
-            ->body(new HtmlString(__('filament-panels::register.notifications.registered.body', [
-                'email' => $user->email,
-            ])))
+            ->title('Pendaftaran Berhasil')
+            ->body('Akun Anda berhasil didaftarkan. Silakan tunggu verifikasi dari admin sebelum dapat login.')
             ->success()
             ->send();
 
-        // Don't auto-login the user since we need to verify their email first
         return app(RegistrationResponse::class);
+    }
+
+    /**
+     * Mengirim notifikasi ke admin bahwa ada user baru
+     */
+    protected function notifyAdmins(User $newUser): void
+    {
+        // Temukan semua admin untuk diberi notifikasi
+        $admins = User::where('is_admin', true)->get();
+
+        // Kirim notifikasi ke setiap admin
+        foreach ($admins as $admin) {
+            $admin->notify(new AdminNewUserNotification($newUser));
+        }
     }
 }

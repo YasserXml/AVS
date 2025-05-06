@@ -2,7 +2,8 @@
 
 return [
 
-    'title' => 'Daftar',
+    'title' => 'Registrasi',
+    'title_singular' => 'Registrasi',
 
     'heading' => 'Buat akun',
 
@@ -10,7 +11,7 @@ return [
 
         'login' => [
             'before' => 'atau',
-            'label' => 'masuk ke akun yang sudah ada',
+            'label' => 'Masuk ke akun yang sudah ada',
         ],
 
     ],

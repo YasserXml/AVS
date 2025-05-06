@@ -2,7 +2,7 @@
 
 return [
 
-    'title' => 'Masuk',
+    'title' => 'Login',
 
     'heading' => 'Masuk ke akun Anda',
 
