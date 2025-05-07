@@ -11,37 +11,45 @@ class UserVerifiedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct()
+    protected bool $isVerified;
+    protected string $loginUrl;
+
+    public function __construct(bool $isVerified)
     {
-        //
+        $this->isVerified = $isVerified;
+        $this->loginUrl = route('filament.admin.auth.login');
     }
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
+    public function via($notifiable): array
     {
         return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail($notifiable): MailMessage
     {
-        $loginUrl = route('filament.admin.auth.login');
+        $message = (new MailMessage)
+            ->greeting('Halo ' . $notifiable->name . ',');
 
-        return (new MailMessage)
-            ->subject('Akun Anda Telah Diverifikasi')
-            ->greeting('Halo ' . $notifiable->name . '!')
-            ->line('Akun Anda telah diverifikasi oleh admin.')
-            ->line('Sekarang Anda dapat masuk ke sistem menggunakan email dan kata sandi Anda.')
-            ->action('Login Sekarang', $loginUrl)
-            ->line('Terima kasih telah menggunakan aplikasi kami!');
+        if ($this->isVerified) {
+            return $message
+                ->subject('Akun Anda Telah Diverifikasi')
+                ->line('Selamat! Akun Anda telah diverifikasi oleh admin.')
+                ->line('Anda sekarang dapat mengakses sistem dengan melakukan login menggunakan email dan kata sandi Anda.')
+                ->action('Login Sekarang', $this->loginUrl)
+                ->line('Terima kasih telah bergabung dengan kami!');
+        } else {
+            return $message
+                ->subject('Pendaftaran Akun Ditolak')
+                ->line('Mohon maaf, pendaftaran akun Anda tidak disetujui oleh admin kami.')
+                ->line('Jika Anda merasa ini adalah kesalahan atau memiliki pertanyaan, silakan hubungi tim dukungan kami.')
+                ->line('Terima kasih atas pengertian Anda.');
+        }
+    }
+
+    public function toArray($notifiable): array
+    {
+        return [
+            'is_verified' => $this->isVerified,
+        ];
     }
 }

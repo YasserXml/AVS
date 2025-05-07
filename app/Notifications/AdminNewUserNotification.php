@@ -7,7 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\URL;
 
 class AdminNewUserNotification extends Notification implements ShouldQueue
 {
@@ -15,55 +15,60 @@ class AdminNewUserNotification extends Notification implements ShouldQueue
 
     protected User $newUser;
 
-    /**
-     * Create a new notification instance.
-     */
     public function __construct(User $newUser)
     {
         $this->newUser = $newUser;
     }
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
+    public function via($notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail($notifiable): MailMessage
     {
-        $verificationUrl = route('filament.admin.resources.users.verify', $this->newUser->id);
+        // Buat URL verifikasi dengan token khusus
+        $verifyUrl = URL::temporarySignedRoute(
+            'admin.verify-user',
+            now()->addDays(7), // Tautan berlaku selama 7 hari
+            [
+                'user_id' => $this->newUser->id,
+                'admin_id' => $notifiable->id,
+                'action' => 'verify'
+            ]
+        );
+
+        // Buat URL tolak dengan token khusus
+        $rejectUrl = URL::temporarySignedRoute(
+            'admin.verify-user',
+            now()->addDays(7), // Tautan berlaku selama 7 hari
+            [
+                'user_id' => $this->newUser->id,
+                'admin_id' => $notifiable->id,
+                'action' => 'reject'
+            ]
+        );
 
         return (new MailMessage)
-            ->subject('Pendaftaran Pengguna Baru - Perlu Verifikasi')
-            ->greeting('Halo Admin!')
-            ->line('Seorang pengguna baru telah mendaftar dan memerlukan verifikasi Anda.')
-            ->line(new HtmlString('Nama: <strong>' . $this->newUser->name . '</strong>'))
-            ->line(new HtmlString('Email: <strong>' . $this->newUser->email . '</strong>'))
-            ->line(new HtmlString('Tanggal Pendaftaran: <strong>' . $this->newUser->created_at->format('d-m-Y H:i') . '</strong>'))
-            ->action('Verifikasi Sekarang', $verificationUrl)
-            ->line('Terima kasih telah menggunakan aplikasi kami!');
+            ->subject('Verifikasi Pengguna Baru')
+            ->greeting('Halo ' . $notifiable->name . ',')
+            ->line('Ada pengguna baru yang mendaftar di sistem dan membutuhkan verifikasi Anda.')
+            ->line('Detail Pengguna:')
+            ->line('Nama: ' . $this->newUser->name)
+            ->line('Email: ' . $this->newUser->email)
+            ->line('Tanggal Pendaftaran: ' . $this->newUser->created_at->format('d-m-Y H:i'))
+            ->action('Verifikasi Pengguna', $verifyUrl)
+            ->line('Jika Anda ingin menolak pengguna ini, klik tautan di bawah ini:')
+            ->action('Tolak Pengguna', $rejectUrl)
+            ->line('Terima kasih atas perhatian Anda.');
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
+    public function toArray($notifiable): array
     {
         return [
-            'title' => 'Pendaftaran Pengguna Baru',
-            'message' => 'Pengguna baru "' . $this->newUser->name . '" memerlukan verifikasi',
             'user_id' => $this->newUser->id,
-            'icon' => 'heroicon-o-user-plus',
-            'url' => route('filament.admin.resources.users.verify', $this->newUser->id),
+            'name' => $this->newUser->name,
+            'email' => $this->newUser->email,
         ];
     }
 }
