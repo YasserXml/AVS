@@ -90,27 +90,22 @@ class Login extends BaseLogin
             $this->throwFailureValidationException();
         }
 
-        $user = filament()->auth()->user();
+        $user = Filament::auth()->user();
 
-        // Memeriksa status verifikasi email dan admin
-        $verificationIssues = $this->checkVerificationIssues($user);
-        
-        if (!empty($verificationIssues)) {
+        // Periksa verifikasi admin
+        if (!$user->admin_verified) {
             Filament::auth()->logout();
             
-            foreach ($verificationIssues as $issue) {
-                Notification::make()
-                    ->title($issue['title'])
-                    ->body($issue['body'])
-                    ->danger()
-                    ->send();
-            }
+            Notification::make()
+                ->title('Akun Belum Diverifikasi')
+                ->body('Akun Anda masih dalam proses verifikasi oleh admin. Kami akan memberi tahu Anda melalui email saat akun Anda telah diverifikasi.')
+                ->danger()
+                ->send();
             
             return $this->response();
         }
 
         session()->regenerate();
-
         return app(LoginResponse::class);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
+use App\Mail\NewUserRegistrationEmail;
 use App\Models\User;
 use App\Notifications\AdminNewUserNotification;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
@@ -16,6 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Auth\Register as BaseRegister;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
@@ -32,16 +34,16 @@ class Register extends BaseRegister
                 $this->getEmailFormComponent(),
                 $this->getPasswordFormComponent(),
                 $this->getPasswordConfirmationFormComponent(),
-                // Add a custom view component to display the social login options
+                // Tombol login sosial
                 View::make('pages.auth.social-login-buttons')
-                    ->columnSpanFull() // Make it full width for responsive design
+                    ->columnSpanFull()
             ])
             ->columns([
                 'default' => 1,
                 'sm' => 1,
                 'md' => 1,
                 'lg' => 1,
-            ]) // Make form responsive
+            ])
             ->statePath('data');
     }
 
@@ -93,9 +95,6 @@ class Register extends BaseRegister
             ->dehydrated(false);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     protected function getFormState(): array
     {
         return [
@@ -121,23 +120,19 @@ class Register extends BaseRegister
         }
 
         $data = $this->form->getState();
-
         $user = User::create($data);
 
-        // Assign default role (user)
-        if (class_exists(Role::class)) {
-            $defaultRole = Role::where('name', 'user')->first();
-            if ($defaultRole) {
-                $user->assignRole($defaultRole);
-            }
+        // Assign default role (user) menggunakan Filament Shield
+        $defaultRole = Role::where('name', 'user')->first();
+        if ($defaultRole) {
+            $user->assignRole($defaultRole);
         }
-
-        // Kirim notifikasi ke admin bahwa ada user baru yang mendaftar
-        $this->notifyAdmins($user);
 
         event(new Registered($user));
 
-        // Tampilkan informasi kepada pengguna bahwa akun mereka perlu diverifikasi
+        // Kirim email ke admin
+        $this->notifyAdmins($user);
+
         Notification::make()
             ->title('Pendaftaran Berhasil')
             ->body('Akun Anda berhasil didaftarkan. Silakan tunggu verifikasi dari admin sebelum dapat login.')
@@ -147,17 +142,18 @@ class Register extends BaseRegister
         return app(RegistrationResponse::class);
     }
 
-    /**
-     * Mengirim notifikasi ke admin bahwa ada user baru
-     */
     protected function notifyAdmins(User $newUser): void
     {
-        // Temukan semua admin untuk diberi notifikasi
-        $admins = User::where('is_admin', true)->get();
+        // Cari admin menggunakan Filament Shield role
+        $adminEmails = User::whereHas('roles', fn ($query) => 
+            $query->whereIn('name', ['super_admin', 'admin'])
+        )->pluck('email')->toArray();
 
-        // Kirim notifikasi ke setiap admin
-        foreach ($admins as $admin) {
-            $admin->notify(new AdminNewUserNotification($newUser));
+        $submitter = Filament::auth()->user() ?? $newUser; // Jika tidak ada user yang login, gunakan user baru
+
+        // Kirim email ke setiap admin
+        foreach ($adminEmails as $email) {
+            Mail::to($email)->queue(new NewUserRegistrationEmail($newUser, $submitter));
         }
     }
 }

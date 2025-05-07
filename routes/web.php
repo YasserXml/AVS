@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminVerificationController as AdminAdminVerificationController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\Auth\SocialiteController as AuthSocialiteController;
 use App\Http\Controllers\SocialiteController;
@@ -31,7 +32,10 @@ Route::post('/email/verification-notification', function (Request $request) {
     return back()->with('message', 'Link verifikasi telah dikirim!');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
-Route::get('/admin/verify-user/{id}/{hash}/{token}', [AdminVerificationController::class, 'verify'])
-    ->middleware(['signed'])
-    ->name('admin.verify-user');
-
+Route::middleware(['auth', 'verified', 'role:super_admin|admin'])->group(function () {
+    Route::get('/admin/verify-user/{user}', [AdminVerificationController::class, 'verifyUser'])
+        ->name('admin.user.verify');
+        
+    Route::get('/admin/reject-user/{user}', [AdminVerificationController::class, 'rejectUser'])
+        ->name('admin.user.reject');
+});

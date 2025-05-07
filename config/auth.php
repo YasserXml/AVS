@@ -112,4 +112,7 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'verify_email' => env('AUTH_VERIFY_EMAIL', true),
+    'admin_verification' => env('AUTH_ADMIN_VERIFICATION', true),
+
 ];
