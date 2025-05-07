@@ -17,10 +17,11 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Auth\Register as BaseRegister;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rules\Password;
-use Spatie\Permission\Models\Role;
+use BezhanSalleh\FilamentShield\Support\Utils; // Gunakan Utils dari FilamentShield
 
 class Register extends BaseRegister
 {
@@ -52,7 +53,6 @@ class Register extends BaseRegister
         return TextInput::make('name')
             ->label('Nama Pengguna')
             ->placeholder('Tuliskan Nama Pengguna Anda')
-            ->helperText('Nama Pengguna atau Nama Lengkap Anda')
             ->required()
             ->maxLength(255)
             ->autofocus();
@@ -63,7 +63,6 @@ class Register extends BaseRegister
         return TextInput::make('email')
             ->label('Email')
             ->placeholder('Tuliskan Email Anda')
-            ->helperText('Email Anda akan digunakan untuk login. Admin akan memverifikasi akun Anda.')
             ->email()
             ->required()
             ->maxLength(255)
@@ -102,6 +101,8 @@ class Register extends BaseRegister
             'email' => $this->data['email'],
             'password' => $this->data['password'],
             'admin_verified' => false, // User baru belum diverifikasi admin
+            'provider' => null, // Pendaftaran melalui form
+            'provider_id' => null,
         ];
     }
 
@@ -120,12 +121,23 @@ class Register extends BaseRegister
         }
 
         $data = $this->form->getState();
+
+        // Pastikan admin_verified selalu false untuk pendaftaran baru
+        $data['admin_verified'] = false;
+
         $user = User::create($data);
 
         // Assign default role (user) menggunakan Filament Shield
-        $defaultRole = Role::where('name', 'user')->first();
-        if ($defaultRole) {
-            $user->assignRole($defaultRole);
+        try {
+            $userRoleName = Utils::getPanelUserRoleName(); // Dapatkan nama role user dari Shield
+            if (!$userRoleName) {
+                $userRoleName = 'user'; // Fallback jika tidak berhasil mendapatkan dari Shield
+            }
+            
+            Log::info('Mencoba assign role: ' . $userRoleName . ' ke user baru');
+            $user->assignRole($userRoleName);
+        } catch (\Exception $e) {
+            Log::error('Gagal assign role: ' . $e->getMessage());
         }
 
         event(new Registered($user));
@@ -144,16 +156,41 @@ class Register extends BaseRegister
 
     protected function notifyAdmins(User $newUser): void
     {
-        // Cari admin menggunakan Filament Shield role
-        $adminEmails = User::whereHas('roles', fn ($query) => 
-            $query->whereIn('name', ['super_admin', 'admin'])
-        )->pluck('email')->toArray();
-
-        $submitter = Filament::auth()->user() ?? $newUser; // Jika tidak ada user yang login, gunakan user baru
-
-        // Kirim email ke setiap admin
-        foreach ($adminEmails as $email) {
-            Mail::to($email)->queue(new NewUserRegistrationEmail($newUser, $submitter));
+        try {
+            // Cari admin menggunakan Filament Shield role
+            $adminUsers = User::whereHas('roles', fn ($query) => 
+                $query->whereIn('name', ['super_admin', 'admin'])
+            )->get();
+            
+            if ($adminUsers->isEmpty()) {
+                Log::warning('Tidak ada admin yang ditemukan untuk notifikasi pendaftaran baru');
+                
+                // Sebagai fallback, kirim ke email yang didefinisikan dalam konfigurasi
+                $fallbackEmail = config('mail.admin_email', 'admin@example.com');
+                Log::info('Mengirim notifikasi ke email fallback: ' . $fallbackEmail);
+                
+                Mail::to($fallbackEmail)->send(new NewUserRegistrationEmail($newUser));
+                return;
+            }
+    
+            Log::info('Menemukan ' . $adminUsers->count() . ' admin untuk notifikasi');
+    
+            // Kirim notifikasi ke setiap admin
+            foreach ($adminUsers as $admin) {
+                try {
+                    Log::info('Mencoba mengirim notifikasi ke admin: ' . $admin->email);
+                    
+                    // Gunakan kelas Mail langsung untuk debugging
+                    Mail::to($admin->email)->send(new NewUserRegistrationEmail($newUser));
+                    
+                    Log::info('Notifikasi berhasil dikirim ke: ' . $admin->email);
+                } catch (\Exception $adminException) {
+                    Log::error('Gagal mengirim notifikasi ke admin: ' . $admin->email . '. Error: ' . $adminException->getMessage());
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error dalam notifyAdmins: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
         }
     }
 }

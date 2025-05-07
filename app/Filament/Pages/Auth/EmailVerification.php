@@ -23,7 +23,7 @@ class EmailVerification extends BaseEmailVerificationPrompt
         } catch (TooManyRequestsException $exception) {
             Notification::make()
                 ->title('Batas percobaan tercapai')
-                ->body('Terlalu banyak permintaan. Silakan coba lagi dalam ' . ceil($exception->secondsUntilAvailable / 60) . ' menit.')
+                ->body('Terlalu banyak permintaan. Silakan coba lagi dalam' . ceil($exception->secondsUntilAvailable / 60) . 'menit.')
                 ->danger()
                 ->send();
 

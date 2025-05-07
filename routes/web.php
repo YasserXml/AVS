@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminUserVerificationController;
 use App\Http\Controllers\Admin\AdminVerificationController as AdminAdminVerificationController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\Auth\SocialiteController as AuthSocialiteController;
@@ -15,7 +16,7 @@ Route::get('/auth/{provider}/redirect', function ($provider) {
     return Socialite::driver($provider)->redirect();
 })->name('auth.socialite.redirect');
 
-Route::get('/auth/{provider}/callback', [AuthSocialiteController::class, 'handleCallback'])
+Route::get('/auth/{provider}/callback', [SocialiteController::class, 'handleCallback'])
     ->name('auth.socialite.callback');
 
 Route::get('/email/verify', function () {
@@ -32,10 +33,18 @@ Route::post('/email/verification-notification', function (Request $request) {
     return back()->with('message', 'Link verifikasi telah dikirim!');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
-Route::middleware(['auth', 'verified', 'role:super_admin|admin'])->group(function () {
-    Route::get('/admin/verify-user/{user}', [AdminVerificationController::class, 'verifyUser'])
-        ->name('admin.user.verify');
-        
-    Route::get('/admin/reject-user/{user}', [AdminVerificationController::class, 'rejectUser'])
-        ->name('admin.user.reject');
+Route::prefix('admin')->middleware(['web'])->group(function () {
+    Route::get('verify-user/{userId}', [AdminUserVerificationController::class, 'verifyUser'])
+        ->name('admin.verify-user');
+    Route::get('reject-user/{userId}', [AdminUserVerificationController::class, 'rejectUser'])
+        ->name('admin.reject-user');
+});
+
+
+Route::middleware(['signed'])->group(function () {
+    Route::get('/admin/verify-user/{userId}', [AdminVerificationController::class, 'verifyUser'])
+        ->name('admin.verify-user');
+    
+    Route::get('/admin/reject-user/{userId}', [AdminVerificationController::class, 'rejectUser'])
+        ->name('admin.reject-user');
 });

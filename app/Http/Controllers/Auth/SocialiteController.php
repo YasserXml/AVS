@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Jobs\SendVerificationEmailJob;
+use App\Mail\NewUserRegistrationEmail;
 use App\Models\User;
 use App\Notifications\AdminNewUserNotification;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Spatie\Permission\Models\Role;
@@ -94,8 +95,8 @@ class SocialiteController extends Controller
                         }
                     }
                     
-                    // Kirim notifikasi ke admin menggunakan job
-                    SendVerificationEmailJob::dispatch($user);
+                    // Notifikasi untuk admin SAJA
+                    $this->notifyAdmins($user);
                     
                     // Berikan pesan ke user
                     Notification::make()
@@ -106,11 +107,6 @@ class SocialiteController extends Controller
                         
                     return redirect()->route('filament.admin.auth.login');
                 }
-            }
-            
-            // If the user hasn't verified their email yet, mark it as verified
-            if (!$user->hasVerifiedEmail()) {
-                $user->markEmailAsVerified();
             }
             
             // Cek apakah user sudah diverifikasi admin
@@ -131,6 +127,7 @@ class SocialiteController extends Controller
             return redirect()->intended(Filament::getHomeUrl());
             
         } catch (\Exception $e) {
+            Log::error('Error login Socialite: ' . $e->getMessage());
             // Handle error
             Notification::make()
                 ->title('Login gagal')
@@ -139,6 +136,52 @@ class SocialiteController extends Controller
                 ->send();
                 
             return redirect()->route('filament.admin.auth.login');
+        }
+    }
+    
+    /**
+     * Notifikasi admin tentang pendaftaran baru
+     */
+    protected function notifyAdmins(User $newUser): void
+    {
+        try {
+            // Cari admin menggunakan Filament Shield role
+            $adminUsers = User::whereHas('roles', fn ($query) => 
+                $query->whereIn('name', ['super_admin', 'admin'])
+            )->get();
+            
+            if ($adminUsers->isEmpty()) {
+                Log::warning('Tidak ada admin yang ditemukan untuk notifikasi pendaftaran baru');
+                
+                // Sebagai fallback, kirim ke email yang didefinisikan dalam konfigurasi
+                $fallbackEmail = config('mail.admin_email', 'admin@example.com');
+                Log::info('Mengirim notifikasi ke email fallback: ' . $fallbackEmail);
+                
+                Mail::to($fallbackEmail)->send(new NewUserRegistrationEmail($newUser));
+                return;
+            }
+    
+            Log::info('Menemukan ' . $adminUsers->count() . ' admin untuk notifikasi');
+    
+            // Kirim notifikasi ke setiap admin
+            foreach ($adminUsers as $admin) {
+                try {
+                    Log::info('Mencoba mengirim notifikasi ke admin: ' . $admin->email);
+                    
+                    // Kirim email
+                    Mail::to($admin->email)->send(new NewUserRegistrationEmail($newUser));
+                    
+                    // Notifikasi database untuk admin
+                    $admin->notify(new AdminNewUserNotification($newUser));
+                    
+                    Log::info('Notifikasi berhasil dikirim ke: ' . $admin->email);
+                } catch (\Exception $adminException) {
+                    Log::error('Gagal mengirim notifikasi ke admin: ' . $admin->email . '. Error: ' . $adminException->getMessage());
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error dalam notifyAdmins: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
         }
     }
 }
