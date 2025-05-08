@@ -1,4 +1,4 @@
-<x-mail::message>
+{{-- <x-mail::message>
 # Pendaftaran Pengguna Baru
 
 Halo Admin,
@@ -29,4 +29,4 @@ Kelola Pengguna
 
 Terima kasih,<br>
 {{ config('app.name') }}
-</x-mail::message>
+</x-mail::message> --}}

@@ -21,6 +21,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Jeffgreco13\FilamentBreezy\BreezyCore;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -34,15 +35,15 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->registration(Register::class)
             ->passwordReset()
-            // ->emailVerification(EmailVerification::class)
+            ->emailVerification()
             ->profile(isSimple: false)
             ->loginRouteSlug('login')
             ->registrationRouteSlug('registrasi')
             ->passwordResetRouteSlug('reset-password')
             ->emailVerificationRouteSlug('verifikasi-email')
-            // ->topNavigation()
             ->spa()
             ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
             ->favicon(asset('images/Logo.png'))

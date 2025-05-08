@@ -112,7 +112,8 @@ class RoleResource extends Resource implements HasShieldPermissions
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                ->color('info'),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
@@ -165,7 +166,7 @@ class RoleResource extends Resource implements HasShieldPermissions
     public static function getNavigationGroup(): ?string
     {
         return Utils::isResourceNavigationGroupEnabled()
-            ? __('Hak Akses')
+            ? __('Manajemen Pengguna')
             : '';
     }
 

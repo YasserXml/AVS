@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\NewUserRegistrationEmail;
 use App\Models\User;
 use App\Notifications\AdminNewUserNotification;
+use App\Services\AdminNotificationService;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
@@ -29,10 +30,10 @@ class SocialiteController extends Controller
                 ->body('Saat ini hanya login dengan Google yang didukung.')
                 ->danger()
                 ->send();
-                
+
             return redirect()->route('filament.admin.auth.login');
         }
-        
+
         return Socialite::driver($provider)->redirect();
     }
 
@@ -43,7 +44,7 @@ class SocialiteController extends Controller
     {
         try {
             $socialiteUser = Socialite::driver($provider)->user();
-            
+
             // Periksa apakah email dari domain Google
             if ($provider === 'google' && !Str::endsWith($socialiteUser->getEmail(), '@gmail.com')) {
                 Notification::make()
@@ -51,20 +52,22 @@ class SocialiteController extends Controller
                     ->body('Hanya email Gmail yang diperbolehkan untuk pendaftaran.')
                     ->danger()
                     ->send();
-                
+
                 return redirect()->route('filament.admin.auth.login');
             }
-            
+
             // Cari user berdasarkan provider_id dan provider
             $user = User::where([
                 'provider' => $provider,
                 'provider_id' => $socialiteUser->getId(),
             ])->first();
-            
+
+            $isNewUser = false;
+
             // Jika user tidak ditemukan, cari berdasarkan email
             if (!$user) {
                 $user = User::where('email', $socialiteUser->getEmail())->first();
-                
+
                 // Jika user sudah ada berdasarkan email, update provider details
                 if ($user) {
                     $user->update([
@@ -72,9 +75,14 @@ class SocialiteController extends Controller
                         'provider_id' => $socialiteUser->getId(),
                         'provider_token' => $socialiteUser->token,
                         'provider_refresh_token' => $socialiteUser->refreshToken ?? null,
+                        // Otomatis verifikasi email dan admin jika login dengan Google
+                        'email_verified_at' => now(),
+                        'admin_verified' => true,
                     ]);
                 } else {
                     // Jika user tidak ditemukan sama sekali, buat user baru
+                    $isNewUser = true;
+
                     $user = User::create([
                         'name' => $socialiteUser->getName(),
                         'email' => $socialiteUser->getEmail(),
@@ -84,9 +92,9 @@ class SocialiteController extends Controller
                         'provider_id' => $socialiteUser->getId(),
                         'provider_token' => $socialiteUser->token,
                         'provider_refresh_token' => $socialiteUser->refreshToken ?? null,
-                        'admin_verified' => false, // User baru perlu verifikasi admin
+                        'admin_verified' => true, // Otomatis verifikasi admin untuk akun Google
                     ]);
-                    
+
                     // Assign default user role if using Filament Shield
                     if (class_exists(Role::class)) {
                         $defaultRole = Role::where('name', 'user')->first();
@@ -94,38 +102,32 @@ class SocialiteController extends Controller
                             $user->assignRole($defaultRole);
                         }
                     }
-                    
-                    // Notifikasi untuk admin SAJA
-                    $this->notifyAdmins($user);
-                    
+
+                    // Kirim notifikasi ke admin
+                    AdminNotificationService::sendNewUserRegisteredNotification($user, true);
+
                     // Berikan pesan ke user
                     Notification::make()
                         ->title('Pendaftaran Berhasil')
-                        ->body('Akun Anda berhasil didaftarkan. Silakan tunggu verifikasi dari admin sebelum dapat login.')
+                        ->body('Akun Anda berhasil didaftarkan dan sudah terverifikasi. Anda dapat langsung login.')
                         ->success()
                         ->send();
-                        
-                    return redirect()->route('filament.admin.auth.login');
+                }
+            } else {
+                // Update status verifikasi jika user ditemukan
+                if (!$user->admin_verified) {
+                    $user->update([
+                        'admin_verified' => true,
+                        'email_verified_at' => $user->email_verified_at ?? now(),
+                    ]);
                 }
             }
-            
-            // Cek apakah user sudah diverifikasi admin
-            if (!$user->admin_verified) {
-                Notification::make()
-                    ->title('Akun Belum Diverifikasi Admin')
-                    ->body('Akun Anda masih dalam proses verifikasi oleh admin. Kami akan memberi tahu Anda melalui email saat akun Anda telah diverifikasi.')
-                    ->danger()
-                    ->send();
-                    
-                return redirect()->route('filament.admin.auth.login');
-            }
-            
+
             // Login user
             Auth::login($user);
-            
+
             // Redirect ke dashboard
             return redirect()->intended(Filament::getHomeUrl());
-            
         } catch (\Exception $e) {
             Log::error('Error login Socialite: ' . $e->getMessage());
             // Handle error
@@ -134,54 +136,8 @@ class SocialiteController extends Controller
                 ->body('Terjadi kesalahan saat login dengan ' . ucfirst($provider) . ': ' . $e->getMessage())
                 ->danger()
                 ->send();
-                
+
             return redirect()->route('filament.admin.auth.login');
-        }
-    }
-    
-    /**
-     * Notifikasi admin tentang pendaftaran baru
-     */
-    protected function notifyAdmins(User $newUser): void
-    {
-        try {
-            // Cari admin menggunakan Filament Shield role
-            $adminUsers = User::whereHas('roles', fn ($query) => 
-                $query->whereIn('name', ['super_admin', 'admin'])
-            )->get();
-            
-            if ($adminUsers->isEmpty()) {
-                Log::warning('Tidak ada admin yang ditemukan untuk notifikasi pendaftaran baru');
-                
-                // Sebagai fallback, kirim ke email yang didefinisikan dalam konfigurasi
-                $fallbackEmail = config('mail.admin_email', 'admin@example.com');
-                Log::info('Mengirim notifikasi ke email fallback: ' . $fallbackEmail);
-                
-                Mail::to($fallbackEmail)->send(new NewUserRegistrationEmail($newUser));
-                return;
-            }
-    
-            Log::info('Menemukan ' . $adminUsers->count() . ' admin untuk notifikasi');
-    
-            // Kirim notifikasi ke setiap admin
-            foreach ($adminUsers as $admin) {
-                try {
-                    Log::info('Mencoba mengirim notifikasi ke admin: ' . $admin->email);
-                    
-                    // Kirim email
-                    Mail::to($admin->email)->send(new NewUserRegistrationEmail($newUser));
-                    
-                    // Notifikasi database untuk admin
-                    $admin->notify(new AdminNewUserNotification($newUser));
-                    
-                    Log::info('Notifikasi berhasil dikirim ke: ' . $admin->email);
-                } catch (\Exception $adminException) {
-                    Log::error('Gagal mengirim notifikasi ke admin: ' . $admin->email . '. Error: ' . $adminException->getMessage());
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Error dalam notifyAdmins: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
         }
     }
 }

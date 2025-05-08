@@ -70,89 +70,89 @@ class Login extends BaseLogin
             ->label('Ingat saya');
     }
 
-    public function authenticate(): LoginResponse
+    /**
+     * @return string|null
+     */
+    protected function getGuard()
+    {
+        return Filament::getAuthGuard();
+    }
+
+    /**
+     * Get the authentication guard.
+     */
+    protected function getAuthGuard()
+    {
+        return auth()->guard($this->getGuard());
+    }
+
+    public function authenticate(): ?LoginResponse
     {
         try {
             $this->rateLimit(5);
         } catch (TooManyRequestsException $exception) {
-            Notification::make()
-                ->title('Batas percobaan tercapai')
-                ->body('Terlalu banyak percobaan login. Silakan coba lagi dalam ' . ceil($exception->secondsUntilAvailable / 60) . ' menit.')
-                ->danger()
-                ->send();
-
-            return $this->response();
+            throw ValidationException::withMessages([
+                'data.email' => __('filament-panels::pages/auth/login.messages.throttled', [
+                    'seconds' => $exception->secondsUntilAvailable,
+                    'minutes' => ceil($exception->secondsUntilAvailable / 60),
+                ]),
+            ]);
         }
 
         $data = $this->form->getState();
-
-        if (! Filament::auth()->attempt($this->getCredentials($data), $data['remember'] ?? false)) {
-            $this->throwFailureValidationException();
+        
+        // Menggunakan Auth facade dari Laravel untuk attempt login dengan guard yang benar
+        if (! auth()->guard($this->getGuard())->attempt([
+            'email' => $data['email'],
+            'password' => $data['password'],
+        ], $data['remember'] ?? false)) {
+            throw ValidationException::withMessages([
+                'data.email' => __('filament-panels::pages/auth/login.messages.failed'),
+            ]);
         }
 
-        $user = Filament::auth()->user();
+        $user = auth()->guard($this->getGuard())->user();
+        
+        // Add null check to avoid "Attempt to read property on null" error
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'data.email' => 'Gagal melakukan autentikasi user.',
+            ]);
+        }
 
-        // Periksa verifikasi admin
+        // Periksa apakah pengguna sudah diverifikasi oleh admin
         if (!$user->admin_verified) {
-            Filament::auth()->logout();
-            
+            // Logout user
+            auth()->guard($this->getGuard())->logout();
+
             Notification::make()
                 ->title('Akun Belum Diverifikasi')
-                ->body('Akun Anda masih dalam proses verifikasi oleh admin. Kami akan memberi tahu Anda melalui email saat akun Anda telah diverifikasi.')
+                ->body('Akun Anda belum diverifikasi oleh admin. Silakan tunggu email konfirmasi atau hubungi administrator.')
                 ->danger()
                 ->send();
-            
-            return $this->response();
+
+            throw ValidationException::withMessages([
+                'data.email' => 'Akun Anda belum diverifikasi oleh admin.',
+            ]);
+        }
+
+        // Periksa apakah email sudah diverifikasi (jika diperlukan)
+        if (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail() && config('filament.auth.require_email_verification', false)) {
+            auth()->guard($this->getGuard())->logout();
+
+            Notification::make()
+                ->title('Email Belum Diverifikasi')
+                ->body('Anda harus memverifikasi email Anda sebelum dapat login. Silakan cek email Anda untuk link verifikasi.')
+                ->danger()
+                ->send();
+
+            throw ValidationException::withMessages([
+                'data.email' => 'Anda harus memverifikasi email Anda sebelum dapat login.',
+            ]);
         }
 
         session()->regenerate();
+
         return app(LoginResponse::class);
-    }
-
-    /**
-     * Memeriksa masalah verifikasi user
-     * 
-     * @param \App\Models\User $user
-     * @return array
-     */
-    protected function checkVerificationIssues($user): array
-    {
-        $issues = [];
-        
-        // Jika fitur verifikasi email diaktifkan (cek di konfigurasi app)
-        if (config('auth.verify_email', false) && !$user->hasVerifiedEmail()) {
-            // Kirim ulang email verifikasi
-            $user->sendEmailVerificationNotification();
-            
-            $issues[] = [
-                'title' => 'Email Belum Terverifikasi',
-                'body' => 'Silakan verifikasi email Anda terlebih dahulu. Kami telah mengirimkan ulang tautan verifikasi ke email Anda.'
-            ];
-        }
-
-        // Jika fitur verifikasi admin diaktifkan
-        if (config('auth.admin_verification', false) && !$user->admin_verified) {
-            $issues[] = [
-                'title' => 'Akun Belum Diverifikasi Admin',
-                'body' => 'Akun Anda masih dalam proses verifikasi oleh admin. Kami akan memberi tahu Anda melalui email saat akun Anda telah diverifikasi.'
-            ];
-        }
-        
-        return $issues;
-    }
-
-    protected function throwFailureValidationException(): never
-    {
-        throw ValidationException::withMessages([
-            'data.email' => 'Email atau password yang Anda masukkan salah. Silakan coba lagi.',
-        ]);
-    }
-
-    protected function getCredentials(array $data): array
-    {
-        return [
-            'email' => $data['email'],
-            'password' => $data['password'],
-        ];
     }
 }

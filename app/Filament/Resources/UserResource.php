@@ -2,23 +2,21 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\UserResource\Actions\VerifyUserAction;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
-use App\Notifications\UserVerifiedNotification;
+use App\Notifications\UserVerifiedByAdmin;
+use Carbon\Carbon;
 use Filament\Forms;
-use Filament\Forms\Components\Checkbox;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Hash;
 use Filament\Tables\Actions\Action;
-use Filament\Notifications\Notification;
-use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
@@ -28,39 +26,48 @@ class UserResource extends Resource
 
     protected static ?string $navigationGroup = 'Manajemen Pengguna';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationLabel = 'Pengguna';
 
-    protected static ?string $recordTitleAttribute = 'name';
+    protected static ?string $modelLabel = 'Pengguna';
+
+    protected static ?string $pluralModelLabel = 'Pengguna';
+
+    protected static ?string $slug = 'pengguna';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                TextInput::make('name')
+                Forms\Components\TextInput::make('name')
                     ->label('Nama')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('email')
+                Forms\Components\TextInput::make('email')
                     ->label('Email')
                     ->email()
                     ->required()
                     ->maxLength(255)
-                    ->unique(static::getModel(), 'email', fn($record) => $record),
-                TextInput::make('password')
-                    ->label('Kata Sandi')
+                    ->unique(ignoreRecord: true),
+                Forms\Components\TextInput::make('password')
+                    ->label('Password')
                     ->password()
                     ->dehydrateStateUsing(fn($state) => Hash::make($state))
                     ->dehydrated(fn($state) => filled($state))
-                    ->required(fn($record) => ! $record)
-                    ->maxLength(255),
-                Checkbox::make('admin_verified')
-                    ->label('Diverifikasi Admin')
-                    ->helperText('Centang ini untuk memverifikasi pengguna'),
-                Checkbox::make('email_verified_at')
-                    ->label('Email Terverifikasi')
-                    ->helperText('Menunjukkan apakah email pengguna sudah diverifikasi')
-                    ->dehydrateStateUsing(fn($state) => $state ? now() : null)
-                    ->formatStateUsing(fn($state) => !is_null($state))
+                    ->required(fn(string $operation): bool => $operation === 'create'),
+                Forms\Components\Toggle::make('admin_verified')
+                    ->label('Verifikasi Admin')
+                    ->helperText('Pengguna dapat login jika telah diverifikasi')
+                    ->default(false),
+                Forms\Components\DateTimePicker::make('email_verified_at')
+                    ->label('Email Terverifikasi Pada')
+                    ->placeholder('Belum diverifikasi'),
+                Forms\Components\Select::make('roles')
+                    ->label('Peran')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload(),
             ]);
     }
 
@@ -68,63 +75,113 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')
+                Tables\Columns\TextColumn::make('name')
                     ->label('Nama')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('email')
+                    ->label('Email')
+                    ->searchable(),
+                TextColumn::make('roles.name')
+                    ->label('Peran')
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('email')
-                    ->searchable()
-                    ->sortable(),
-                BooleanColumn::make('admin_verified')
-                    ->label('Diverifikasi Admin')
                     ->sortable()
-                    ->trueIcon('heroicon-o-check')
-                    ->falseIcon('heroicon-o-x-circle'),
-                BooleanColumn::make('email_verified_at')
+                    ->getStateUsing(fn(User $record): string => $record->roles->pluck('name')->implode(', ')),
+                Tables\Columns\IconColumn::make('email_verified_at')
                     ->label('Email Terverifikasi')
-                    ->getStateUsing(fn(User $record) => !is_null($record->email_verified_at))
-                    ->sortable()
-                    ->trueIcon('heroicon-o-check')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->getStateUsing(fn(User $record): bool => $record->email_verified_at !== null),
+                Tables\Columns\IconColumn::make('admin_verified')
+                    ->label('Verifikasi Admin')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle'),
-                TextColumn::make('created_at')
-                    ->label('Terdaftar Pada')
-                    ->dateTime('d M Y H:i')
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Tanggal Daftar')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\Filter::make('verified')
-                    ->label('Sudah Diverifikasi')
-                    ->query(fn($query) => $query->where('admin_verified', true)),
-                Tables\Filters\Filter::make('unverified')
-                    ->label('Belum Diverifikasi')
-                    ->query(fn($query) => $query->where('admin_verified', false)),
+                Tables\Filters\SelectFilter::make('admin_verified')
+                    ->label('Status Verifikasi')
+                    ->options([
+                        '1' => 'Terverifikasi',
+                        '0' => 'Belum Terverifikasi',
+                    ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('Edit')
-                    ->color('info')
-                    ->icon('heroicon-o-pencil'),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make(),
+                // VerifyUserAction::make(),
+                Action::make('verify')
+                    ->label('Verifikasi')
+                    ->icon('heroicon-o-check')
+                    ->color('success')
+                    ->visible(fn(User $record): bool => !$record->admin_verified)
+                    ->requiresConfirmation()
+                    ->modalHeading('Verifikasi Pengguna')
+                    ->modalDescription('Apakah Anda yakin ingin memverifikasi pengguna ini? Pengguna akan menerima notifikasi email dan dapat mengakses sistem.')
+                    ->modalSubmitActionLabel('Ya, Verifikasi')
+                    ->action(function (User $record): void {
+                        // Update status verifikasi
+                        $record->admin_verified = true;
+
+                        // Jika email belum diverifikasi, verifikasi sekarang
+                        if (!$record->hasVerifiedEmail()) {
+                            $record->email_verified_at = Carbon::now();
+                        }
+
+                        $record->save();
+
+                        // Kirim notifikasi email ke pengguna
+                        $record->notify(new UserVerifiedByAdmin());
+
+                        // Dapatkan admin yang melakukan verifikasi
+                        $admin = Auth::user();
+
+                        // Kirim notifikasi popup ke admin saat ini
+                        Notification::make()
+                            ->title('Pengguna Berhasil Diverifikasi')
+                            ->success()
+                            ->body("Pengguna {$record->name} telah berhasil diverifikasi dan notifikasi telah dikirim ke email mereka.")
+                            ->icon('heroicon-o-check-circle')
+                            ->send();
+
+                        // Kirim notifikasi database ke semua admin lain
+                        $adminUsers = User::whereHas('roles', fn ($query) => 
+                        $query->whereIn('name', ['super_admin', 'admin'])
+                        )->get();
+
+                        foreach ($adminUsers as $otherAdmin) {
+                            Notification::make()
+                                ->title('Pengguna Diverifikasi')
+                                ->success()
+                                ->body("Pengguna {$record->name} telah diverifikasi oleh {$admin->name}.")
+                                ->icon('heroicon-o-check-circle')
+                                ->sendToDatabase($otherAdmin);
+                        }
+                    }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('verify')
-                    ->label('Verifikasi Pengguna')
+                Tables\Actions\BulkAction::make('verifySelected')
+                    ->label('Verifikasi Terpilih')
                     ->icon('heroicon-o-check')
-                    ->action(function ($records) {
-                        foreach ($records as $record) {
+                    ->color('success')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        $records->each(function (User $record): void {
                             $record->admin_verified = true;
 
                             if (!$record->hasVerifiedEmail()) {
-                                $record->email_verified_at = now();
+                                $record->email_verified_at = Carbon::now();
                             }
 
                             $record->save();
 
-                            // Kirim notifikasi
-                            $record->notify(new UserVerifiedNotification());
-                        }
-                    })
-                    ->deselectRecordsAfterCompletion(),
+                            // Kirim notifikasi ke pengguna (optional)
+                            // Implementasi notifikasi bisa ditambahkan di sini
+                        });
+                    }),
+                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 

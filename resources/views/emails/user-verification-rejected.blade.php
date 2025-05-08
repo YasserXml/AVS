@@ -1,4 +1,4 @@
-<x-mail::message>
+{{-- <x-mail::message>
 # Informasi Penolakan Pendaftaran
 
 Halo {{ $user->name }},
@@ -15,4 +15,4 @@ Terima kasih atas minat Anda untuk bergabung dengan kami.
 
 Salam,<br>
 {{ config('app.name') }}
-</x-mail::message>
+</x-mail::message> --}}
