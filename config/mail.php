@@ -97,6 +97,13 @@ return [
             'retry_after' => 60,
         ],
 
+        'markdown' => [
+        'theme' => 'default',
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
     ],
 
     /*

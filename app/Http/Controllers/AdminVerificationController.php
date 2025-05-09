@@ -30,6 +30,7 @@ class AdminVerificationController extends Controller
         // Verifikasi pengguna
         $user->update([
             'admin_verified' => true,
+            // 'email_verified_at' => now(), // Tambahkan ini untuk memastikan email juga terverifikasi
         ]);
 
         // Kirim email ke pengguna bahwa akunnya sudah diverifikasi
@@ -42,7 +43,7 @@ class AdminVerificationController extends Controller
             ->success()
             ->send();
 
-        return redirect()->route('filament.admin.resources.users.index')
+        return redirect()->route('filament.admin.resources.pengguna.index')
             ->with('success', 'Pengguna berhasil diverifikasi!');
     }
 }

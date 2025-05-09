@@ -114,7 +114,7 @@ class Register extends FilamentRegister
         event(new Registered($user));
 
         // Kirim notifikasi ke admin
-        AdminNotificationService::sendNewUserRegisteredNotification($user);
+        // AdminNotificationService::sendNewUserRegisteredNotification($user);
 
         // Tampilkan pesan ke pengguna (tanpa menyebut verifikasi email)
         Notification::make()

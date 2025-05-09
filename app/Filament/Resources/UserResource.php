@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Actions\VerifyUserAction;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use App\Notifications\AdminVerifiedUser;
 use App\Notifications\UserVerifiedByAdmin;
 use Carbon\Carbon;
 use Filament\Forms;
@@ -13,6 +14,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +69,7 @@ class UserResource extends Resource
                     ->label('Peran')
                     ->relationship('roles', 'name')
                     ->multiple()
+                    ->searchable()
                     ->preload(),
             ]);
     }
@@ -100,6 +103,7 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Tanggal Daftar')
                     ->dateTime('d/m/Y H:i')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
             ])
             ->filters([
@@ -111,76 +115,33 @@ class UserResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                // VerifyUserAction::make(),
-                Action::make('verify')
-                    ->label('Verifikasi')
-                    ->icon('heroicon-o-check')
-                    ->color('success')
-                    ->visible(fn(User $record): bool => !$record->admin_verified)
-                    ->requiresConfirmation()
-                    ->modalHeading('Verifikasi Pengguna')
-                    ->modalDescription('Apakah Anda yakin ingin memverifikasi pengguna ini? Pengguna akan menerima notifikasi email dan dapat mengakses sistem.')
-                    ->modalSubmitActionLabel('Ya, Verifikasi')
-                    ->action(function (User $record): void {
-                        // Update status verifikasi
-                        $record->admin_verified = true;
-
-                        // Jika email belum diverifikasi, verifikasi sekarang
-                        if (!$record->hasVerifiedEmail()) {
-                            $record->email_verified_at = Carbon::now();
-                        }
-
-                        $record->save();
-
-                        // Kirim notifikasi email ke pengguna
-                        $record->notify(new UserVerifiedByAdmin());
-
-                        // Dapatkan admin yang melakukan verifikasi
-                        $admin = Auth::user();
-
-                        // Kirim notifikasi popup ke admin saat ini
-                        Notification::make()
-                            ->title('Pengguna Berhasil Diverifikasi')
-                            ->success()
-                            ->body("Pengguna {$record->name} telah berhasil diverifikasi dan notifikasi telah dikirim ke email mereka.")
-                            ->icon('heroicon-o-check-circle')
-                            ->send();
-
-                        // Kirim notifikasi database ke semua admin lain
-                        $adminUsers = User::whereHas('roles', fn ($query) => 
-                        $query->whereIn('name', ['super_admin', 'admin'])
-                        )->get();
-
-                        foreach ($adminUsers as $otherAdmin) {
+                ActionGroup::make([
+                    Action::make('edit')
+                        ->label('Edit')
+                        ->color('info')
+                        ->icon('heroicon-o-pencil')
+                        ->url(fn(User $record): string => UserResource::getUrl('edit', ['record' => $record])),
+                    Action::make('delete')
+                        ->label('Hapus')
+                        ->color('danger')
+                        ->icon('heroicon-o-trash')
+                        ->action(function (User $record): void {
+                            $record->delete();
                             Notification::make()
-                                ->title('Pengguna Diverifikasi')
+                                ->title('Pengguna Dihapus')
                                 ->success()
-                                ->body("Pengguna {$record->name} telah diverifikasi oleh {$admin->name}.")
+                                ->body("Pengguna {$record->name} telah dihapus.")
                                 ->icon('heroicon-o-check-circle')
-                                ->sendToDatabase($otherAdmin);
-                        }
-                    }),
+                                ->send();
+                        }),
+
+                    
+                ]),
+
+
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('verifySelected')
-                    ->label('Verifikasi Terpilih')
-                    ->icon('heroicon-o-check')
-                    ->color('success')
-                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
-                        $records->each(function (User $record): void {
-                            $record->admin_verified = true;
-
-                            if (!$record->hasVerifiedEmail()) {
-                                $record->email_verified_at = Carbon::now();
-                            }
-
-                            $record->save();
-
-                            // Kirim notifikasi ke pengguna (optional)
-                            // Implementasi notifikasi bisa ditambahkan di sini
-                        });
-                    }),
+               
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }

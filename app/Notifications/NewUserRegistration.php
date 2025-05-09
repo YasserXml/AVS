@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\URL;
 
 class NewUserRegistration extends Notification implements ShouldQueue
 {
@@ -27,6 +28,16 @@ class NewUserRegistration extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
+        // Buat URL terverifikasi untuk verifikasi langsung yang aman
+        $verificationUrl = URL::temporarySignedRoute(
+            'user.verify',
+            now()->addDays(7), // URL akan kedaluwarsa setelah 7 hari
+            [
+                'id' => $this->newUser->id,
+                'hash' => sha1($this->newUser->email),
+            ]
+        );
+
         return (new MailMessage)
             ->subject('Pendaftaran Pengguna Baru')
             ->greeting('Halo ' . $notifiable->name . ',')
@@ -34,7 +45,8 @@ class NewUserRegistration extends Notification implements ShouldQueue
             ->line('Nama: ' . $this->newUser->name)
             ->line('Email: ' . $this->newUser->email)
             ->line('Tanggal Pendaftaran: ' . Carbon::parse($this->newUser->created_at)->format('d/m/Y H:i'))
-            ->action('Verifikasi Sekarang', route('filament.admin.resources.users.index'))
+            ->action('Verifikasi Sekarang', $verificationUrl) // Gunakan URL verifikasi langsung
+            ->line('Tombol ini akan langsung memverifikasi pengguna tanpa perlu membuka panel admin.')
             ->line('Terima kasih telah membantu menjaga keamanan sistem!');
     }
 

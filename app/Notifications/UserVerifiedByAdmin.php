@@ -36,11 +36,15 @@ class UserVerifiedByAdmin extends Notification implements ShouldQueue
      * Get the mail representation of the notification.
      */
     public function toMail(object $notifiable): MailMessage
-{
-    return (new MailMessage)
-        ->subject('Akun Anda Telah Diverifikasi')
-        ->view('emails.user-verified', ['notifiable' => $notifiable]);
-}
+    {
+        return (new MailMessage)
+            ->subject('Akun Anda Telah Diverifikasi')
+            ->greeting('Halo ' . $notifiable->name . ',')
+            ->line('Selamat! Akun Anda telah berhasil diverifikasi oleh administrator.')
+            ->line('Anda sekarang dapat masuk ke sistem dan menggunakan semua fitur yang tersedia.')
+            ->action('Login Sekarang', route('filament.admin.auth.login'))
+            ->line('Terima kasih telah menggunakan layanan kami!');
+    }
 
     /**
      * Get the array representation of the notification.

@@ -1,10 +1,10 @@
-<!-- resources/views/emails/user-verified.blade.php -->
+<!-- resources/views/emails/user-registration.blade.php -->
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akun Anda Telah Diverifikasi</title>
+    <title>Pendaftaran Pengguna Baru</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -51,6 +51,20 @@
             color: #333;
             font-size: 24px;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table td {
+            padding: 10px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .note {
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -62,23 +76,38 @@
         <div class="content">
             <h2>Halo {{ $userName }},</h2>
             
-            <p>Selamat! Akun Anda telah diverifikasi oleh admin.</p>
+            <p>Ada pendaftaran pengguna baru yang memerlukan verifikasi.</p>
             
-            <p>Anda sekarang dapat login dan menggunakan sistem kami.</p>
+            <table>
+                <tr>
+                    <td><strong>Nama:</strong></td>
+                    <td>{{ $newUserName }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Email:</strong></td>
+                    <td>{{ $newUserEmail }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Tanggal Pendaftaran:</strong></td>
+                    <td>{{ $registrationDate }}</td>
+                </tr>
+            </table>
             
             <div style="text-align: center;">
-                <a href="{{ $loginUrl }}" class="button">Login Sekarang</a>
+                <a href="{{ $verificationUrl }}" class="button">Verifikasi Sekarang</a>
             </div>
             
-            <p>Terima kasih telah bergabung dengan kami!</p>
+            <p class="note">Tombol ini akan langsung memverifikasi pengguna tanpa perlu membuka panel admin.</p>
+            
+            <p>Terima kasih telah membantu menjaga keamanan sistem!</p>
             
             <p>Salam,<br>AVSimulator</p>
         </div>
         
         <div class="footer">
             <p>© {{ date('Y') }} AVSimulator. Hak cipta dilindungi.</p>
-            <p>Jika Anda mengalami kesulitan mengklik tombol "Login Sekarang", copy dan paste URL di bawah ini ke browser Anda:</p>
-            <p style="word-break: break-all;">{{ $loginUrl }}</p>
+            <p>Jika Anda mengalami kesulitan mengklik tombol "Verifikasi Sekarang", copy dan paste URL di bawah ini ke browser Anda:</p>
+            <p style="word-break: break-all;">{{ $verificationUrl }}</p>
         </div>
     </div>
 </body>

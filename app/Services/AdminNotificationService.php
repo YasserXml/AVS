@@ -2,11 +2,8 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Notifications\NewUserRegisteredNotification;
 use App\Notifications\NewUserRegistration;
-use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Notification as FacadesNotification;
-use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Log;
 
 class AdminNotificationService
 {
@@ -18,11 +15,19 @@ class AdminNotificationService
             )->get();
         
         if ($adminUsers->isEmpty()) {
-            // Fallback jika tidak ada admin
+            Log::warning('Tidak ada admin ditemukan untuk notifikasi pendaftaran pengguna baru');
             return;
         }
 
+        // Log untuk debugging
+        Log::info('Mengirim notifikasi pendaftaran baru ke admin', [
+            'new_user_id' => $user->id,
+            'admin_count' => $adminUsers->count()
+        ]);
+
         // Kirim notifikasi ke semua admin
-        FacadesNotification::send($adminUsers, new NewUserRegistration($user, $fromSocialLogin));
+        foreach ($adminUsers as $admin) {
+            $admin->notify(new NewUserRegistration($user));
+        }
     }
 }

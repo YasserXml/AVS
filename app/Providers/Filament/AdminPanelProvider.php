@@ -35,6 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->registration(Register::class)
             ->passwordReset()
+            ->sidebarCollapsibleOnDesktop()
             ->emailVerification()
             ->profile(isSimple: false)
             ->loginRouteSlug('login')

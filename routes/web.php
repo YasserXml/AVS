@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserVerificationController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\Auth\SocialiteController as AuthSocialiteController;
 use App\Http\Controllers\SocialiteController;
+use App\Http\Controllers\UserVerificationController as ControllersUserVerificationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
@@ -23,10 +24,14 @@ Route::get('/admin/verify-user/{user}', [AdminVerificationController::class, 've
     ->name('admin.verify-user')
     ->middleware(['signed']);
 
-    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-        // We don't call $request->fulfill() since we don't want to mark emails as verified
-        return redirect('/');
-    })->middleware(['signed'])->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    // We don't call $request->fulfill() since we don't want to mark emails as verified
+    return redirect('/');
+})->middleware(['signed'])->name('verification.verify');
+
+Route::get('/verify-user/{id}/{hash}', [ControllersUserVerificationController::class, 'verify'])
+    ->name('user.verify')
+    ->middleware('signed');
 
 // Route::get('/email/verify', function () {
 //     return view('auth.verify-email');
