@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AdminNotificationService;
 use App\Notifications\UserVerifiedByAdmin;
 use App\Notifications\UserVerifiedNotification;
 use BezhanSalleh\FilamentShield\Support\Utils;
@@ -34,7 +35,7 @@ class AdminVerificationController extends Controller
         ]);
 
         // Kirim email ke pengguna bahwa akunnya sudah diverifikasi
-        $user->notify(new UserVerifiedByAdmin());
+        AdminNotificationService::sendUserVerifiedNotification($user);
 
         // Kirim notifikasi ke admin
         Notification::make()

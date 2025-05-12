@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\user;
+use App\Services\AdminNotificationService;
 use App\Notifications\NewUserRegistration;
 
 class UserObserver
@@ -17,9 +18,7 @@ class UserObserver
         )->get();
         
         // Notify all admins about the new user registration
-        foreach ($adminUsers as $admin) {
-            $admin->notify(new NewUserRegistration($user));
-        }
+        AdminNotificationService::sendNewUserRegistrationNotifications($user);
     }
 
     /**

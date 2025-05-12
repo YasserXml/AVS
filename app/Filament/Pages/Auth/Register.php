@@ -9,6 +9,7 @@ use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use DanHarrin\LivewireRateLimiting\WithRateLimiting;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Forms\Components\View;
@@ -32,6 +33,7 @@ class Register extends FilamentRegister
             ->schema([
                 $this->getNameFormComponent(),
                 $this->getEmailFormComponent(),
+                $this->getDivisiFormComponent(), // Tambahkan komponen pilih divisi
                 $this->getPasswordFormComponent(),
                 $this->getPasswordConfirmationFormComponent(),
                 // Tambahkan social login buttons disini juga
@@ -43,8 +45,33 @@ class Register extends FilamentRegister
                 'sm' => 1,
                 'md' => 1,
                 'lg' => 1,
-            ]) // Make form responsive
+            ]) // Buat form responsif
             ->statePath('data');
+    }
+
+    // Metode untuk komponen form divisi
+    protected function getDivisiFormComponent(): Component
+    {
+        // Definisikan opsi divisi secara hardcoded (sesuai data dari screenshot database)
+        $divisiOptions = [
+            'divisi_manager_hrd' => 'Manager HRD',
+            'divisi_hrd_ga' => 'HRD & GA',
+            'divisi_keuangan' => 'Keuangan',
+            'divisi_software' => 'Software',
+            'divisi_purchasing' => 'Purchasing',
+            'divisi_elektro' => 'Elektro',
+            'divisi_r&d' => 'R&D',
+            'divisi_3d' => '3D',
+            'divisi_mekanik' => 'Mekanik',
+        ];
+        
+        return Select::make('divisi_role')
+            ->label('Pilih Divisi')
+            ->placeholder('Pilih Divisi Anda')
+            ->searchable()
+            ->preload()
+            ->options($divisiOptions)
+            ->required();
     }
 
     protected function getNameFormComponent(): Component
@@ -95,11 +122,20 @@ class Register extends FilamentRegister
         try {
             $this->rateLimit(5);
         } catch (TooManyRequestsException $exception) {
-            // Rate limiting notification code...
+            Notification::make()
+                ->title('Terlalu banyak percobaan')
+                ->body('Silakan coba lagi dalam beberapa saat.')
+                ->danger()
+                ->send();
+                
             return null;
         }
 
         $data = $this->form->getState();
+
+        // Ambil role divisi dan hapus dari data
+        $divisiRole = $data['divisi_role'];
+        unset($data['divisi_role']);
 
         $data['password'] = Hash::make($data['password']);
         // Set admin_verified ke false secara default
@@ -107,23 +143,20 @@ class Register extends FilamentRegister
 
         $user = User::create($data);
 
-        // Assign default role 'user' ke pengguna baru
-        $user->assignRole('user');
+        // Assign role divisi yang dipilih
+        $user->assignRole($divisiRole);
 
-        // We still trigger the Registered event for other listeners
+        // Tetap memicu event Registered untuk listener lain
         event(new Registered($user));
 
-        // Kirim notifikasi ke admin
-        // AdminNotificationService::sendNewUserRegisteredNotification($user);
-
-        // Tampilkan pesan ke pengguna (tanpa menyebut verifikasi email)
+        // Tampilkan pesan ke pengguna
         Notification::make()
             ->title('Pendaftaran Berhasil')
-            ->body('Akun Anda telah terdaftar tetapi memerlukan verifikasi dari admin sebelum dapat digunakan.')
+            ->body('Mohon menunggu akun anda diverifikasi oleh admin, status verifikasi akan dikirim via email')
             ->success()
             ->send();
 
-        // Redirect to login page
+        // Redirect ke halaman login
         return app(RegistrationResponse::class);
     }
 

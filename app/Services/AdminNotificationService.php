@@ -1,33 +1,78 @@
 <?php
 namespace App\Services;
 
+use App\Mail\NewUserRegistrationMail;
+use App\Mail\UserVerifiedByAdminMail;
 use App\Models\User;
-use App\Notifications\NewUserRegistration;
-use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Filament\Notifications\Actions\Action;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Mail;
 
 class AdminNotificationService
 {
-    public static function sendNewUserRegisteredNotification(User $user, bool $fromSocialLogin = false)
+     /**
+     * Kirim notifikasi pendaftaran pengguna baru ke semua admin
+     *
+     * @param User $newUser
+     * @return void
+     */
+    public static function sendNewUserRegistrationNotifications(User $newUser)
     {
-        // Dapatkan semua admin atau super admin
+        // Ambil semua admin
         $adminUsers = User::whereHas('roles', fn ($query) => 
-                $query->whereIn('name', ['super_admin', 'admin'])
-            )->get();
+            $query->whereIn('name', ['super_admin', 'admin'])
+        )->get();
         
-        if ($adminUsers->isEmpty()) {
-            Log::warning('Tidak ada admin ditemukan untuk notifikasi pendaftaran pengguna baru');
-            return;
-        }
-
-        // Log untuk debugging
-        Log::info('Mengirim notifikasi pendaftaran baru ke admin', [
-            'new_user_id' => $user->id,
-            'admin_count' => $adminUsers->count()
+        // Buat URL verifikasi
+        $verificationUrl = route('admin.verify-user', [
+            'user' => $newUser->id,
+            'hash' => sha1($newUser->email),
         ]);
-
-        // Kirim notifikasi ke semua admin
+        
         foreach ($adminUsers as $admin) {
-            $admin->notify(new NewUserRegistration($user));
+            // Kirim notifikasi Filament
+            Notification::make()
+                ->title('Pendaftaran Pengguna Baru')
+                ->icon('heroicon-o-user-plus')
+                ->iconColor('primary')
+                ->body("👤 {$newUser->name} telah mendaftar dan menunggu verifikasi.")
+                ->actions([
+                    Action::make('verify')
+                        ->label('Verifikasi')
+                        ->url($verificationUrl)
+                        ->button(),
+                ])
+                ->sendToDatabase($admin);
+            
+            // Kirim email
+            Mail::to($admin->email)->queue(new NewUserRegistrationMail($newUser, $admin));
         }
+    }
+    
+    /**
+     * Kirim notifikasi verifikasi pengguna ke pengguna yang bersangkutan
+     *
+     * @param User $user
+     * @return void
+     */
+    public static function sendUserVerifiedNotification(User $user)
+    {
+        // Kirim notifikasi Filament
+        Notification::make()
+            ->title('Akun Anda Telah Diverifikasi')
+            ->success()
+            ->icon('heroicon-o-check-circle')
+            ->body('Selamat! Akun Anda telah berhasil diverifikasi oleh administrator.')
+            ->actions([
+                Action::make('login')
+                    ->label('Login Sekarang')
+                    ->url(route('filament.admin.auth.login'))
+                    ->button(),
+            ])
+            ->sendToDatabase($user);
+        
+        // Kirim email
+        Mail::to($user->email)->queue(new UserVerifiedByAdminMail($user));
     }
 }

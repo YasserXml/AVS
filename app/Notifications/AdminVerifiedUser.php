@@ -24,7 +24,7 @@ class AdminVerifiedUser extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['database'];
+        return ['mail', 'database'];
     }
 
     public function toDatabase($notifiable): array

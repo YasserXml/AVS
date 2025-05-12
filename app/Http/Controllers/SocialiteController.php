@@ -104,7 +104,7 @@ class SocialiteController extends Controller
                     }
 
                     // Kirim notifikasi ke admin
-                    AdminNotificationService::sendNewUserRegisteredNotification($user, true);
+                    AdminNotificationService::sendNewUserRegistrationNotifications($user, true);
 
                     // Berikan pesan ke user
                     Notification::make()
