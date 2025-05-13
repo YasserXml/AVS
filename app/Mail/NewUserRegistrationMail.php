@@ -27,7 +27,7 @@ class NewUserRegistrationMail extends Mailable implements ShouldQueue
     {
         $this->newUser = $newUser;
         $this->admin = $admin;
-        
+
         // Buat URL terverifikasi untuk verifikasi langsung yang aman
         $this->verificationUrl = URL::temporarySignedRoute(
             'user.verify',
@@ -67,8 +67,17 @@ class NewUserRegistrationMail extends Mailable implements ShouldQueue
             'divisi_mekanik' => 'Mekanik',
         ];
 
-        // Dapatkan nama divisi yang lebih manusiawi atau gunakan nilai asli jika tidak ditemukan
-        $divisiNama = $divisiMapping[$this->newUser->divisi_role] ?? $this->newUser->divisi_role;
+        // Dapatkan nama role pengguna
+        $userRoles = $this->newUser->getRoleNames();
+        $divisiNama = 'Tidak ada divisi';
+
+        // Cari role yang cocok dengan pemetaan divisi
+        foreach ($userRoles as $role) {
+            if (isset($divisiMapping[$role])) {
+                $divisiNama = $divisiMapping[$role];
+                break;
+            }
+        }
 
         return new Content(
             view: 'emails.user-registration',
