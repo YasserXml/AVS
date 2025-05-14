@@ -25,6 +25,8 @@ return new class extends Migration
             $table->string('provider_refresh_token')->nullable()->after('provider_token');
             $table->boolean('admin_verified')->default(false)->after('email_verified_at');
             $table->boolean('is_admin')->default(false)->after('admin_verified');
+             $table->string('avatar')->nullable()->after('email');
+            $table->string('jabatan')->nullable()->after('avatar');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -1,12 +1,13 @@
 <div class="mt-4">
     <div class="flex items-center justify-between">
-        <hr class="w-full">
-        <span class="px-4 text-gray-500 text-sm">Atau</span>
-        <hr class="w-full">
+        <hr class="w-full dark:border-gray-700">
+        <span class="px-4 text-gray-500 dark:text-gray-400 text-sm">Atau</span>
+        <hr class="w-full dark:border-gray-700">
     </div>
 
     <div class="flex flex-col gap-2 mt-4">
-        <a href="{{ route('filament.admin.auth.socialite.redirect', ['provider' => 'google']) }}" class="w-full inline-flex justify-center items-center py-2.5 px-5 text-sm font-medium text-gray-900 rounded-lg border border-gray-300 hover:bg-gray-100 focus:outline-none">
+        <a href="{{ route('filament.admin.auth.socialite.redirect', ['provider' => 'google']) }}" 
+           class="w-full inline-flex justify-center items-center py-2.5 px-5 text-sm font-medium text-gray-900 dark:text-gray-100 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800 focus:outline-none transition duration-150 ease-in-out">
             <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
                 <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
                     c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24

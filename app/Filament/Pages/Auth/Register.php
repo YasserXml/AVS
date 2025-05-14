@@ -11,6 +11,9 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Card;
 use Filament\Forms\Form;
 use Filament\Forms\Components\View;
 use Filament\Notifications\Notification;
@@ -31,28 +34,43 @@ class Register extends FilamentRegister
     {
         return $form
             ->schema([
-                $this->getNameFormComponent(),
-                $this->getEmailFormComponent(),
-                $this->getDivisiFormComponent(), // Tambahkan komponen pilih divisi
-                $this->getPasswordFormComponent(),
-                $this->getPasswordConfirmationFormComponent(),
-                // Tambahkan social login buttons disini juga
-                View::make('pages.auth.social-login-buttons')
-                    ->columnSpanFull(),
+                Section::make('Informasi Akun')
+                    ->description('Silakan lengkapi data Anda untuk membuat akun baru.')
+                    ->icon('heroicon-o-user-circle')
+                    ->columns([
+                        'default' => 1,
+                        'sm' => 1,
+                        'md' => 2,
+                        'lg' => 2,
+                    ])
+                    ->schema([
+                        $this->getNameFormComponent(),
+                        $this->getEmailFormComponent(),
+                        $this->getDivisiFormComponent(),
+                        Grid::make()
+                            ->schema([
+                                $this->getPasswordFormComponent(),
+                                $this->getPasswordConfirmationFormComponent(),
+                            ])
+                            ->columns([
+                                'default' => 1,
+                                'sm' => 1,
+                                'md' => 2,
+                                'lg' => 2,
+                            ])
+                            ->columnSpanFull(),
+                    ]),
+                
+                
+
             ])
-            ->columns([
-                'default' => 1,
-                'sm' => 1,
-                'md' => 1,
-                'lg' => 1,
-            ]) // Buat form responsif
             ->statePath('data');
     }
 
-    // Metode untuk komponen form divisi
+    // Metode untuk komponen form divisi dengan UI yang lebih baik
     protected function getDivisiFormComponent(): Component
     {
-        // Definisikan opsi divisi secara hardcoded (sesuai data dari screenshot database)
+        // Definisikan opsi divisi secara hardcoded
         $divisiOptions = [
             'divisi_manager_hrd' => 'Manager HRD',
             'divisi_hrd_ga' => 'HRD & GA',
@@ -66,33 +84,41 @@ class Register extends FilamentRegister
         ];
         
         return Select::make('divisi_role')
-            ->label('Pilih Divisi')
+            ->label('Divisi')
             ->placeholder('Pilih Divisi Anda')
             ->searchable()
             ->preload()
             ->options($divisiOptions)
-            ->required();
+            ->required()
+            ->native(false)
+            ->helperText('Pilih divisi sesuai dengan anda bekerja')
+            ->reactive()
+            ->prefixIcon('heroicon-o-building-office-2');
     }
 
     protected function getNameFormComponent(): Component
     {
         return TextInput::make('name')
             ->label('Nama Pengguna')
-            ->placeholder('Tuliskan Nama Pengguna Anda')
+            ->placeholder('Masukkan nama lengkap Anda')
             ->required()
             ->maxLength(255)
-            ->autofocus();
+            ->autofocus()
+            ->autocomplete('name')
+            ->prefixIcon('heroicon-o-user');
     }
 
     protected function getEmailFormComponent(): Component
     {
         return TextInput::make('email')
-            ->label('Email')
+            ->label('Alamat Email')
             ->email()
-            ->placeholder('Tuliskan Email Anda')
+            ->placeholder('Masukkan alamat email Anda')
             ->required()
             ->maxLength(255)
-            ->unique(table: User::class, column: 'email');
+            ->unique(table: User::class, column: 'email')
+            ->autocomplete('email')
+            ->prefixIcon('heroicon-o-envelope');
     }
 
     protected function getPasswordFormComponent(): Component
@@ -100,10 +126,14 @@ class Register extends FilamentRegister
         return TextInput::make('password')
             ->label('Kata Sandi')
             ->password()
-            ->placeholder('Tuliskan kata sandi Anda')
+            ->placeholder('Minimal 8 karakter')
             ->required()
             ->minLength(8)
-            ->confirmed();
+            ->confirmed()
+            ->autocomplete('new-password')
+            ->helperText('Kata sandi harus terdiri dari minimal 8 karakter')
+            ->prefixIcon('heroicon-o-lock-closed')
+            ->revealable();
     }
 
     protected function getPasswordConfirmationFormComponent(): Component
@@ -111,10 +141,13 @@ class Register extends FilamentRegister
         return TextInput::make('password_confirmation')
             ->label('Konfirmasi Kata Sandi')
             ->password()
-            ->placeholder('Tulis ulang kata sandi Anda')
+            ->placeholder('Masukkan ulang kata sandi')
             ->required()
             ->minLength(8)
-            ->dehydrated(false);
+            ->dehydrated(false)
+            ->autocomplete('new-password')
+            ->prefixIcon('heroicon-o-shield-check')
+            ->revealable();
     }
 
     public function register(): ?RegistrationResponse
@@ -151,9 +184,10 @@ class Register extends FilamentRegister
 
         // Tampilkan pesan ke pengguna
         Notification::make()
-            ->title('Pendaftaran Berhasil')
-            ->body('Mohon menunggu akun anda diverifikasi oleh admin, status verifikasi akan dikirim via email')
+            ->title('Pendaftaran Berhasil!')
+            ->body('Terima kasih telah mendaftar. Mohon menunggu akun Anda diverifikasi oleh admin. Kami akan mengirimkan notifikasi status via email.')
             ->success()
+            ->persistent()
             ->send();
 
         // Redirect ke halaman login

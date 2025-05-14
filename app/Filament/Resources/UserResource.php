@@ -36,6 +36,8 @@ class UserResource extends Resource
 
     protected static ?string $navigationLabel = 'Pengguna';
 
+    protected static ?string $activeNavigationIcon = 'heroicon-o-user';
+    
     protected static ?string $modelLabel = 'Pengguna';
 
     protected static ?string $pluralModelLabel = 'Pengguna';
@@ -120,7 +122,7 @@ class UserResource extends Resource
                         return (string) $rowLoop->iteration;
                     })
                     ->alignCenter()
-                    ->color('info')
+                    ->color('gray')
                     ->weight(FontWeight::Bold)
                     ->searchable(false)
                     ->sortable(false),

@@ -8,6 +8,7 @@ use App\Models\Kategori;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,16 @@ class KategoriResource extends Resource
     protected static ?string $navigationGroup = 'Inventory';
 
     protected static ?string $navigationLabel = 'Kategori Barang';
+
+    protected static ?string $label = 'Kategori';
+
+    protected static ?string $pluralLabel = 'Kategori';
+
+    protected static ?string $slug = 'kategori';
+
+    // protected static ?string $modelLabel = 'Kategori Barang';
+
+    protected static ?string $pluralModelLabel = 'Kategori Barang';
 
     protected static ?int $navigationSort = 3;
     
@@ -58,14 +69,21 @@ class KategoriResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+               Tables\Columns\TextColumn::make('id')
                     ->label('No')
-                    ->sortable()
-                    ->searchable(),
+                    // ->state(static function ($rowLoop): string {
+                    //     return (string) $rowLoop->iteration;
+                    // })
+                    ->alignCenter()
+                    ->color('gray')
+                    ->weight(FontWeight::Bold)
+                    ->searchable(false)
+                    ->sortable(),
                     
                 Tables\Columns\TextColumn::make('nama_kategori')
                     ->label('Nama Kategori')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('created_at')
@@ -87,7 +105,9 @@ class KategoriResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(),
+                Tables\Filters\TrashedFilter::make()
+                ->label('Dihapus')
+                    ->default(),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([

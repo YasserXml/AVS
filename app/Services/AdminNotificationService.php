@@ -35,14 +35,8 @@ class AdminNotificationService
             Notification::make()
                 ->title('Pendaftaran Pengguna Baru')
                 ->icon('heroicon-o-user-plus')
-                ->iconColor('primary')
+                ->iconColor('info')
                 ->body("👤 {$newUser->name} telah mendaftar dan menunggu verifikasi.")
-                ->actions([
-                    Action::make('verify')
-                        ->label('Verifikasi')
-                        ->url($verificationUrl)
-                        ->button(),
-                ])
                 ->sendToDatabase($admin);
             
             // Kirim email

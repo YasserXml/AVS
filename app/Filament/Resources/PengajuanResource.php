@@ -25,11 +25,15 @@ class PengajuanResource extends Resource
 
     protected static ?int $navigationSort = 8;
 
+    protected static ?string $pluralLabel = 'Pengajuan';
+
+    protected static ?string $slug = 'pengajuan';
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                //
+                
             ]);
     }
 

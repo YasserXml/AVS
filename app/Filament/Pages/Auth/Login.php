@@ -28,9 +28,7 @@ class Login extends BaseLogin
                 $this->getEmailFormComponent(),
                 $this->getPasswordFormComponent(),
                 $this->getRememberFormComponent(),
-                // Add a custom view component to display the social login options
-                View::make('pages.auth.social-login-buttons')
-                    ->columnSpanFull(), // Make it full width for responsive design
+                // Add a custom view component to display the social login options// Make it full width for responsive design
             ])
             ->columns([
                 'default' => 1,
@@ -60,6 +58,7 @@ class Login extends BaseLogin
             ->password()
             ->placeholder('Tuliskan Password Anda')
             ->required()
+            ->revealable()
             ->autocomplete('current-password')
             ->extraInputAttributes(['tabindex' => 2]);
     }
@@ -101,7 +100,7 @@ class Login extends BaseLogin
 
         $data = $this->form->getState();
         
-        // Menggunakan Auth facade dari Laravel untuk attempt login dengan guard yang benar
+        // Menggunakan Auth facade untuk attempt login dengan guard yang benar
         if (! auth()->guard($this->getGuard())->attempt([
             'email' => $data['email'],
             'password' => $data['password'],

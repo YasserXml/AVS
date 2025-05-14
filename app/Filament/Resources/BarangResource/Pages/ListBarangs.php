@@ -30,7 +30,8 @@ class ListBarangs extends ListRecords
     {
         return [
             'semua' => Tab::make('Semua Barang')
-                ->badge(fn () => $this->getModel()::count()),
+                ->badge(fn () => $this->getModel()::count())
+                ->badgeColor('info'),
             
             'stok_tersedia' => Tab::make('Stok Tersedia')
                 ->badge(fn () => $this->getModel()::where('jumlah_barang', '>', 0)->count())
@@ -54,19 +55,5 @@ class ListBarangs extends ListRecords
         return 'Ketersediaan Barang';
     }
 
-     public function getFooter(): ?View
-    {
-        $totalNilaiInventaris = $this->getModel()::query()
-            ->selectRaw('SUM(jumlah_barang * harga_barang) as total_nilai')
-            ->value('total_nilai');
 
-        $totalJenis = $this->getModel()::count();
-        $totalStok = $this->getModel()::sum('jumlah_barang');
-
-        return view('sum.barang-sum', [
-            'totalNilaiInventaris' => $totalNilaiInventaris,
-            'totalJenis' => $totalJenis,
-            'totalStok' => $totalStok,
-        ]);
-    }
 }

@@ -17,7 +17,6 @@ return new class extends Migration
             $table->integer('kode_barang');
             $table->string('nama_barang');
             $table->integer('jumlah_barang');
-            $table->integer('harga_barang');
             $table->foreignId('kategori_id')->constrained('kategoris');
             $table->timestamps();
             $table->softDeletes();
