@@ -13,6 +13,7 @@ use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 use Filament\Notifications\Notification;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use DanHarrin\LivewireRateLimiting\WithRateLimiting;
+use Filament\Support\Enums\IconPosition;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\View\View as ViewView;
 use Illuminate\View\View as IlluminateViewView;
@@ -39,26 +40,28 @@ class Login extends BaseLogin
             ->statePath('data');
     }
      
-    protected function getEmailFormComponent(): Component
+     protected function getEmailFormComponent(): Component
     {
         return TextInput::make('email')
-            ->label('Email')
+            ->label('Alamat Email')
             ->email()
-            ->placeholder('Tuliskan Email Anda')
+            ->placeholder('Masukkan email Anda')
             ->required()
-            ->autocomplete()
+            ->autocomplete('email')
             ->autofocus()
+            ->prefixIcon('heroicon-o-envelope')
             ->extraInputAttributes(['tabindex' => 1]);
     }
 
     protected function getPasswordFormComponent(): Component
     {
         return TextInput::make('password')
-            ->label('Password')
+            ->label('Kata Sandi')
             ->password()
-            ->placeholder('Tuliskan Password Anda')
+            ->placeholder('Masukkan kata sandi Anda')
             ->required()
             ->revealable()
+            ->prefixIcon('heroicon-o-lock-closed')
             ->autocomplete('current-password')
             ->extraInputAttributes(['tabindex' => 2]);
     }
@@ -68,6 +71,26 @@ class Login extends BaseLogin
         return Checkbox::make('remember')
             ->label('Ingat saya');
     }
+
+    protected function getFormActions(): array
+    {
+        $actions = parent::getFormActions();
+        
+        // Modifikasi tombol login untuk tampilan yang lebih menarik
+        if (isset($actions[0])) {
+            $actions[0]->label('Masuk Sekarang')
+                ->icon('heroicon-o-arrow-right-circle')
+                ->iconPosition(IconPosition::After)
+                ->color('primary')
+                ->size('lg')
+                ->extraAttributes([
+                    'class' => 'w-full md:w-auto',
+                ]);
+        }
+        
+        return $actions;
+    }
+
 
     /**
      * @return string|null

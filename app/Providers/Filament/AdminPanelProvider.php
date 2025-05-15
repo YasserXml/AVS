@@ -48,7 +48,7 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotificationsPolling('30s')
             ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
-            ->favicon(asset('images/Logo.png'))
+            ->favicon(asset('images/Logo(1).webp'))
             ->colors([
                 'primary' => Color::Red,
             ])

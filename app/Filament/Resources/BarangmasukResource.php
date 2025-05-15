@@ -41,21 +41,6 @@ class BarangmasukResource extends Resource
         return static::getModel()::count();
     }
 
-   
-    public static function getGloballySearchableAttributes(): array
-    {
-        return [
-            'serial_number',
-            'barang.nama_barang',
-            'kode_barang',
-            'jumlah_barang_masuk',
-            'harga_barang',
-            'total_harga',
-            'tanggal_masuk_barang',
-            'status',
-            'user.name',
-        ];
-    }
     public static function form(Form $form): Form
     {
         return $form
@@ -95,7 +80,7 @@ class BarangmasukResource extends Resource
                                     ->prefixIcon('heroicon-o-flag'),
     
                                 Forms\Components\Select::make('user_id')
-                                    ->label('Petugas')
+                                    ->label('Yang Input')
                                     ->relationship('user', 'name')
                                     ->default(fn() => filament()->auth()->id())
                                     ->required()
@@ -307,7 +292,7 @@ class BarangmasukResource extends Resource
                     ->toggleable(),
     
                 TextColumn::make('user.name')
-                    ->label('Petugas')
+                    ->label('Yang Input')
                     ->sortable()
                     ->toggleable(),
     
@@ -403,11 +388,5 @@ class BarangmasukResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
-    }
+    
 }

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->date('tanggal_barang_masuk');
             $table->string('diajukan_oleh');
             $table->enum('status', ['oprasional_kantor', 'project']);
+             $table->string('dibeli')->nullable()->after('status');
             $table->timestamps();
             $table->softDeletes(); // Add soft deletes column
         });
