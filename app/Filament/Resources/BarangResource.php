@@ -41,7 +41,6 @@ class BarangResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Ketersediaan Barang';
 
-    protected static ?string $recordTitleAttribute = 'nama_barang';
 
     protected static ?string $modelLabel = 'Barang';
     
@@ -427,11 +426,5 @@ class BarangResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
-    }
+  
 }

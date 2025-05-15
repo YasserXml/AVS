@@ -21,7 +21,7 @@ class RoleResource extends Resource implements HasShieldPermissions
 {
     use HasShieldFormComponents;
 
-    protected static ?string $recordTitleAttribute = 'name';
+  
 
     public static function getPermissionPrefixes(): array
     {
@@ -202,8 +202,8 @@ class RoleResource extends Resource implements HasShieldPermissions
         return Utils::isScopedToTenant();
     }
 
-    public static function canGloballySearch(): bool
-    {
-        return Utils::isResourceGloballySearchable() && count(static::getGloballySearchableAttributes()) && static::canViewAny();
-    }
+    // public static function canGloballySearch(): bool
+    // {
+    //     return Utils::isResourceGloballySearchable() && count(static::getGloballySearchableAttributes()) && static::canViewAny();
+    // }
 }
