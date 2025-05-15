@@ -210,12 +210,12 @@ class UserResource extends Resource
                         ->modalSubmitActionLabel('Ya, Hapus Pengguna')
                         ->action(function (User $record): void {
                             $record->delete();
-                            Notification::make()
-                                ->title('Pengguna Dihapus')
-                                ->success()
-                                ->body("Pengguna {$record->name} telah dihapus dari sistem.")
-                                ->icon('heroicon-o-check-circle')
-                                ->send();
+                            // Notification::make()
+                            //     ->title('Pengguna Dihapus')
+                            //     ->success()
+                            //     ->body("Pengguna {$record->name} telah dihapus dari sistem.")
+                            //     ->icon('heroicon-o-check-circle')
+                            //     ->send();
                         }),
                 ])
                     ->color('danger')

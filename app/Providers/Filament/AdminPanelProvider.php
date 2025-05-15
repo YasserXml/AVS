@@ -6,6 +6,7 @@ use App\Filament\Pages\Auth\EmailVerification;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Auth\Register;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspectorPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;

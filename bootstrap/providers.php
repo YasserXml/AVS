@@ -1,5 +1,6 @@
 <?php
 
+use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspectorServiceProvider;
 use Laravel\Sanctum\SanctumServiceProvider;
 
 return [
@@ -8,5 +9,6 @@ return [
     Spatie\Permission\PermissionServiceProvider::class,
     BezhanSalleh\FilamentShield\FilamentShieldServiceProvider::class,
     // Laravel\Socialite\SocialiteServiceProvider::class,
-    SanctumServiceProvider::class,
+    // SanctumServiceProvider::class,
+    // FilamentThemeInspectorServiceProvider::class,
 ];

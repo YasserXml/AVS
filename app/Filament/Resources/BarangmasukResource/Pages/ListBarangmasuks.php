@@ -5,6 +5,7 @@ namespace App\Filament\Resources\BarangmasukResource\Pages;
 use App\Filament\Resources\BarangmasukResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Enums\IconPosition;
 
 class ListBarangmasuks extends ListRecords
 {
@@ -14,8 +15,11 @@ class ListBarangmasuks extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-            ->label('Input Barang Masuk')
-            ->icon('heroicon-o-plus'),
+                ->icon('heroicon-o-plus-circle')
+                ->label('Tambah Barang Masuk')
+                ->iconPosition(IconPosition::Before)
+                ->color('success')
+                ->size('lg'),
         ];
     }
 

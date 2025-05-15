@@ -21,6 +21,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 
 class BarangmasukResource extends Resource
 {
@@ -41,6 +42,11 @@ class BarangmasukResource extends Resource
         return static::getModel()::count();
     }
 
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'success';
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -57,15 +63,16 @@ class BarangmasukResource extends Resource
                                     ->label('Serial Number')
                                     ->required()
                                     ->unique(ignoreRecord: true)
+                                    ->disabled(fn($operation) => $operation === 'edit')
                                     ->dehydrated()
                                     ->prefixIcon('heroicon-o-identification'),
-    
+
                                 Forms\Components\DatePicker::make('tanggal_barang_masuk')
                                     ->label('Tanggal Masuk')
                                     ->default(now())
                                     ->required()
                                     ->prefixIcon('heroicon-o-calendar'),
-    
+
                                 Forms\Components\Select::make('status')
                                     ->label('Status Penggunaan')
                                     ->options([
@@ -78,7 +85,17 @@ class BarangmasukResource extends Resource
                                     ->reactive()
                                     ->searchable()
                                     ->prefixIcon('heroicon-o-flag'),
-    
+
+                                Forms\Components\TextInput::make('dibeli')
+                                    ->label('Dibeli oleh')
+                                    ->prefixIcon('heroicon-o-building-storefront'),
+
+                                // Forms\Components\TextInput::make('diajukan_oleh')
+                                //     ->label('Diajukan Oleh')
+                                //     ->required()
+                                //     ->placeholder('Masukkan nama pengaju')
+                                //     ->prefixIcon('heroicon-o-user-circle'),
+
                                 Forms\Components\Select::make('user_id')
                                     ->label('Yang Input')
                                     ->relationship('user', 'name')
@@ -88,13 +105,13 @@ class BarangmasukResource extends Resource
                                     ->preload()
                                     ->prefixIcon('heroicon-o-user'),
                             ]),
-    
+
                         Forms\Components\Textarea::make('keterangan')
                             ->label('Keterangan')
                             ->placeholder('Tambahkan catatan atau keterangan jika diperlukan')
                             ->columnSpanFull(),
                     ]),
-    
+
                 Forms\Components\Section::make('Detail Barang')
                     ->description('Informasi detail barang yang masuk')
                     ->icon('heroicon-o-cube')
@@ -104,7 +121,7 @@ class BarangmasukResource extends Resource
                             ->schema([
                                 Forms\Components\Card::make()
                                     ->schema([
-                                        Forms\Components\Radio::make('tipe_transaksi')  
+                                        Forms\Components\Radio::make('tipe_transaksi')
                                             ->label('Jenis Input Barang')
                                             ->options([
                                                 'barang_lama' => 'Pilih Barang yang Sudah Ada',
@@ -118,7 +135,7 @@ class BarangmasukResource extends Resource
                                             ->columnSpanFull(),
                                     ]),
                             ]),
-    
+
                         // Bagian pilih barang yang sudah ada
                         Forms\Components\Grid::make(2)
                             ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_lama')
@@ -145,8 +162,26 @@ class BarangmasukResource extends Resource
                                             }
                                         }
                                     }),
+
+                                Forms\Components\TextInput::make('stok_saat_ini')
+                                    ->label('Stok Saat Ini')
+                                    ->numeric()
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->prefixIcon('heroicon-o-archive-box')
+                                    ->afterStateHydrated(function (Get $get, Set $set) {
+                                        $barangId = $get('barang_id');
+                                        if ($barangId) {
+                                            $barang = Barang::find($barangId);
+                                            if ($barang) {
+                                                $set('stok_saat_ini', $barang->jumlah_barang);
+                                            }
+                                        }
+                                    })
+                                    ->reactive()
+                                    ->lazy(),
                             ]),
-    
+
                         // Bagian input barang baru
                         Forms\Components\Grid::make(2)
                             ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
@@ -158,14 +193,14 @@ class BarangmasukResource extends Resource
                                     ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
                                     ->dehydrated()
                                     ->prefixIcon('heroicon-o-identification'),
-    
+
                                 Forms\Components\TextInput::make('nama_barang')
                                     ->label('Nama Barang')
                                     ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
                                     ->placeholder('Masukkan nama barang')
                                     ->dehydrated()
                                     ->prefixIcon('heroicon-o-tag'),
-    
+
                                 Forms\Components\Select::make('kategori_id')
                                     ->label('Kategori Barang')
                                     ->relationship('kategori', 'nama_kategori')
@@ -180,7 +215,7 @@ class BarangmasukResource extends Resource
                                     ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
                                     ->prefixIcon('heroicon-o-tag'),
                             ]),
-    
+
                         Forms\Components\Grid::make()
                             ->columns(2)
                             ->schema([
@@ -198,9 +233,9 @@ class BarangmasukResource extends Resource
                                         $set('total_harga', $harga * $jumlah);
                                     })
                                     ->prefixIcon('heroicon-o-plus'),
-    
+
                                 Forms\Components\TextInput::make('harga_barang')
-                                    ->label('Harga barang')
+                                    ->label('Harga Satuan')
                                     ->numeric()
                                     ->required()
                                     ->prefix('Rp')
@@ -210,12 +245,12 @@ class BarangmasukResource extends Resource
                                     ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                         $numericValue = preg_replace('/[^0-9]/', '', $state);
                                         $set('harga_barang', $numericValue);
-                                        
+
                                         $jumlah = $get('jumlah_barang_masuk') ?? 0;
                                         $set('total_harga', $numericValue * $jumlah);
                                     })
                                     ->prefixIcon('heroicon-o-banknotes'),
-    
+
                                 Forms\Components\TextInput::make('total_harga')
                                     ->label('Total Harga')
                                     ->numeric()
@@ -229,7 +264,7 @@ class BarangmasukResource extends Resource
                     ]),
             ]);
     }
-    
+
     public static function table(Table $table): Table
     {
         return $table
@@ -240,68 +275,80 @@ class BarangmasukResource extends Resource
                     ->sortable()
                     ->copyable()
                     ->toggleable(),
-    
+
                 TextColumn::make('barang.nama_barang')
                     ->label('Nama Barang')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
-    
+
                 TextColumn::make('kode_barang')
                     ->label('Kode Barang')
                     ->searchable()
                     ->toggleable(),
-    
+
                 TextColumn::make('jumlah_barang_masuk')
                     ->label('Jumlah')
                     ->sortable()
                     ->toggleable(),
-    
+
                 TextColumn::make('harga_barang')
                     ->label('Harga Satuan')
                     ->money('IDR')
                     ->sortable()
                     ->toggleable(),
-    
+
                 TextColumn::make('total_harga')
                     ->label('Total Harga')
                     ->money('IDR')
                     ->sortable()
                     ->toggleable(),
-    
+
                 TextColumn::make('tanggal_barang_masuk')
                     ->label('Tanggal Masuk')
                     ->date('d M Y')
                     ->sortable()
                     ->toggleable(),
-    
+
+                // TextColumn::make('diajukan_oleh')
+                //     ->label('Diajukan Oleh')
+                //     ->searchable()
+                //     ->sortable()
+                //     ->toggleable(),
+
+                TextColumn::make('dibeli')
+                    ->label('Dibeli Dari')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
                     ->sortable()
-                    ->color(fn (string $state): string => match ($state) {
-                        'oprasional_kantor' => 'primary',
+                    ->color(fn(string $state): string => match ($state) {
+                        'oprasional_kantor' => 'success',
                         'project' => 'warning',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
                         'oprasional_kantor' => 'Operasional Kantor',
                         'project' => 'Project',
                         default => $state,
                     })
                     ->toggleable(),
-    
+
                 TextColumn::make('user.name')
                     ->label('Yang Input')
                     ->sortable()
                     ->toggleable(),
-    
+
                 TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-    
+
                 TextColumn::make('updated_at')
                     ->label('Diperbarui')
                     ->dateTime('d M Y, H:i')
@@ -316,7 +363,7 @@ class BarangmasukResource extends Resource
                         'project' => 'Project',
                     ])
                     ->multiple(),
-                
+
                 Filter::make('tanggal_barang_masuk')
                     ->form([
                         Forms\Components\DatePicker::make('dari_tanggal')
@@ -328,24 +375,24 @@ class BarangmasukResource extends Resource
                         return $query
                             ->when(
                                 $data['dari_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_barang_masuk', '>=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('tanggal_barang_masuk', '>=', $date),
                             )
                             ->when(
                                 $data['sampai_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_barang_masuk', '<=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('tanggal_barang_masuk', '<=', $date),
                             );
                     })
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
-                        
+
                         if ($data['dari_tanggal'] ?? null) {
                             $indicators['dari_tanggal'] = 'Dari tanggal ' . Carbon::parse($data['dari_tanggal'])->format('d M Y');
                         }
-                        
+
                         if ($data['sampai_tanggal'] ?? null) {
                             $indicators['sampai_tanggal'] = 'Sampai tanggal ' . Carbon::parse($data['sampai_tanggal'])->format('d M Y');
                         }
-                        
+
                         return $indicators;
                     }),
             ])
@@ -366,9 +413,12 @@ class BarangmasukResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->emptyStateHeading('Belum Ada Data Barang Masuk')
             ->emptyStateDescription('Silakan tambahkan data barang masuk dengan klik tombol di bawah')
+            ->emptyStateIcon('heroicon-o-archive-box')
             ->emptyStateActions([
                 Tables\Actions\CreateAction::make()
-                    ->label('Tambah Barang Masuk'),
+                    ->label('Tambah Barang Masuk')
+                    ->icon('heroicon-o-plus')
+                    ->color('success'),
             ]);
     }
 
@@ -387,6 +437,4 @@ class BarangmasukResource extends Resource
             'edit' => Pages\EditBarangmasuk::route('/{record}/edit'),
         ];
     }
-
-    
 }
