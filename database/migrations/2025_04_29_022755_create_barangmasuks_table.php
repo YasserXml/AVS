@@ -13,8 +13,6 @@ return new class extends Migration
     {
         Schema::create('barangmasuks', function (Blueprint $table) {
             $table->id();
-            $table->string('serial_number')->unique();
-            $table->integer('kode_barang');
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('barang_id')->constrained('barangs');
             $table->integer('jumlah_barang_masuk');
@@ -22,6 +20,7 @@ return new class extends Migration
             $table->string('diajukan_oleh');
             $table->enum('status', ['oprasional_kantor', 'project']);
              $table->string('dibeli')->nullable()->after('status');
+              $table->string('project_name')->after('status');
             $table->timestamps();
             $table->softDeletes(); // Add soft deletes column
         });

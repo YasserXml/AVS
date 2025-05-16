@@ -4,27 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Barangmasuk extends Model
+class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'serial_number',
-        'kode_barang',
+        'nama_project',
         'user_id',
         'barang_id',
-        'tanggal_barang_masuk',
-        'jumlah_barang_masuk',
+        'kategori_id',
+        'tanggal_mulai',
+        'tanggal_selesai',
         'status',
-        'dibeli',
-        'project_name',
+        'client_name',
     ];
 
     protected $casts = [
-        'tanggal_masuk_barang' => 'datetime',
-        
+        'tanggal_mulai' => 'datetime',
+        'tanggal_selesai' => 'datetime',
     ];
 
     public function barang()

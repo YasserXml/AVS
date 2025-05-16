@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Filament\Notifications\Notification as FilamentNotification;
+use Illuminate\Mail\Mailer;
 use Illuminate\Support\Facades\Mail;
 
 class UserVerificationController extends Controller

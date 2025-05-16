@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BarangmasukResource\Pages;
-use App\Filament\Resources\BarangmasukResource\RelationManagers;
 use App\Models\Barang;
 use App\Models\Barangmasuk;
 use Carbon\Carbon;
@@ -12,7 +11,6 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
-use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
@@ -21,7 +19,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Str;
+use Filament\Notifications\Notification;
+use Filament\Tables\Filters\TrashedFilter;
 
 class BarangmasukResource extends Resource
 {
@@ -36,6 +35,10 @@ class BarangmasukResource extends Resource
     protected static ?int $navigationSort = 4;
 
     protected static ?string $slug = 'barang-masuk';
+
+    protected static ?string $modelLabel = 'Barang Masuk';
+
+    protected static ?string $pluralModelLabel = 'Barang Masuk';
 
     public static function getNavigationBadge(): ?string
     {
@@ -59,18 +62,12 @@ class BarangmasukResource extends Resource
                         Forms\Components\Grid::make()
                             ->columns(2)
                             ->schema([
-                                Forms\Components\TextInput::make('serial_number')
-                                    ->label('Serial Number')
-                                    ->required()
-                                    ->unique(ignoreRecord: true)
-                                    ->disabled(fn($operation) => $operation === 'edit')
-                                    ->dehydrated()
-                                    ->prefixIcon('heroicon-o-identification'),
-
                                 Forms\Components\DatePicker::make('tanggal_barang_masuk')
                                     ->label('Tanggal Masuk')
                                     ->default(now())
                                     ->required()
+                                    ->disabled()
+                                    ->dehydrated(true)
                                     ->prefixIcon('heroicon-o-calendar'),
 
                                 Forms\Components\Select::make('status')
@@ -84,17 +81,22 @@ class BarangmasukResource extends Resource
                                     ->native(false)
                                     ->reactive()
                                     ->searchable()
-                                    ->prefixIcon('heroicon-o-flag'),
+                                    ->prefixIcon('heroicon-o-flag')
+                                    ->afterStateUpdated(fn(Set $set) => $set('project_name', null)),
+
+                                // Conditional field for project name when status is "project"
+                                Forms\Components\TextInput::make('project_name')
+                                    ->label('Nama Project')
+                                    ->placeholder('Masukkan nama project')
+                                    ->required(fn(Get $get) => $get('status') === 'project')
+                                    ->visible(fn(Get $get) => $get('status') === 'project')
+                                    ->prefixIcon('heroicon-o-briefcase'),
 
                                 Forms\Components\TextInput::make('dibeli')
-                                    ->label('Dibeli oleh')
-                                    ->prefixIcon('heroicon-o-building-storefront'),
-
-                                // Forms\Components\TextInput::make('diajukan_oleh')
-                                //     ->label('Diajukan Oleh')
-                                //     ->required()
-                                //     ->placeholder('Masukkan nama pengaju')
-                                //     ->prefixIcon('heroicon-o-user-circle'),
+                                    ->label('Diajukan Oleh')
+                                    ->required()
+                                    ->placeholder('Masukkan nama pengaju')
+                                    ->prefixIcon('heroicon-o-user-circle'),
 
                                 Forms\Components\Select::make('user_id')
                                     ->label('Yang Input')
@@ -117,23 +119,29 @@ class BarangmasukResource extends Resource
                     ->icon('heroicon-o-cube')
                     ->collapsible()
                     ->schema([
-                        Forms\Components\Grid::make()
+                        Forms\Components\Card::make()
                             ->schema([
-                                Forms\Components\Card::make()
-                                    ->schema([
-                                        Forms\Components\Radio::make('tipe_transaksi')
-                                            ->label('Jenis Input Barang')
-                                            ->options([
-                                                'barang_lama' => 'Pilih Barang yang Sudah Ada',
-                                                'barang_baru' => 'Tambah Barang Baru',
-                                            ])
-                                            ->default('barang_lama')
-                                            ->required()
-                                            ->inline()
-                                            ->live()
-                                            ->helperText('Pilih jenis input sesuai kebutuhan transaksi barang masuk')
-                                            ->columnSpanFull(),
-                                    ]),
+                                Forms\Components\Radio::make('tipe_transaksi')
+                                    ->label('Jenis Input Barang')
+                                    ->options([
+                                        'barang_lama' => 'Pilih Barang yang Sudah Ada',
+                                        'barang_baru' => 'Tambah Barang Baru',
+                                    ])
+                                    ->default('barang_lama')
+                                    ->required()
+                                    ->inline()
+                                    ->live()
+                                    ->helperText('Pilih jenis input sesuai kebutuhan transaksi barang masuk')
+                                    ->columnSpanFull()
+                                    ->afterStateUpdated(function (Set $set) {
+                                        // Reset fields when switching between types
+                                        $set('barang_id', null);
+                                        $set('kode_barang', null);
+                                        $set('nama_barang', null);
+                                        $set('kategori_id', null);
+                                        $set('stok_saat_ini', null);
+                                        $set('serial_number', null);
+                                    }),
                             ]),
 
                         // Bagian pilih barang yang sudah ada
@@ -148,14 +156,14 @@ class BarangmasukResource extends Resource
                                     ->live()
                                     ->dehydrated()
                                     ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_lama')
-                                    ->placeholder('Cari dan pilih barang...')
+                                    ->placeholder('Cari atau pilih barang...')
                                     ->prefixIcon('heroicon-o-magnifying-glass')
                                     ->afterStateUpdated(function ($state, Set $set) {
                                         if ($state) {
                                             $barang = Barang::find($state);
                                             if ($barang) {
                                                 $set('kode_barang', $barang->kode_barang);
-                                                $set('harga_barang', $barang->harga_barang ?? 0);
+                                                $set('stok_saat_ini', $barang->jumlah_barang);
                                                 // Clear fields untuk barang baru
                                                 $set('nama_barang', null);
                                                 $set('kategori_id', null);
@@ -168,24 +176,21 @@ class BarangmasukResource extends Resource
                                     ->numeric()
                                     ->disabled()
                                     ->dehydrated(false)
-                                    ->prefixIcon('heroicon-o-archive-box')
-                                    ->afterStateHydrated(function (Get $get, Set $set) {
-                                        $barangId = $get('barang_id');
-                                        if ($barangId) {
-                                            $barang = Barang::find($barangId);
-                                            if ($barang) {
-                                                $set('stok_saat_ini', $barang->jumlah_barang);
-                                            }
-                                        }
-                                    })
-                                    ->reactive()
-                                    ->lazy(),
+                                    ->prefixIcon('heroicon-o-archive-box'),
                             ]),
 
                         // Bagian input barang baru
                         Forms\Components\Grid::make(2)
                             ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
                             ->schema([
+                                Forms\Components\TextInput::make('serial_number')
+                                    ->label('Serial Number')
+                                    ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
+                                    ->unique(table: 'barangs', column: 'serial_number', ignoreRecord: true)
+                                    ->disabled(fn($operation) => $operation === 'edit')
+                                    ->dehydrated()
+                                    ->prefixIcon('heroicon-o-identification'),
+                                
                                 Forms\Components\TextInput::make('kode_barang')
                                     ->label('Kode Barang')
                                     ->numeric()
@@ -217,7 +222,7 @@ class BarangmasukResource extends Resource
                             ]),
 
                         Forms\Components\Grid::make()
-                            ->columns(2)
+                            ->columns(1)
                             ->schema([
                                 Forms\Components\TextInput::make('jumlah_barang_masuk')
                                     ->label('Jumlah Barang Masuk')
@@ -225,41 +230,8 @@ class BarangmasukResource extends Resource
                                     ->required()
                                     ->default(1)
                                     ->minValue(1)
-                                    ->live()
                                     ->placeholder('Masukkan jumlah barang')
-                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                        $harga = $get('harga_barang') ?? 0;
-                                        $jumlah = $state ?? 0;
-                                        $set('total_harga', $harga * $jumlah);
-                                    })
                                     ->prefixIcon('heroicon-o-plus'),
-
-                                Forms\Components\TextInput::make('harga_barang')
-                                    ->label('Harga Satuan')
-                                    ->numeric()
-                                    ->required()
-                                    ->prefix('Rp')
-                                    ->placeholder('0')
-                                    ->live()
-                                    ->mask(RawJs::make('$money($input)'))
-                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                        $numericValue = preg_replace('/[^0-9]/', '', $state);
-                                        $set('harga_barang', $numericValue);
-
-                                        $jumlah = $get('jumlah_barang_masuk') ?? 0;
-                                        $set('total_harga', $numericValue * $jumlah);
-                                    })
-                                    ->prefixIcon('heroicon-o-banknotes'),
-
-                                Forms\Components\TextInput::make('total_harga')
-                                    ->label('Total Harga')
-                                    ->numeric()
-                                    ->required()
-                                    ->prefix('Rp')
-                                    ->disabled()
-                                    ->dehydrated()
-                                    ->helperText('Total harga akan dihitung otomatis')
-                                    ->prefixIcon('heroicon-o-calculator'),
                             ]),
                     ]),
             ]);
@@ -269,8 +241,8 @@ class BarangmasukResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('serial_number')
-                    ->label('Nomor Transaksi')
+                TextColumn::make('barang.serial_number')
+                    ->label('Serial Number')
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -282,25 +254,13 @@ class BarangmasukResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
-                TextColumn::make('kode_barang')
+                TextColumn::make('barang.kode_barang')
                     ->label('Kode Barang')
                     ->searchable()
                     ->toggleable(),
 
                 TextColumn::make('jumlah_barang_masuk')
-                    ->label('Jumlah')
-                    ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('harga_barang')
-                    ->label('Harga Satuan')
-                    ->money('IDR')
-                    ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('total_harga')
-                    ->label('Total Harga')
-                    ->money('IDR')
+                    ->label('Jumlah Barang Masuk')
                     ->sortable()
                     ->toggleable(),
 
@@ -310,14 +270,8 @@ class BarangmasukResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
-                // TextColumn::make('diajukan_oleh')
-                //     ->label('Diajukan Oleh')
-                //     ->searchable()
-                //     ->sortable()
-                //     ->toggleable(),
-
                 TextColumn::make('dibeli')
-                    ->label('Dibeli Dari')
+                    ->label('Diajukan Oleh')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
@@ -338,6 +292,13 @@ class BarangmasukResource extends Resource
                     })
                     ->toggleable(),
 
+                TextColumn::make('project_name')
+                    ->label('Nama Project')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable()
+                    ->visible(fn($livewire) => $livewire->activeTab === 'project'),
+
                 TextColumn::make('user.name')
                     ->label('Yang Input')
                     ->sortable()
@@ -356,6 +317,8 @@ class BarangmasukResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TrashedFilter::make(),
+
                 SelectFilter::make('status')
                     ->label('Status Penggunaan')
                     ->options([
@@ -399,8 +362,33 @@ class BarangmasukResource extends Resource
             ->actions([
                 ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->color('info')
+                        ->icon('heroicon-o-pencil'),
+                    Tables\Actions\DeleteAction::make()
+                        ->color('danger')
+                        ->icon('heroicon-o-trash')
+                        ->requiresConfirmation()
+                        ->action(function (Barangmasuk $record) {
+                            $record->delete();
+
+                            Notification::make()
+                                ->title('Data Barang Masuk Berhasil Dihapus')
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\RestoreAction::make()
+                        ->color('success')
+                        ->icon('heroicon-o-arrow-path')
+                        ->requiresConfirmation()
+                        ->action(function (Barangmasuk $record) {
+                            $record->restore();
+
+                            Notification::make()
+                                ->title('Data Barang Masuk Berhasil Dipulihkan')
+                                ->success()
+                                ->send();
+                        }),
                     Tables\Actions\ForceDeleteAction::make(),
                 ]),
             ])

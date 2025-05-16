@@ -6,8 +6,9 @@ use App\Filament\Resources\BarangmasukResource;
 use App\Models\Barang;
 use App\Models\Barangmasuk;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class EditBarangmasuk extends EditRecord
@@ -57,10 +58,6 @@ class EditBarangmasuk extends EditRecord
                 $barang = Barang::findOrFail($this->record->barang_id);
                 $barang->increment('jumlah_barang', $selisih);
             });
-        }
-        
-        if (!isset($data['total_harga'])) {
-            $data['total_harga'] = $data['harga_barang'] * $data['jumlah_barang_masuk'];
         }
         
         return $data;
