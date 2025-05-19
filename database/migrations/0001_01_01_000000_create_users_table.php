@@ -23,9 +23,10 @@ return new class extends Migration
             $table->string('provider_id')->nullable()->after('provider');
             $table->string('provider_token')->nullable()->after('provider_id');
             $table->string('provider_refresh_token')->nullable()->after('provider_token');
+            $table->softDeletes();
             $table->boolean('admin_verified')->default(false)->after('email_verified_at');
             $table->boolean('is_admin')->default(false)->after('admin_verified');
-             $table->string('avatar')->nullable()->after('email');
+            $table->string('avatar')->nullable()->after('email');
             $table->string('jabatan')->nullable()->after('avatar');
         });
 

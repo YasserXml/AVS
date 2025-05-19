@@ -38,4 +38,5 @@ class CreateUser extends CreateRecord
             ])
             ->seconds(5);
     }
+    
 }

@@ -22,31 +22,50 @@ class ListBarangmasuks extends ListRecords
                 ->label('Tambah Barang Masuk')
                 ->iconPosition(IconPosition::Before)
                 ->color('success')
-                ->size('lg'),
+                ->tooltip('Klik untuk menambahkan data barang masuk baru')
+                ->size('lg')
+                ->extraAttributes([
+                    'class' => 'font-semibold shadow-lg hover:shadow-xl transition-all duration-200'
+                ]),
         ];
     }
+    
 
     public function getTitle(): Htmlable|string
     {
         return 'Daftar Barang Masuk';
     }
 
-    public function getTabs(): array
+     public function getTabs(): array
     {
+        $allCount = static::getResource()::getEloquentQuery()->count();
+        $operationalCount = static::getResource()::getEloquentQuery()
+            ->where('status', 'oprasional_kantor')
+            ->count();
+        $projectCount = static::getResource()::getEloquentQuery()
+            ->where('status', 'project')
+            ->count();
+
         return [
             'all' => Tab::make('Semua')
-                ->label('Semua Barang Masuk')
-                ->icon('heroicon-o-squares-2x2'),
+                ->label("Semua ({$allCount})")
+                ->icon('heroicon-o-squares-2x2')
+                ->badge($allCount)
+                ->badgeColor('primary'),
             
             'oprasional' => Tab::make('Operasional')
-                ->label('Operasional Kantor')
+                ->label("Operasional ({$operationalCount})")
                 ->icon('heroicon-o-building-office')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'oprasional_kantor')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'oprasional_kantor'))
+                ->badge($operationalCount)
+                ->badgeColor('success'),
             
             'project' => Tab::make('Project')
-                ->label('Project')
+                ->label("Project ({$projectCount})")
                 ->icon('heroicon-o-building-library')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'project')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'project'))
+                ->badge($projectCount)
+                ->badgeColor('warning'),
         ];
     }
 }

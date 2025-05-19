@@ -24,8 +24,19 @@ class CreateBarangmasuk extends CreateRecord
             $jumlahBarangMasuk = $data['jumlah_barang_masuk'];
 
             if ($data['status'] !== 'project') {
-            $data['project_name'] = '-'; // atau nilai default lainnya seperti 'Non-Project'
-        }
+                $data['project_name'] = '-'; // atau nilai default lainnya seperti 'Non-Project'
+            }
+
+            // Persiapkan data untuk barangmasuks
+            $dataBarangMasuk = [
+                'tanggal_barang_masuk' => $data['tanggal_barang_masuk'],
+                'status' => $data['status'],
+                'project_name' => $data['project_name'],
+                'dibeli' => $data['dibeli'],
+                'user_id' => $data['user_id'],
+                'jumlah_barang_masuk' => $jumlahBarangMasuk,
+                'keterangan' => isset($data['keterangan']) ? $data['keterangan'] : null,
+            ];
 
             // Handle barang_baru (create new item)
             if ($tipeTransaksi === 'barang_baru') {
@@ -38,12 +49,14 @@ class CreateBarangmasuk extends CreateRecord
                     'kategori_id' => $data['kategori_id'],
                 ]);
 
-                // Update data with the newly created barang_id
-                $data['barang_id'] = $barang->id;
+                // Update data with the newly created barang_id and kategori_id
+                $dataBarangMasuk['barang_id'] = $barang->id;
+                $dataBarangMasuk['kategori_id'] = $data['kategori_id'];
+                // Set the barang_id and kategori_id in the dataBarangMasuk array
 
                 // Create the barangmasuk record
-                $barangMasuk = static::getModel()::create($data);
-                
+                $barangMasuk = static::getModel()::create($dataBarangMasuk);
+
                 // Optional notification
                 Notification::make()
                     ->title('Barang baru berhasil ditambahkan')
@@ -52,13 +65,17 @@ class CreateBarangmasuk extends CreateRecord
             } else {
                 // Handle barang_lama (update existing item)
                 $barang = Barang::findOrFail($data['barang_id']);
-                
+
                 // Update the stock quantity
                 $barang->jumlah_barang += $jumlahBarangMasuk;
                 $barang->save();
 
+                // Add barang_id and kategori_id to data
+                $dataBarangMasuk['barang_id'] = $data['barang_id'];
+                $dataBarangMasuk['kategori_id'] = $barang->kategori_id; // Ambil dari barang yang sudah ada
+
                 // Create the barangmasuk record
-                $barangMasuk = static::getModel()::create($data);
+                $barangMasuk = static::getModel()::create($dataBarangMasuk);
 
                 // Optional notification
                 Notification::make()
@@ -88,5 +105,31 @@ class CreateBarangmasuk extends CreateRecord
     public function getTitle(): string
     {
         return 'Tambah Barang Masuk';
+    }
+
+     protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction()
+                ->label('Simpan Data')
+                ->icon('heroicon-o-check')
+                ->size('lg')
+                ->extraAttributes([
+                    'class' => 'font-semibold'
+                ]),
+            $this->getCancelFormAction()
+                ->label('Batal')
+                ->icon('heroicon-o-x-mark')
+                ->color('gray'),
+        ];
+    }
+    
+    protected function getCreatedNotification(): ?Notification
+    {
+        return Notification::make()
+            ->title('Barang Masuk Berhasil Ditambahkan')
+            ->success()
+            ->icon('heroicon-o-check')
+            ->body('Data barang masuk telah berhasil ditambahkan.');
     }
 }

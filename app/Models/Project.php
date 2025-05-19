@@ -27,18 +27,18 @@ class Project extends Model
         'tanggal_selesai' => 'datetime',
     ];
 
-    public function barang()
+    public function barangs()
     {
-        return $this->belongsTo(Barang::class);
+        return $this->belongsTo(Barang::class, 'barang_id');
     }
 
-    public function user()
+    public function users()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function kategori()
+    public function kategoris()
     {
-        return $this->belongsTo(Kategori::class);
+        return $this->belongsTo(Kategori::class, 'kategori_id');
     }
 }
