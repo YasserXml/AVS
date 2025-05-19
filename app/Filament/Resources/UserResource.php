@@ -163,7 +163,8 @@ class UserResource extends Resource
                     ->falseIcon('heroicon-o-shield-exclamation')
                     ->trueColor('succes')  // Merah untuk yang sudah terverifikasi
                     ->falseColor('gray')
-                    ->size(IconColumn\IconColumnSize::Large),
+                    ->size(IconColumn\IconColumnSize::Large)
+                    ->getStateUsing(fn(User $record): bool => $record->admin_verified !== null),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Terdaftar Pada')

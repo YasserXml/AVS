@@ -13,11 +13,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Testing\Fluent\Concerns\Has;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use TomatoPHP\FilamentMediaManager\Traits\InteractsWithMediaFolders;
 
 class User extends Authenticatable 
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasDatabaseNotifications;
+    use HasFactory, Notifiable, HasRoles, HasDatabaseNotifications, InteractsWithMediaFolders;
 
     /**
      * The attributes that are mass assignable.
@@ -27,12 +28,12 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
-        'provider',
-        'provider_id',
-        'provider_token',
-        'provider_refresh_token',
         'email_verified_at',
+        'password',
+        'remember_token',
+        'avatar',
+        'admin_verified',
+        'jabatan',
     ];
 
     /**

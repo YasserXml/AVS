@@ -24,6 +24,7 @@ return new class extends Migration
             $table->dateTime('approved_at')->nullable();
             $table->foreignId('reject_by')->constrained('users');
             $table->text('reject_reason')->nullable();
+             $table->foreignId('barang_keluar_id')->constrained('barangkeluars')->after('barang_id');
             $table->timestamps();
             $table->softDeletes();
         });
