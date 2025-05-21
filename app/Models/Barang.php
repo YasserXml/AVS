@@ -26,7 +26,6 @@ class Barang extends Model
         return $this->hasMany(Barangmasuk::class);
     }
 
-
     public function pengajuan()
     {
         return $this->hasMany(Pengajuan::class);
@@ -44,7 +43,7 @@ class Barang extends Model
 
     public function kategori()
     {
-        return $this->belongsTo(Kategori::class);
+        return $this->belongsTo(Kategori::class, 'kategori_id');
     }
 
 }

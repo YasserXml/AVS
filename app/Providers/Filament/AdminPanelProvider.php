@@ -6,6 +6,7 @@ use App\Filament\Pages\Auth\EmailVerification;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Auth\Register;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspector;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspectorPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -34,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('web')
-            ->topNavigation()
+            // ->topNavigation()
             ->login(Login::class)
             ->registration(Register::class)
             ->passwordReset()
@@ -76,9 +77,9 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugins([
                 FilamentShieldPlugin::make(),
-                FilamentMediaManagerPlugin::make()
-                ->allowSubFolders()
-                ->allowUserAccess(),
+                // FilamentThemeInspectorPlugin::make()
+                //     ->disabled(fn()=> ! app()->hasDebugModeEnabled()),
+                
             ])
             ->authMiddleware([
                 Authenticate::class,

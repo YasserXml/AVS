@@ -127,7 +127,6 @@ class BarangmasukResource extends Resource
                             ->required(fn(Get $get) => $get('status') === 'project')
                             ->visible(fn(Get $get) => $get('status') === 'project')
                             ->prefixIcon('heroicon-o-briefcase')
-                            ->suffixIcon('heroicon-o-sparkles')
                             ->suffixIconColor('warning')
                             ->columnSpanFull(),
                     ]),
@@ -156,129 +155,118 @@ class BarangmasukResource extends Resource
                                     ->inline()
                                     ->live()
                                     ->helperText('💡 Pilih jenis input sesuai kebutuhan transaksi barang masuk')
-                                    ->columnSpanFull()
-                                    ->afterStateUpdated(function (Set $set) {
-                                        // Reset fields when switching between types
-                                        $set('barang_id', null);
-                                        $set('kode_barang', null);
-                                        $set('nama_barang', null);
-                                        $set('kategori_id', null);
-                                        $set('stok_saat_ini', null);
-                                        $set('serial_number', null);
-                                    }),
+                                    ->columnSpanFull(),
                             ])
                             ->extraAttributes(['class' => 'border-2 border-dashed border-gray-300 bg-gray-50/50 dark:border-gray-600 dark:bg-gray-800/50']),
 
-                        // Existing Item Selection
-                        Forms\Components\Group::make()
-                            ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_lama')
-                            ->schema([
-                                Forms\Components\Fieldset::make('Pilih Barang Yang Sudah Ada')
-                                    ->schema([
-                                        Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
-                                            ->schema([
-                                                Forms\Components\Select::make('barang_id')
-                                                    ->label('Pilih Barang')
-                                                    ->relationship('barang', 'nama_barang')
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->live()
-                                                    ->dehydrated()
-                                                    ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_lama')
-                                                    ->placeholder('Cari atau pilih barang...')
-                                                    ->prefixIcon('heroicon-o-magnifying-glass')
-                                                    ->suffixAction(
-                                                        Forms\Components\Actions\Action::make('refresh_barang')
-                                                            ->icon('heroicon-m-arrow-path')
-                                                            ->color('secondary')
-                                                            ->action(fn (Forms\Components\Select $component) => $component->state(null))
-                                                    )
-                                                    ->afterStateUpdated(function ($state, Set $set) {
-                                                        if ($state) {
-                                                            $barang = Barang::find($state);
-                                                            if ($barang) {
-                                                                $set('kode_barang', $barang->kode_barang);
-                                                                $set('stok_saat_ini', $barang->jumlah_barang);
-                                                                // Clear fields untuk barang baru
-                                                                $set('nama_barang', null);
-                                                                $set('kategori_id', null);
-                                                            }
-                                                        }
-                                                    }),
-
-                                                Forms\Components\TextInput::make('stok_saat_ini')
-                                                    ->label('📊 Stok Saat Ini')
-                                                    ->numeric()
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-archive-box')
-                                                    ->prefix('Qty:')
-                                                    ->extraAttributes(['class' => 'font-mono text-center'])
-                                                    ->placeholder('0'),
-                                            ]),
-                                    ]),
-                            ]),
-
-                        // New Item Creation
-                        Forms\Components\Group::make()
-                            ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
-                            ->schema([
-                                Forms\Components\Fieldset::make('Detail Barang Baru')
-                                    ->schema([
-                                        Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
-                                            ->schema([
-                                                Forms\Components\TextInput::make('serial_number')
-                                                    ->label('Serial Number')
-                                                    ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
-                                                    ->unique(table: 'barangs', column: 'serial_number', ignoreRecord: true)
-                                                    ->disabled(fn($operation) => $operation === 'edit')
-                                                    ->dehydrated()
-                                                    ->prefixIcon('heroicon-o-identification')
-                                                    ->placeholder('SN-XXXX-XXXX')
-                                                    ->extraAttributes(['style' => 'font-family: monospace;']),
-                                
-                                                Forms\Components\TextInput::make('kode_barang')
-                                                    ->label('Kode Barang')
-                                                    ->numeric()
-                                                    ->unique(table: 'barangs', column: 'kode_barang', ignoreRecord: true)
-                                                    ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
-                                                    ->dehydrated()
-                                                    ->prefixIcon('heroicon-o-hashtag')
-                                                    ->placeholder('Contoh: 12345')
-                                                    ->extraAttributes(['style' => 'font-family: monospace;']),
-
-                                                Forms\Components\TextInput::make('nama_barang')
-                                                    ->label('Nama Barang')
-                                                    ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
-                                                    ->placeholder('Masukkan nama barang...')
-                                                    ->dehydrated()
-                                                    ->prefixIcon('heroicon-o-tag')
-                                                    ->suffixIcon('heroicon-o-check-circle')
-                                                    ->suffixIconColor('success'),
-
-                                                Forms\Components\Select::make('kategori_id')
-                                                    ->label('Kategori Barang')
-                                                    ->relationship('kategori', 'nama_kategori')
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->createOptionForm([
-                                                        Forms\Components\TextInput::make('nama_kategori')
-                                                            ->required()
-                                                            ->maxLength(255)
-                                                            ->label('Nama Kategori')
-                                                            ->placeholder('Masukkan nama kategori baru...'),
-                                                    ])
-                                                    ->required(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru')
-                                                    ->prefixIcon('heroicon-o-tag')
-                                            ]),
-                                    ]),
-                            ]),
-
-                        // Quantity Input
-                        Forms\Components\Fieldset::make('Jumlah Barang')
+                        // Repeater for Existing Items
+                        Forms\Components\Repeater::make('barang_lama_items')
                             ->schema([
                                 Forms\Components\Grid::make(['sm' => 1, 'md' => 3])
                                     ->schema([
+                                        Forms\Components\Select::make('barang_id')
+                                            ->label('Pilih Barang')
+                                            ->relationship('barang', 'nama_barang')
+                                            ->searchable()
+                                            ->preload()
+                                            ->live()
+                                            ->required()
+                                            ->placeholder('Cari atau pilih barang...')
+                                            ->prefixIcon('heroicon-o-magnifying-glass')
+                                            ->columnSpan(1)
+                                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                                if ($state) {
+                                                    $barang = \App\Models\Barang::find($state);
+                                                    if ($barang) {
+                                                        $set('kode_barang', $barang->kode_barang);
+                                                        $set('stok_saat_ini', $barang->jumlah_barang);
+                                                    }
+                                                }
+                                            }),
+
+                                        Forms\Components\TextInput::make('stok_saat_ini')
+                                            ->label('📊 Stok Saat Ini')
+                                            ->numeric()
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->prefixIcon('heroicon-o-archive-box')
+                                            ->placeholder('0')
+                                            ->columnSpan(1),
+
+                                        Forms\Components\TextInput::make('jumlah_barang_masuk')
+                                            ->label('📈 Jumlah Masuk')
+                                            ->numeric()
+                                            ->required()
+                                            ->minValue(1)
+                                            ->prefixIcon('heroicon-o-plus')
+                                            ->placeholder('0')
+                                            ->columnSpan(1),
+
+                                        Forms\Components\Hidden::make('kode_barang'),
+                                    ])
+                            ])
+                            ->itemLabel(
+                                fn(array $state): ?string =>
+                                isset($state['barang_id']) ?
+                                    \App\Models\Barang::find($state['barang_id'])?->nama_barang . ' (' . ($state['jumlah_barang_masuk'] ?? '0') . ' unit)' :
+                                    'Barang Baru'
+                            )
+                            ->collapsible()
+                            ->defaultItems(1)
+                            ->addActionLabel('+ Tambah Barang Lama')
+                            ->reorderableWithButtons()
+                            ->deleteAction(
+                                fn(Forms\Components\Actions\Action $action) => $action->requiresConfirmation()
+                            )
+                            ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_lama'),
+
+                        // Repeater for New Items
+                        Forms\Components\Repeater::make('barang_baru_items')
+                            ->schema([
+                                Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
+                                    ->schema([
+                                        Forms\Components\TextInput::make('serial_number')
+                                            ->label('Serial Number')
+                                            ->required()
+                                            ->unique(table: 'barangs', column: 'serial_number', ignoreRecord: true)
+                                            ->dehydrated()
+                                            ->prefixIcon('heroicon-o-identification')
+                                            ->placeholder('SN-XXXX-XXXX')
+                                            ->extraAttributes(['style' => 'font-family: monospace;']),
+
+                                        Forms\Components\TextInput::make('kode_barang')
+                                            ->label('Kode Barang')
+                                            ->numeric()
+                                            ->unique(table: 'barangs', column: 'kode_barang', ignoreRecord: true)
+                                            ->required()
+                                            ->dehydrated()
+                                            ->prefixIcon('heroicon-o-hashtag')
+                                            ->placeholder('Contoh: 12345')
+                                            ->extraAttributes(['style' => 'font-family: monospace;']),
+
+                                        Forms\Components\TextInput::make('nama_barang')
+                                            ->label('Nama Barang')
+                                            ->required()
+                                            ->placeholder('Masukkan nama barang...')
+                                            ->prefixIcon('heroicon-o-tag')
+                                            ->suffixIcon('heroicon-o-check-circle')
+                                            ->suffixIconColor('success'),
+
+                                        Forms\Components\Select::make('kategori_id')
+                                            ->label('Kategori Barang')
+                                            ->relationship('kategori', 'nama_kategori')
+                                            ->searchable()
+                                            ->preload()
+                                            ->createOptionForm([
+                                                Forms\Components\TextInput::make('nama_kategori')
+                                                    ->required()
+                                                    ->maxLength(255)
+                                                    ->label('Nama Kategori')
+                                                    ->placeholder('Masukkan nama kategori baru...'),
+                                            ])
+                                            ->required()
+                                            ->prefixIcon('heroicon-o-tag'),
+
                                         Forms\Components\TextInput::make('jumlah_barang_masuk')
                                             ->label('📈 Jumlah Barang Masuk')
                                             ->numeric()
@@ -288,11 +276,25 @@ class BarangmasukResource extends Resource
                                             ->prefixIcon('heroicon-o-plus')
                                             ->prefix('Qty:')
                                             ->suffix('Unit')
-                                            ->extraAttributes(['class' => 'font-mono text-center text-lg'])
-                                            ->columnSpan(['sm' => 1, 'md' => 3]),
+                                            ->extraAttributes(['class' => 'font-mono text-center'])
+                                            ->columnSpan(2),
                                     ]),
-                            ]),
-                    ]), 
+                            ])
+                            ->itemLabel(
+                                fn(array $state): ?string =>
+                                isset($state['nama_barang']) ?
+                                    $state['nama_barang'] . ' (' . ($state['jumlah_barang_masuk'] ?? '0') . ' unit)' :
+                                    'Barang Baru'
+                            )
+                            ->collapsible()
+                            ->defaultItems(1)
+                            ->addActionLabel('+ Tambah Barang Baru')
+                            ->reorderableWithButtons()
+                            ->deleteAction(
+                                fn(Forms\Components\Actions\Action $action) => $action->requiresConfirmation()
+                            )
+                            ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru'),
+                    ]),
             ]);
     }
 
@@ -306,34 +308,58 @@ class BarangmasukResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->copyable()
+                    ->copyMessage('Serial number berhasil disalin!')
+                    ->copyMessageDuration(1500)
+                    ->icon('heroicon-o-identification')
+                    ->weight('bold')
+                    ->color('primary')
                     ->toggleable(),
 
                 TextColumn::make('barang.nama_barang')
                     ->label('Nama Barang')
                     ->searchable()
                     ->sortable()
+                    ->limit(30)
+                    ->tooltip(fn($record) => $record->barang->nama_barang)
+                    ->wrap()
+                    ->icon('heroicon-o-cube')
                     ->toggleable(),
 
                 TextColumn::make('barang.kode_barang')
                     ->label('Kode Barang')
                     ->searchable()
+                    ->badge()
+                    ->color('gray')
+                    ->icon('heroicon-o-qr-code')
                     ->toggleable(),
 
                 TextColumn::make('jumlah_barang_masuk')
-                    ->label('Jumlah Barang Masuk')
+                    ->label('Jumlah Masuk')
+                    ->numeric(
+                        decimalPlaces: 0,
+                        decimalSeparator: ',',
+                        thousandsSeparator: '.'
+                    )
                     ->sortable()
+                    ->icon('heroicon-o-arrow-trending-up')
+                    ->alignCenter()
+                    ->weight('bold')
                     ->toggleable(),
 
                 TextColumn::make('tanggal_barang_masuk')
                     ->label('Tanggal Masuk')
                     ->date('d M Y')
                     ->sortable()
+                    ->icon('heroicon-o-calendar')
+                    ->color('success')
                     ->toggleable(),
 
                 TextColumn::make('dibeli')
                     ->label('Diajukan Oleh')
                     ->searchable()
                     ->sortable()
+                    ->formatStateUsing(fn($state) => ucwords($state))
+                    ->icon('heroicon-o-user')
                     ->toggleable(),
 
                 TextColumn::make('status')
@@ -345,10 +371,15 @@ class BarangmasukResource extends Resource
                         'project' => 'warning',
                         default => 'gray',
                     })
+                    ->icon(fn(string $state): string => match ($state) {
+                        'oprasional_kantor' => 'heroicon-o-building-office',
+                        'project' => 'heroicon-o-briefcase',
+                        default => 'heroicon-o-question-mark-circle',
+                    })
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'oprasional_kantor' => 'Operasional Kantor',
                         'project' => 'Project',
-                        default => $state,
+                        default => ucfirst($state),
                     })
                     ->toggleable(),
 
@@ -356,26 +387,45 @@ class BarangmasukResource extends Resource
                     ->label('Nama Project')
                     ->searchable()
                     ->sortable()
+                    ->placeholder('Tidak ada project')
+                    ->limit(25)
+                    ->tooltip(fn($record) => $record->project_name)
+                    ->icon('heroicon-o-document-text')
                     ->toggleable()
                     ->visible(fn($livewire) => $livewire->activeTab === 'project'),
 
                 TextColumn::make('user.name')
-                    ->label('Yang Input')
+                    ->label('Diinput Oleh')
+                    ->searchable()
                     ->sortable()
+                    ->formatStateUsing(fn($state) => ucwords($state))
+                    ->icon('heroicon-o-user-circle')
+                    ->color('info')
                     ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y, H:i')
+                    ->since() // Menampilkan dalam format "x hari yang lalu"
                     ->sortable()
+                    ->icon('heroicon-o-clock')
+                    ->color('gray')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('updated_at')
                     ->label('Diperbarui')
                     ->dateTime('d M Y, H:i')
+                    ->since() // Menampilkan dalam format "x jam yang lalu"
                     ->sortable()
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('gray')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
+            ->striped()
+            ->searchable()
+            ->persistFiltersInSession()
+            ->filtersFormColumns(3)
             ->filters([
                 TrashedFilter::make(),
 
@@ -456,7 +506,11 @@ class BarangmasukResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),
-                ]),
+                ])
+                    ->label('Tindakan')
+                    ->icon('heroicon-m-adjustments-horizontal')
+                    ->color('danger')
+                    ->tooltip('Aksi untuk barang masuk yang dipilih'),
             ])
             ->defaultSort('created_at', 'desc')
             ->emptyStateHeading('Belum Ada Data Barang Masuk')

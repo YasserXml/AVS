@@ -13,7 +13,7 @@ class Pengajuan extends Model
     protected $table = 'pengajuans';
 
     protected $fillable = [
-        'jumlah_barang_diajukan',
+        'Jumlah_barang_diajukan',
         'status',
         'tanggal_pengajuan',
         'keterangan',
@@ -24,6 +24,8 @@ class Pengajuan extends Model
         'kategoris_id',
         'approved_by',
         'reject_by',
+        'barang_keluar_id',
+        'status_barang',
     ];
 
     protected $casts =[
@@ -32,4 +34,39 @@ class Pengajuan extends Model
         'approved_at' => 'datetime',
         'reject_reason' => 'string',
     ];
+
+    public function barang()
+    {
+        return $this->belongsTo(Barang::class, 'barang_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function kategori()
+    {
+        return $this->belongsTo(Kategori::class, 'kategoris_id');
+    }
+
+    public function barangKeluar()
+    {
+        return $this->belongsTo(Barangkeluar::class, 'barang_keluar_id');
+    }
+
+    public function rejectedBy()
+    {
+        return $this->belongsTo(User::class, 'reject_by');
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function detailpengajuan()
+    {
+        return $this->hasMany(Detailpengajuan::class);
+    }
 }

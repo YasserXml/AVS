@@ -19,12 +19,14 @@ return new class extends Migration
             $table->integer('Jumlah_barang_diajukan');
             $table->enum('status',['pending','approved','rejected'])->default('pending');
             $table->date('tanggal_pengajuan');
-            $table->text('keterangan');
-            $table->foreignId('approved_by')->constrained('users');
+            $table->text('keterangan')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->dateTime('approved_at')->nullable();
-            $table->foreignId('reject_by')->constrained('users');
+            $table->foreignId('reject_by')->nullable()->constrained('users');
             $table->text('reject_reason')->nullable();
-             $table->foreignId('barang_keluar_id')->constrained('barangkeluars')->after('barang_id');
+            $table->foreignId('barang_keluar_id')->nullable()->constrained('barangkeluars');
+            $table->enum('status_barang',['oprasional_kantor', 'project']);
+            $table->string('nama_project')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

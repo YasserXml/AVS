@@ -10,5 +10,5 @@ return [
     BezhanSalleh\FilamentShield\FilamentShieldServiceProvider::class,
     // Laravel\Socialite\SocialiteServiceProvider::class,
     // SanctumServiceProvider::class,
-    // FilamentThemeInspectorServiceProvider::class,
+
 ];
