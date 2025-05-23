@@ -26,6 +26,8 @@ class Pengajuan extends Model
         'reject_by',
         'barang_keluar_id',
         'status_barang',
+        'nama_project',
+        'batch_id',
     ];
 
     protected $casts =[
@@ -63,10 +65,5 @@ class Pengajuan extends Model
     public function approvedBy()
     {
         return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    public function detailpengajuan()
-    {
-        return $this->hasMany(Detailpengajuan::class);
     }
 }

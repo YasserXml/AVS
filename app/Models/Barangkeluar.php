@@ -13,13 +13,17 @@ class Barangkeluar extends Model
     protected $table = 'barangkeluars';
 
     protected $fillable = [
-        'barang_id',
-        'pengajuan_id',
-        'user_id',
-        'jumlah_barang_keluar',
-        'tanggal_keluar_barang',
-        'keterangan',
-        'status',
+       'jumlah_barang_keluar',
+       'tanggal_barang_keluar',
+       'keterangan',
+       'status',
+       'barang_id',
+       'pengajuan_id',
+       'user_id',
+    ];
+
+    protected $casts = [
+        'tanggal_barang_keluar' => 'date',
     ];
 
     public function barang()

@@ -4,13 +4,15 @@ namespace App\Filament\Resources\PengajuanResource\Pages;
 
 use App\Filament\Resources\PengajuanResource;
 use App\Models\Barang;
-use Filament\Actions;
-use Filament\Notifications\Notification;
+use App\Models\Pengajuan;
+use App\Services\AdminNotificationService;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Contracts\Support\Htmlable;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CreatePengajuan extends CreateRecord
 {
@@ -30,74 +32,73 @@ class CreatePengajuan extends CreateRecord
     {
         DB::beginTransaction();
         try {
-            // Debug untuk melihat data yang diterima
-            // dd($data); // Uncomment untuk debug
+            // Generate batch_id unik untuk pengajuan bersamaan
+            $batchId = 'PGJ-' . now()->format('YmdHis') . '-' . Str::random(6);
 
-            // Pastikan status_barang ada dan tidak null
             if (!isset($data['status_barang']) || $data['status_barang'] === null) {
-                $data['status_barang'] = 'oprasional_kantor'; // Set default value
+                $data['status_barang'] = 'oprasional_kantor';
             }
 
-            // Data dasar untuk semua pengajuan
             $baseData = [
+                'batch_id' => $batchId, //batch_id untuk mengelompokkan
                 'user_id' => $data['user_id'],
                 'tanggal_pengajuan' => $data['tanggal_pengajuan'],
-                'status_barang' => $data['status_barang'], // Pastikan nilai ini ada
+                'status_barang' => $data['status_barang'],
+                'nama_project' => $data['nama_project'] ?? null,
                 'keterangan' => $data['keterangan'] ?? null,
-                'status' => 'pending', // Default status
-            ];
+                'status' => 'pending',
+            ]; 
 
             $createdRecords = [];
 
-            // Proses data dari repeater dan buat multiple records
             if (isset($data['detail_pengajuan']) && count($data['detail_pengajuan']) > 0) {
                 foreach ($data['detail_pengajuan'] as $detailItem) {
-                    // Pastikan barang_id ada
                     if (!isset($detailItem['barang_id']) || empty($detailItem['barang_id'])) {
                         continue;
                     }
 
-                    // Dapatkan barang yang dipilih
                     $barang = Barang::findOrFail($detailItem['barang_id']);
 
-                    
-                    // Buat data pengajuan untuk barang ini
                     $pengajuanData = array_merge($baseData, [
                         'barang_id' => $detailItem['barang_id'],
-                        'kategoris_id' => $detailItem['kategoris_id'] ?? $barang->kategori_id, // Gunakan nilai dari form dulu
-                        'Jumlah_barang_diajukan' => $detailItem['jumlah_diajukan'],
+                        'kategoris_id' => $detailItem['kategoris_id'] ?? $barang->kategori_id,
+                        'Jumlah_barang_diajukan' => $detailItem['Jumlah_barang_diajukan'],
                     ]);
 
-                    // Tambahkan catatan ke keterangan jika ada
-                    if (!empty($detailItem['catatan'])) {
-                        $pengajuanData['keterangan'] = (empty($pengajuanData['keterangan']) ? '' : $pengajuanData['keterangan'] . "\n\n") .
-                            "Catatan barang: " . $detailItem['catatan'];
+                    $finalKeterangan = $pengajuanData['keterangan'] ?? '';
+
+                    if (!empty($detailItem['catatan_barang'])) {
+                        if (!empty($finalKeterangan)) {
+                            $finalKeterangan .= "\n\n--- Catatan Barang: " . $barang->nama_barang . " ---\n";
+                            $finalKeterangan .= $detailItem['catatan_barang'];
+                        } else {
+                            $finalKeterangan = "Catatan Barang: " . $barang->nama_barang . "\n" . $detailItem['catatan_barang'];
+                        }
                     }
 
-                    // Simpan record pengajuan
+                    $pengajuanData['keterangan'] = $finalKeterangan;
                     $createdRecords[] = static::getModel()::create($pengajuanData);
                 }
 
-                // Notifikasi sukses
+                // Kirim notifikasi
+                if (!empty($createdRecords)) {
+                    try {
+                        $pengaju = filament()->auth()->user();
+                        $pengajuanCollection = collect($createdRecords);
+                        AdminNotificationService::sendPengajuanNotification($pengajuanCollection, $pengaju);
+                    } catch (\Exception $e) {
+                        Log::error('Gagal mengirim notifikasi email pengajuan: ' . $e->getMessage());
+                    }
+                }
+
                 Notification::make()
                     ->title('Pengajuan barang berhasil dibuat')
-                    ->body('Sebanyak ' . count($createdRecords) . ' barang telah diajukan')
+                    ->body('Sebanyak ' . count($createdRecords))
                     ->success()
                     ->send();
-            } else {
-                // Jika tidak ada detail barang
-                Notification::make()
-                    ->title('Pengajuan tidak berhasil')
-                    ->body('Tidak ada barang yang diajukan')
-                    ->warning()
-                    ->send();
-
-                throw new \Exception('Tidak ada barang yang diajukan');
             }
 
             DB::commit();
-
-            // Kembalikan record pertama untuk redirect
             return $createdRecords[0] ?? static::getModel()::latest()->first();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -109,8 +110,6 @@ class CreatePengajuan extends CreateRecord
             throw $e;
         }
     }
-
-
 
     public function getTitle(): string|Htmlable
     {

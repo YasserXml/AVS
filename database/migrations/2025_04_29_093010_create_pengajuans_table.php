@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('pengajuans', function (Blueprint $table) {
             $table->id();
+             $table->string('batch_id')->nullable()->after('id');
+            $table->index('batch_id');
             $table->foreignId('barang_id')->constrained('barangs');
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('kategoris_id')->constrained('kategoris');
@@ -24,7 +26,7 @@ return new class extends Migration
             $table->dateTime('approved_at')->nullable();
             $table->foreignId('reject_by')->nullable()->constrained('users');
             $table->text('reject_reason')->nullable();
-            $table->foreignId('barang_keluar_id')->nullable()->constrained('barangkeluars');
+            $table->string('reject_at')->nullable()->after('reject_reason');
             $table->enum('status_barang',['oprasional_kantor', 'project']);
             $table->string('nama_project')->nullable();
             $table->timestamps();

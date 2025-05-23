@@ -9,6 +9,7 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -39,7 +40,39 @@ class BarangkeluarResource extends Resource
     {
         return $table
             ->columns([
-                //
+                TextColumn::make('jumlah_barang_keluar')
+                    ->label('Jumlah Barang Keluar')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('tanggal_keluar_barang')
+                    ->label('Tanggal Keluar Barang')
+                    ->sortable()
+                    ->searchable()
+                    ->dateTime('d/m/Y'),
+                TextColumn::make('keterangan')
+                    ->label('Keterangan')
+                    ->sortable()
+                    ->searchable(), 
+                TextColumn::make('barang.nama_barang')
+                    ->label('Nama Barang')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('user.name')
+                    ->label('Nama User')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('pengajuan.batch_id')
+                    ->label('Batch ID')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('created_at')
+                    ->label('Dibuat Pada')
+                    ->sortable()
+                    ->dateTime('d/m/Y H:i:s'),
+                TextColumn::make('updated_at')
+                    ->label('Diperbarui Pada')
+                    ->sortable()
+                    ->dateTime('d/m/Y H:i:s'),
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),

@@ -32,7 +32,7 @@
         }
         
         .header {
-            background-color: #222222;
+            background-color: #455045;
             padding: 20px;
             text-align: center;
         }
@@ -81,7 +81,7 @@
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 10px;
-            color: #222222;
+            color: #455045;
         }
         
         .message {
@@ -107,7 +107,7 @@
         
         .info-box strong {
             width: 140px;
-            color: #222222;
+            color: #455045;
             font-weight: 600;
         }
         
@@ -142,7 +142,7 @@
         .footer {
             text-align: center;
             padding: 15px;
-            background-color: #222222;
+            background-color: #455045;
             color: #ffffff;
             font-size: 12px;
         }

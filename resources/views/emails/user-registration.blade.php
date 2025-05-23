@@ -32,7 +32,7 @@
         }
         
         .header {
-            background-color: #222222;
+            background-color: #455056;
             padding: 20px;
             text-align: center;
         }
@@ -107,7 +107,7 @@
         
         .info-box strong {
             width: 140px;
-            color: #222222;
+            color: #455056;
             font-weight: 600;
         }
         
@@ -142,7 +142,7 @@
         .footer {
             text-align: center;
             padding: 15px;
-            background-color: #222222;
+            background-color: #455056;
             color: #ffffff;
             font-size: 12px;
         }

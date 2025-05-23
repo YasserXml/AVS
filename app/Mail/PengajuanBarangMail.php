@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\Pengajuan;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -9,16 +11,22 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class UserCreatePengajuanMail extends Mailable
+class PengajuanBarangMail extends Mailable
 {
     use Queueable, SerializesModels;
+
+    public $pengajuanItems;
+    public $pengaju;
+    public $totalBarang;
 
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct($pengajuanItems, User $pengaju)
     {
-        //
+        $this->pengajuanItems = $pengajuanItems;
+        $this->pengaju = $pengaju;
+        $this->totalBarang = count($pengajuanItems);
     }
 
     /**
@@ -27,7 +35,7 @@ class UserCreatePengajuanMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'User Create Pengajuan Mail',
+            subject: 'Pengajuan Barang Baru - ' . $this->pengaju->name,
         );
     }
 
@@ -37,7 +45,12 @@ class UserCreatePengajuanMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.pengajuan-barang',
+            with: [
+                'pengajuanItems' => $this->pengajuanItems,
+                'pengaju' => $this->pengaju,
+                'totalBarang' => $this->totalBarang,
+            ],
         );
     }
 

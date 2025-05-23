@@ -7,7 +7,9 @@ use Filament\Actions;
 use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\IconPosition;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class ListPengajuans extends ListRecords
 {
@@ -55,5 +57,14 @@ class ListPengajuans extends ListRecords
                 ->badgeColor('danger')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'rejected')),
         ];
+    }
+
+     public function getTitle(): string|Htmlable
+    {
+        return new HtmlString('
+            <div class="flex items-center gap-2 ">
+                <span class="text-xl font-bold">Pengajuan Barang</span>
+            </div>
+        ');
     }
 }
