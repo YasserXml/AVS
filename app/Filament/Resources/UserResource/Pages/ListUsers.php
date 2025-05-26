@@ -8,6 +8,7 @@ use Filament\Forms\Components\Tabs\Tab;
 use Filament\Resources\Components\Tab as ComponentsTab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 
 class ListUsers extends ListRecords
 {
@@ -21,11 +22,6 @@ class ListUsers extends ListRecords
                 ->color('success')
                 ->icon('heroicon-o-plus'),
         ];
-    }
-
-    public function getTitle(): string|Htmlable
-    {
-        return "Pengguna";
     }
 
     public function getTabs(): array
@@ -75,5 +71,14 @@ class ListUsers extends ListRecords
                 ->badgeColor('primary')
                 ->modifyQueryUsing(fn($query) => $query->role('divisi_mekanik')),
         ];
+    }
+
+    public function getTitle(): string|Htmlable
+    {
+        return new HtmlString('
+            <div class="flex items-center gap-2 ">
+                <span class="text-xl font-bold">Pengguna</span>
+            </div>
+        ');
     }
 }

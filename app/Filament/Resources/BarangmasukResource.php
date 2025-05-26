@@ -57,7 +57,7 @@ class BarangmasukResource extends Resource
             ->schema([
                 // Informasi Transaksi Section
                 Forms\Components\Section::make()
-                    ->heading('📋 Informasi Transaksi')
+                    ->heading('Informasi Transaksi')
                     ->description('Detail informasi transaksi barang masuk')
                     ->icon('heroicon-o-document-text')
                     ->collapsible()
@@ -72,7 +72,7 @@ class BarangmasukResource extends Resource
                                 Forms\Components\Fieldset::make('Detail Waktu & Status')
                                     ->schema([
                                         Forms\Components\DatePicker::make('tanggal_barang_masuk')
-                                            ->label('📅 Tanggal Masuk')
+                                            ->label('Tanggal Masuk')
                                             ->default(now())
                                             ->required()
                                             ->disabled()
@@ -82,7 +82,7 @@ class BarangmasukResource extends Resource
                                             ->extraAttributes(['style' => 'font-weight: 500;']),
 
                                         Forms\Components\Select::make('status')
-                                            ->label('🚩 Status Penggunaan')
+                                            ->label('Status Penggunaan')
                                             ->options([
                                                 'oprasional_kantor' => 'Operasional Kantor',
                                                 'project' => 'Project',
@@ -100,12 +100,10 @@ class BarangmasukResource extends Resource
                                 Forms\Components\Fieldset::make('Informasi Penanggung Jawab')
                                     ->schema([
                                         Forms\Components\TextInput::make('dibeli')
-                                            ->label('👤 Diajukan Oleh')
+                                            ->label('Diajukan Oleh')
                                             ->required()
                                             ->placeholder('Masukkan nama pengaju')
-                                            ->prefixIcon('heroicon-o-user-circle')
-                                            ->suffixIcon('heroicon-o-check-circle')
-                                            ->suffixIconColor('success'),
+                                            ->prefixIcon('heroicon-o-user-circle'),
 
                                         Forms\Components\Select::make('user_id')
                                             ->label('Yang Input')
@@ -122,7 +120,7 @@ class BarangmasukResource extends Resource
 
                         // Conditional Project Name
                         Forms\Components\TextInput::make('project_name')
-                            ->label('💼 Nama Project')
+                            ->label('Nama Project')
                             ->placeholder('Masukkan nama project')
                             ->required(fn(Get $get) => $get('status') === 'project')
                             ->visible(fn(Get $get) => $get('status') === 'project')
@@ -133,7 +131,7 @@ class BarangmasukResource extends Resource
 
                 // Detail Barang Section
                 Forms\Components\Section::make()
-                    ->heading('📦 Detail Barang')
+                    ->heading('Detail Barang')
                     ->description('Informasi detail barang yang masuk ke inventori')
                     ->icon('heroicon-o-cube')
                     ->collapsible()
@@ -154,7 +152,8 @@ class BarangmasukResource extends Resource
                                     ->required()
                                     ->inline()
                                     ->live()
-                                    ->helperText('💡 Pilih jenis input sesuai kebutuhan transaksi barang masuk')
+                                    ->reactive()
+                                    ->helperText('Pilih jenis input sesuai kebutuhan transaksi barang masuk')
                                     ->columnSpanFull(),
                             ])
                             ->extraAttributes(['class' => 'border-2 border-dashed border-gray-300 bg-gray-50/50 dark:border-gray-600 dark:bg-gray-800/50']),
@@ -168,7 +167,8 @@ class BarangmasukResource extends Resource
                                             ->label('Pilih Barang')
                                             ->relationship('barang', 'nama_barang')
                                             ->searchable()
-                                            ->preload()
+                                            ->preload() 
+                                            ->reactive()
                                             ->live()
                                             ->required()
                                             ->placeholder('Cari atau pilih barang...')
@@ -185,7 +185,7 @@ class BarangmasukResource extends Resource
                                             }),
 
                                         Forms\Components\TextInput::make('stok_saat_ini')
-                                            ->label('📊 Stok Saat Ini')
+                                            ->label('Stok Saat Ini')
                                             ->numeric()
                                             ->disabled()
                                             ->dehydrated(false)
@@ -194,9 +194,11 @@ class BarangmasukResource extends Resource
                                             ->columnSpan(1),
 
                                         Forms\Components\TextInput::make('jumlah_barang_masuk')
-                                            ->label('📈 Jumlah Masuk')
+                                            ->label('Jumlah Barang Masuk')
                                             ->numeric()
                                             ->required()
+                                            ->reactive()
+                                            ->live()
                                             ->minValue(1)
                                             ->prefixIcon('heroicon-o-plus')
                                             ->placeholder('0')
@@ -248,9 +250,7 @@ class BarangmasukResource extends Resource
                                             ->label('Nama Barang')
                                             ->required()
                                             ->placeholder('Masukkan nama barang...')
-                                            ->prefixIcon('heroicon-o-tag')
-                                            ->suffixIcon('heroicon-o-check-circle')
-                                            ->suffixIconColor('success'),
+                                            ->prefixIcon('heroicon-o-tag'),
 
                                         Forms\Components\Select::make('kategori_id')
                                             ->label('Kategori Barang')
@@ -268,7 +268,7 @@ class BarangmasukResource extends Resource
                                             ->prefixIcon('heroicon-o-tag'),
 
                                         Forms\Components\TextInput::make('jumlah_barang_masuk')
-                                            ->label('📈 Jumlah Barang Masuk')
+                                            ->label('Jumlah Barang Masuk')
                                             ->numeric()
                                             ->required()
                                             ->minValue(1)

@@ -8,6 +8,7 @@ use App\Filament\Resources\PengajuanResource\RelationManagers\DetailPengajuanRel
 use App\Models\Barang;
 use App\Models\Barangkeluar;
 use App\Models\Pengajuan;
+use App\Services\PengajuanApprovalService;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -154,6 +155,7 @@ class PengajuanResource extends Resource
                                                     ->searchable()
                                                     ->preload()
                                                     ->required()
+                                                    ->reactive()
                                                     ->live()
                                                     ->prefixIcon('heroicon-o-magnifying-glass')
                                                     ->afterStateUpdated(function ($state, callable $set) {
@@ -216,6 +218,8 @@ class PengajuanResource extends Resource
                                                     ->label('Jumlah Yang Diajukan')
                                                     ->numeric()
                                                     ->required()
+                                                    ->reactive()
+                                                    ->live()
                                                     ->minValue(1)
                                                     ->maxValue(function (callable $get) {
                                                         $stokTersedia = (int) $get('jumlah_barang');
@@ -324,20 +328,7 @@ class PengajuanResource extends Resource
                         ])
                             ->collapsible(false),
 
-                        BadgeColumn::make('batch_info')
-                            ->label('Batch')
-                            ->formatStateUsing(function ($record) {
-                                if (empty($record->batch_id)) return '';
-
-                                $batchCount = Pengajuan::where('batch_id', $record->batch_id)->count();
-                                return "Batch ({$batchCount} item)";
-                            })
-                            ->color('gray')
-                            ->size('sm')
-                            ->visible(fn($record) => !empty($record->batch_id)),
-
                         Split::make([
-                            // PERBAIKAN: Gunakan nama relationship yang benar sesuai model
                             TextColumn::make('approvedBy.name')
                                 ->label('Disetujui Oleh')
                                 ->formatStateUsing(fn($state) => $state ? "✅ " . $state : '')
@@ -354,7 +345,6 @@ class PengajuanResource extends Resource
                                 )
                                 ->size('sm'),
 
-                            // PERBAIKAN: Pastikan nama_project ditampilkan
                             TextColumn::make('status_barang')
                                 ->label('Diperuntukan')
                                 ->formatStateUsing(function ($state, $record) {
@@ -364,13 +354,8 @@ class PengajuanResource extends Resource
                                     ];
                                     $statusText = $labels[$state] ?? $state;
 
-                                    // PERBAIKAN: Debug untuk melihat apakah nama_project ada
-                                    if ($state === 'project') {
-                                        if (!empty($record->nama_project)) {
-                                            $statusText .= ' - ' . $record->nama_project;
-                                        } else {
-                                            $statusText .= ' (Nama project tidak diisi)'; // Debug text
-                                        }
+                                    if ($state === 'project' && !empty($record->nama_project)) {
+                                        $statusText .= ' - ' . $record->nama_project;
                                     }
 
                                     return "" . $statusText;
@@ -380,7 +365,6 @@ class PengajuanResource extends Resource
                         ]),
 
                         Split::make([
-                            // PERBAIKAN: Gunakan nama relationship yang benar
                             TextColumn::make('rejectedBy.name')
                                 ->label('Ditolak Oleh')
                                 ->formatStateUsing(fn($state) => $state ? "❌ " . $state : '')
@@ -420,6 +404,7 @@ class PengajuanResource extends Resource
                 TrashedFilter::make()
                     ->preload()
                     ->searchable(),
+
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'pending' => 'Menunggu Persetujuan',
@@ -430,6 +415,21 @@ class PengajuanResource extends Resource
                     ->indicator('Status')
                     ->preload()
                     ->searchable(),
+
+                // Filter untuk pengajuan bersamaan
+                Tables\Filters\Filter::make('has_group')
+                    ->label('Pengajuan Bersamaan')
+                    ->toggle()
+                    ->query(function (Builder $query, array $data): Builder {
+                        if ($data['isActive']) {
+                            return $query->whereNotNull('batch_id')
+                                ->whereHas('batchSiblings', function ($q) {
+                                    $q->havingRaw('COUNT(*) > 1');
+                                });
+                        }
+                        return $query;
+                    })
+                    ->indicator('Pengajuan Bersamaan'),
 
                 Tables\Filters\Filter::make('tanggal_pengajuan')
                     ->form([
@@ -472,30 +472,20 @@ class PengajuanResource extends Resource
                 ActionsAction::make('approve')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->label('Setujui Batch')
-                    ->modalHeading('Setujui Semua Pengajuan dalam Batch')
+                    ->label('Setujui')
+                    ->modalHeading('Setujui Pengajuan')
                     ->modalDescription(function (Pengajuan $record) {
-                        // Cari semua pengajuan dalam batch yang sama
-                        $batchPengajuans = Pengajuan::where('batch_id', $record->batch_id)
-                            ->where('status', 'pending')
-                            ->with('barang')
-                            ->get();
-
-                        $totalItems = $batchPengajuans->count();
-                        $itemList = $batchPengajuans->map(function ($item) {
-                            return "• {$item->barang->nama_barang} ({$item->Jumlah_barang_diajukan} unit)";
-                        })->join("\n");
-
-                        return "Anda akan menyetujui {$totalItems} pengajuan barang sekaligus:\n\n{$itemList}";
+                        $approvalService = new PengajuanApprovalService();
+                        return $approvalService->generateApprovalModalDescription($record);
                     })
                     ->modalIcon('heroicon-o-check-circle')
-                    ->modalSubmitActionLabel('Setujui Semua')
+                    ->modalSubmitActionLabel('Setujui')
                     ->form([
                         Forms\Components\Textarea::make('keterangan_barang_keluar')
                             ->label('Keterangan Barang Keluar')
                             ->required()
                             ->maxLength(255)
-                            ->helperText('Keterangan akan diterapkan ke semua barang dalam batch ini')
+                            ->helperText('Keterangan akan diterapkan ke semua barang dalam grup pengajuan ini')
                             ->rows(3),
                     ])
                     ->visible(
@@ -504,80 +494,11 @@ class PengajuanResource extends Resource
                             $record->status === 'pending'
                     )
                     ->action(function (Pengajuan $record, array $data) {
-                        try {
-                            // Ambil semua pengajuan dalam batch yang sama dan masih pending
-                            $batchPengajuans = Pengajuan::where('batch_id', $record->batch_id)
-                                ->where('status', 'pending')
-                                ->with('barang')
-                                ->get();
+                        $approvalService = new PengajuanApprovalService();
+                        $result = $approvalService->approveBatch($record, $data);
 
-                            $approvedCount = 0;
-                            $failedItems = [];
-
-                            DB::transaction(function () use ($batchPengajuans, $data, &$approvedCount, &$failedItems, $record) {
-                                foreach ($batchPengajuans as $pengajuan) {
-                                    try {
-                                        // Periksa stok tersedia
-                                        $barang = Barang::find($pengajuan->barang_id);
-                                        if ($barang->jumlah_barang < $pengajuan->Jumlah_barang_diajukan) {
-                                            $failedItems[] = "{$barang->nama_barang} (stok tidak mencukupi: tersedia {$barang->jumlah_barang}, diminta {$pengajuan->Jumlah_barang_diajukan})";
-                                            continue;
-                                        }
-
-                                        // Catat barang keluar
-                                        $barangKeluar = Barangkeluar::create([
-                                            'barang_id' => $pengajuan->barang_id,
-                                            'pengajuan_id' => $pengajuan->id,
-                                            'user_id' => Auth::id(),
-                                            'jumlah_barang_keluar' => $pengajuan->Jumlah_barang_diajukan,
-                                            'tanggal_keluar_barang' => now()->format('Y-m-d'), // Gunakan tanggal hari ini
-                                            'keterangan' => $data['keterangan_barang_keluar'],
-                                            'status' => $pengajuan->status_barang, // Ambil dari pengajuan
-                                        ]);
-
-                                        // Update pengajuan
-                                        $pengajuan->update([
-                                            'status' => 'approved',
-                                            'approved_by' => Auth::id(),
-                                            'approved_at' => now(),
-                                        ]);
-
-                                        // Kurangi stok barang
-                                        $barang->decrement('jumlah_barang', $pengajuan->Jumlah_barang_diajukan);
-                                        $approvedCount++;
-
-                                        Log::info("Barang keluar berhasil dibuat untuk pengajuan ID: {$pengajuan->id}, tanggal: " . now()->format('Y-m-d'));
-                                    } catch (\Exception $e) {
-                                        $failedItems[] = "{$pengajuan->barang->nama_barang} (error: {$e->getMessage()})";
-                                        Log::error('Error saat approve item individual: ' . $e->getMessage());
-                                    }
-                                }
-                            });
-
-                            // Notifikasi hasil
-                            if ($approvedCount > 0) {
-                                Notification::make()
-                                    ->title('Pengajuan Berhasil Disetujui')
-                                    ->body("Berhasil menyetujui {$approvedCount} pengajuan barang dalam batch {$record->batch_id}")
-                                    ->success()
-                                    ->send();
-                            }
-
-                            if (!empty($failedItems)) {
-                                Notification::make()
-                                    ->title('Beberapa Item Gagal Disetujui')
-                                    ->body("Item yang gagal:\n" . implode("\n", $failedItems))
-                                    ->warning()
-                                    ->persistent()
-                                    ->send();
-                            }
-                        } catch (\Exception $e) {
-                            Log::error('Error saat batch approve: ' . $e->getMessage());
-                            Notification::make()
-                                ->title('Gagal Menyetujui Batch')
-                                ->body('Terjadi kesalahan saat memproses batch pengajuan.')
-                                ->danger()
-                                ->send();
+                        if (!$result['success']) {
+                            Log::error('Group approval failed: ' . ($result['error'] ?? 'Unknown error'));
                         }
                     }),
 
@@ -585,29 +506,20 @@ class PengajuanResource extends Resource
                 ActionsAction::make('reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->label('Tolak Batch')
-                    ->modalHeading('Tolak Semua Pengajuan dalam Batch')
+                    ->label('Tolak')
+                    ->modalHeading('Tolak Pengajuan')
                     ->modalDescription(function (Pengajuan $record) {
-                        $batchPengajuans = Pengajuan::where('batch_id', $record->batch_id)
-                            ->where('status', 'pending')
-                            ->with('barang')
-                            ->get();
-
-                        $totalItems = $batchPengajuans->count();
-                        $itemList = $batchPengajuans->map(function ($item) {
-                            return "• {$item->barang->nama_barang} ({$item->Jumlah_barang_diajukan} unit)";
-                        })->join("\n");
-
-                        return "Anda akan menolak {$totalItems} pengajuan barang sekaligus:\n\n{$itemList}";
+                        $approvalService = new PengajuanApprovalService();
+                        return $approvalService->generateRejectionModalDescription($record);
                     })
                     ->modalIcon('heroicon-o-x-circle')
-                    ->modalSubmitActionLabel('Tolak Semua')
+                    ->modalSubmitActionLabel('Tolak')
                     ->form([
                         Forms\Components\Textarea::make('reject_reason')
                             ->label('Alasan Penolakan')
                             ->required()
                             ->maxLength(255)
-                            ->helperText('Alasan penolakan akan diterapkan ke semua item dalam batch ini')
+                            ->helperText('Alasan penolakan akan diterapkan ke semua item dalam grup pengajuan ini')
                             ->rows(3)
                     ])
                     ->visible(
@@ -616,38 +528,11 @@ class PengajuanResource extends Resource
                             $record->status === 'pending'
                     )
                     ->action(function (Pengajuan $record, array $data) {
-                        try {
-                            // Ambil semua pengajuan dalam batch yang sama dan masih pending
-                            $batchPengajuans = Pengajuan::where('batch_id', $record->batch_id)
-                                ->where('status', 'pending')
-                                ->get();
+                        $approvalService = new PengajuanApprovalService();
+                        $result = $approvalService->rejectBatch($record, $data);
 
-                            $rejectedCount = 0;
-
-                            DB::transaction(function () use ($batchPengajuans, $data, &$rejectedCount) {
-                                foreach ($batchPengajuans as $pengajuan) {
-                                    $pengajuan->update([
-                                        'status' => 'rejected',
-                                        'reject_by' => Auth::id(),
-                                        'reject_reason' => $data['reject_reason'],
-                                        'rejected_at' => now(),
-                                    ]);
-                                    $rejectedCount++;
-                                }
-                            });
-
-                            Notification::make()
-                                ->title('Batch Pengajuan Berhasil Ditolak')
-                                ->body("Berhasil menolak {$rejectedCount} pengajuan barang dalam batch {$record->batch_id}")
-                                ->success()
-                                ->send();
-                        } catch (\Exception $e) {
-                            Log::error('Error saat batch reject: ' . $e->getMessage());
-                            Notification::make()
-                                ->title('Gagal Menolak Batch')
-                                ->body('Terjadi kesalahan saat memproses batch pengajuan.')
-                                ->danger()
-                                ->send();
+                        if (!$result['success']) {
+                            Log::error('Group rejection failed: ' . ($result['error'] ?? 'Unknown error'));
                         }
                     }),
 
@@ -666,6 +551,7 @@ class PengajuanResource extends Resource
                             $record->status === 'pending' &&
                                 (Auth::user()->id === $record->user_id || Auth::user()->hasAnyRole(['super_admin', 'administrator']))
                         ),
+
                     ForceDeleteAction::make(),
                 ]),
             ])

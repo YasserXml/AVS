@@ -127,7 +127,7 @@ class Register extends FilamentRegister
         return TextInput::make('email')
             ->label('Alamat Email')
             ->email()
-            ->placeholder('contoh@perusahaan.com')
+            ->placeholder('contoh@gmail.com')
             ->required()
             ->maxLength(255)
             ->unique(table: User::class, column: 'email')

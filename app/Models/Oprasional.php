@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class Oprasional extends Model
 {
-    //
+    protected $table= 'oprasionals';
 }

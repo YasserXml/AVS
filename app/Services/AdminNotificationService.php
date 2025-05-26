@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Mail\NewUserRegistrationMail;
 use App\Mail\PengajuanBarangMail;
-use App\Mail\UserVerifiedByAdminMail;
+use App\Mail\UserVerified;
 use App\Models\User;
 use Filament\Notifications\Actions\Action;
 use Filament\Notifications\Notification;
@@ -136,7 +136,7 @@ class AdminNotificationService
             ->sendToDatabase($user);
         
         // Kirim email
-        Mail::to($user->email)->queue(new UserVerifiedByAdminMail($user));
+        Mail::to($user->email)->queue(new UserVerified($user));
     }
     
     /**

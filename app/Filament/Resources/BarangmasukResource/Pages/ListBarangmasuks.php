@@ -9,6 +9,7 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\IconPosition;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 
 class ListBarangmasuks extends ListRecords
 {
@@ -30,12 +31,6 @@ class ListBarangmasuks extends ListRecords
         ];
     }
     
-
-    public function getTitle(): Htmlable|string
-    {
-        return 'Daftar Barang Masuk';
-    }
-
      public function getTabs(): array
     {
         $allCount = static::getResource()::getEloquentQuery()->count();
@@ -67,5 +62,14 @@ class ListBarangmasuks extends ListRecords
                 ->badge($projectCount)
                 ->badgeColor('warning'),
         ];
+    }
+
+     public function getTitle(): string|Htmlable
+    {
+        return new HtmlString('
+            <div class="flex items-center gap-2 ">
+                <span class="text-xl font-bold">Barang Masuk</span>
+            </div>
+        ');
     }
 }

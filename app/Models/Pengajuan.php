@@ -30,7 +30,7 @@ class Pengajuan extends Model
         'batch_id',
     ];
 
-    protected $casts =[
+    protected $casts = [
         'jumlah_barang_diajukan' => 'integer',
         'tanggal_pengajuan' => 'datetime',
         'approved_at' => 'datetime',
@@ -65,5 +65,96 @@ class Pengajuan extends Model
     public function approvedBy()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function batchSiblings()
+    {
+        return $this->hasMany(Pengajuan::class, 'batch_id', 'batch_id')
+            ->where('id', '!=', $this->id);
+    }
+
+    public function groupMembers()
+    {
+        return $this->hasMany(Pengajuan::class, 'batch_id', 'batch_id');
+    }
+
+    // Scopes
+    public function scopeInSameGroup($query, $batchId)
+    {
+        return $query->where('batch_id', $batchId);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'rejected');
+    }
+
+    // Helper methods
+    public function isPartOfGroup(): bool
+    {
+        if (empty($this->batch_id)) {
+            return false;
+        }
+
+        return static::where('batch_id', $this->batch_id)->count() > 1;
+    }
+
+    public function getGroupSize(): int
+    {
+        if (empty($this->batch_id)) {
+            return 1;
+        }
+
+        return static::where('batch_id', $this->batch_id)->count();
+    }
+
+    public function getGroupName(): string
+    {
+        if (!$this->isPartOfGroup()) {
+            return 'Pengajuan Tunggal';
+        }
+
+        $tanggal = $this->tanggal_pengajuan->format('d/m');
+        $pemohon = $this->user->name ?? 'Unknown';
+        
+        return "{$pemohon} - {$tanggal}";
+    }
+
+    // Accessor untuk status yang lebih readable
+    public function getStatusLabelAttribute(): string
+    {
+        $labels = [
+            'pending' => 'Menunggu Persetujuan',
+            'approved' => 'Disetujui',
+            'rejected' => 'Ditolak',
+        ];
+
+        return $labels[$this->status] ?? $this->status;
+    }
+
+    public function getStatusBarangLabelAttribute(): string
+    {
+        $labels = [
+            'oprasional_kantor' => 'Operasional Kantor',
+            'project' => 'Project',
+        ];
+
+        $statusText = $labels[$this->status_barang] ?? $this->status_barang;
+
+        if ($this->status_barang === 'project' && !empty($this->nama_project)) {
+            $statusText .= ' - ' . $this->nama_project;
+        }
+
+        return $statusText;
     }
 }

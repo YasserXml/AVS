@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\UserVerified;
 use App\Mail\UserVerifiedByAdminMail;
 use App\Models\User;
 use App\Notifications\AdminVerifiedUser;
@@ -53,7 +54,7 @@ class UserVerificationController extends Controller
         
 
         // Kirim email ke pengguna
-        Mail::to($user->email)->queue(new UserVerifiedByAdminMail($user));
+        Mail::to($user->email)->queue(new UserVerified($user));
 
         // Redirect ke halaman login dengan pesan sukses
         return redirect()->route('filament.admin.auth.login')

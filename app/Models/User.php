@@ -60,6 +60,31 @@ class User extends Authenticatable
         ];
     }
 
+    public function barang()
+    {
+        return $this->hasMany(Barang::class);
+    }
+
+    public function barangmasuk()
+    {
+        return $this->hasMany(Barangmasuk::class);
+    }
+
+    public function barangkeluar()
+    {
+        return $this->hasMany(Barangkeluar::class);
+    }
+
+    public function pengajuan()
+    {
+        return $this->hasMany(Pengajuan::class);
+    }
+
+    public function pengembalian()
+    {
+        return $this->hasMany(Pengembalian::class);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         // Tambahkan kondisi admin_verified

@@ -61,10 +61,6 @@ class BarangkeluarResource extends Resource
                     ->label('Nama User')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('pengajuan.batch_id')
-                    ->label('Batch ID')
-                    ->sortable()
-                    ->searchable(),
                 TextColumn::make('created_at')
                     ->label('Dibuat Pada')
                     ->sortable()

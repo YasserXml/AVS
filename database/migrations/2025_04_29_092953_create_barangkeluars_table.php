@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('pengajuan_id')->constrained('pengajuans')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->integer('jumlah_barang_keluar');
-            $table->date('tanggal_keluar_barang')->nullable()->change();
+            $table->date('tanggal_keluar_barang')->nullable;
             $table->text('keterangan')->nullable();
             $table->enum('status', ['oprasional_kantor', 'project']);
             $table->timestamps();
