@@ -23,7 +23,6 @@ class ListBarangmasuks extends ListRecords
                 ->label('Tambah Barang Masuk')
                 ->iconPosition(IconPosition::Before)
                 ->color('success')
-                ->tooltip('Klik untuk menambahkan data barang masuk baru')
                 ->size('lg')
                 ->extraAttributes([
                     'class' => 'font-semibold shadow-lg hover:shadow-xl transition-all duration-200'

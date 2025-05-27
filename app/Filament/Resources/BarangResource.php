@@ -43,99 +43,123 @@ class BarangResource extends Resource
 
 
     protected static ?string $modelLabel = 'Barang';
-    
+
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
     }
-    
+
     public static function getNavigationBadgeColor(): ?string
     {
         return static::getModel()::count() > 0 ? 'success' : 'danger';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        $count = static::getModel()::count();
+        return $count > 0 ? "Jumlah barang tersedia: $count" : 'Tidak ada barang tersedia';
     }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Wizard::make([
-                    Forms\Components\Wizard\Step::make('Identitas Barang')
-                        ->description('Masukkan informasi identitas barang')
-                        ->icon('heroicon-o-identification')
-                        ->schema([
-                            Forms\Components\TextInput::make('serial_number')
-                                ->label('Nomor Serial')
-                                ->required()
-                                ->maxLength(255)
-                                ->unique(ignoreRecord: true)
-                                ->placeholder('Masukkan nomor serial barang')
-                                ->helperText('Nomor serial harus unik')
-                                ->columnSpan(['default' => 1, 'md' => 1]),
-                            
-                            Forms\Components\TextInput::make('kode_barang')
-                                ->label('Kode Barang')
-                                ->required()
-                                ->numeric()
-                                ->placeholder('Masukkan kode barang')
-                                ->columnSpan(['default' => 1, 'md' => 1]),
-                            
-                            Forms\Components\TextInput::make('nama_barang')
-                                ->label('Nama Barang')
-                                ->required()
-                                ->maxLength(255)
-                                ->placeholder('Masukkan nama barang')
-                                ->columnSpan(['default' => 2, 'md' => 2])
-                                ->autocapitalize(),
-                        ])
-                        ->columns(['default' => 1, 'md' => 2]),
-                        
-                    Forms\Components\Wizard\Step::make('Detail Barang')
-                        ->description('Masukkan detail informasi barang')
-                        ->icon('heroicon-o-information-circle')
-                        ->schema([
-                            Forms\Components\TextInput::make('jumlah_barang')
-                                ->label('Jumlah Barang')
-                                ->required()
-                                ->numeric()
-                                ->minValue(0)
-                                ->placeholder('Masukkan jumlah barang')
-                                ->suffixIcon('heroicon-m-cube')
-                                ->columnSpan(['default' => 1, 'md' => 1]),
-                            
-                            Forms\Components\Select::make('kategori_id')
-                                ->label('Kategori')
-                                ->relationship('kategori', 'nama_kategori')
-                                ->required()
-                                ->searchable()
-                                ->preload()
-                                ->placeholder('Pilih kategori barang')
-                                ->createOptionForm([
-                                    Forms\Components\TextInput::make('nama_kategori')
-                                        ->required()
-                                        ->maxLength(255),
-                                    Forms\Components\Textarea::make('deskripsi')
-                                        ->maxLength(65535),
-                                ])
-                                ->prefixIcon('heroicon-m-tag')
-                                ->columnSpan(['default' => 1, 'md' => 1]),
-                            
-                            Forms\Components\Placeholder::make('created_at')
-                                ->label('Dibuat Pada')
-                                ->content(fn (Barang $record): string => $record->created_at?->diffForHumans() ?? '-')
-                                ->columnSpan(['default' => 1, 'md' => 1])
-                                ->hidden(fn ($operation) => $operation === 'create'),
-                                
-                            Forms\Components\Placeholder::make('updated_at')
-                                ->label('Diperbarui Pada')
-                                ->content(fn (Barang $record): string => $record->updated_at?->diffForHumans() ?? '-')
-                                ->columnSpan(['default' => 1, 'md' => 1])
-                                ->hidden(fn ($operation) => $operation === 'create'),
-                        ])
-                        ->columns(['default' => 1, 'md' => 2]),
-                ])->columnSpanFull(),
-            ]);
+                Forms\Components\Section::make('Identitas Barang')
+                    ->description('Masukkan informasi identitas barang')
+                    ->icon('heroicon-o-identification')
+                    ->schema([
+                        Forms\Components\TextInput::make('serial_number')
+                            ->label('Nomor Serial')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true)
+                            ->placeholder('Masukkan nomor serial barang')
+                            ->helperText('Nomor serial harus unik')
+                            ->prefixIcon('heroicon-m-hashtag')
+                            ->columnSpan(['default' => 2, 'md' => 1]),
+
+                        Forms\Components\TextInput::make('kode_barang')
+                            ->label('Kode Barang')
+                            ->required()
+                            ->numeric()
+                            ->placeholder('Masukkan kode barang')
+                            ->prefixIcon('heroicon-m-qr-code')
+                            ->columnSpan(['default' => 2, 'md' => 1]),
+
+                        Forms\Components\TextInput::make('nama_barang')
+                            ->label('Nama Barang')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('Masukkan nama barang')
+                            ->prefixIcon('heroicon-m-cube')
+                            ->columnSpan(['default' => 2, 'md' => 2])
+                            ->autocapitalize(),
+                    ])
+                    ->columns(['default' => 1, 'md' => 2])
+                    ->collapsible()
+                    ->persistCollapsed(),
+
+                Forms\Components\Section::make('Detail Barang')
+                    ->description('Masukkan detail informasi barang')
+                    ->icon('heroicon-o-information-circle')
+                    ->schema([
+                        Forms\Components\TextInput::make('jumlah_barang')
+                            ->label('Jumlah Barang')
+                            ->required()
+                            ->numeric()
+                            ->minValue(0)
+                            ->placeholder('Masukkan jumlah barang')
+                            ->columnSpan(['default' => 2, 'md' => 1]),
+
+                        Forms\Components\Select::make('kategori_id')
+                            ->label('Kategori')
+                            ->relationship('kategori', 'nama_kategori')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Pilih kategori barang')
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('nama_kategori')
+                                    ->label('Nama Kategori')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->placeholder('Masukkan nama kategori baru'),
+                            ])
+                            ->createOptionModalHeading('Tambah Kategori Baru')
+                            ->createOptionAction(function (Forms\Components\Actions\Action $action) {
+                                return $action
+                                    ->modalHeading('Tambah Kategori Baru')
+                                    ->modalSubmitActionLabel('Simpan')
+                                    ->modalCancelActionLabel('Batal');
+                            })
+                            ->prefixIcon('heroicon-m-tag')
+                            ->columnSpan(['default' => 2, 'md' => 1]),
+                    ])
+                    ->columns(['default' => 1, 'md' => 2])
+                    ->collapsible()
+                    ->persistCollapsed(),
+
+                Forms\Components\Section::make('Informasi Sistem')
+                    ->description('Informasi waktu pembuatan dan pembaruan')
+                    ->icon('heroicon-o-clock')
+                    ->schema([
+                        Forms\Components\Placeholder::make('created_at')
+                            ->label('Dibuat Pada')
+                            ->content(fn(?Barang $record): string => $record?->created_at?->format('d M Y, H:i') ?? '-')
+                            ->columnSpan(['default' => 1, 'md' => 1]),
+
+                        Forms\Components\Placeholder::make('updated_at')
+                            ->label('Diperbarui Pada')
+                            ->content(fn(?Barang $record): string => $record?->updated_at?->format('d M Y, H:i') ?? '-')
+                            ->columnSpan(['default' => 1, 'md' => 1]),
+                    ])
+                    ->columns(['default' => 1, 'md' => 2])
+                    ->collapsed()
+                    ->hidden(fn($operation) => $operation === 'create'),
+            ])
+            ->columns(['default' => 1, 'lg' => 2]);
     }
-    
+
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -148,22 +172,21 @@ class BarangResource extends Resource
                             ->copyable()
                             ->badge()
                             ->color('primary'),
-                        
+
                         Infolists\Components\TextEntry::make('kode_barang')
                             ->label('Kode Barang')
                             ->copyable(),
-                            
+
                         Infolists\Components\TextEntry::make('nama_barang')
                             ->label('Nama Barang')
                             ->weight(FontWeight::Bold)
                             ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
-                            
+
                         Infolists\Components\TextEntry::make('jumlah_barang')
                             ->label('Jumlah Barang')
                             ->badge()
-                            ->color(fn (int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger')),
-                            // ->suffixIcon(fn (int $state): string => $state > 10 ? 'heroicon-o-check-circle' : ($state > 0 ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-x-circle')),
-                            
+                            ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger')),
+
                         Infolists\Components\TextEntry::make('kategori.nama_kategori')
                             ->label('Kategori')
                             ->badge()
@@ -171,7 +194,7 @@ class BarangResource extends Resource
                             ->color('success'),
                     ])
                     ->columns(2),
-                
+
                 Infolists\Components\Section::make('Riwayat')
                     ->icon('heroicon-o-clock')
                     ->collapsed()
@@ -180,20 +203,20 @@ class BarangResource extends Resource
                             ->label('Dibuat Pada')
                             ->dateTime('d M Y H:i')
                             ->icon('heroicon-m-calendar'),
-                            
+
                         Infolists\Components\TextEntry::make('updated_at')
                             ->label('Diperbarui Pada')
                             ->dateTime('d M Y H:i')
                             ->since()
                             ->icon('heroicon-m-arrow-path'),
-                            
+
                         Infolists\Components\TextEntry::make('deleted_at')
                             ->label('Dihapus Pada')
                             ->dateTime('d M Y H:i')
                             ->badge()
                             ->color('danger')
                             ->icon('heroicon-m-trash')
-                            ->visible(fn ($record) => $record->deleted_at !== null),
+                            ->visible(fn($record) => $record->deleted_at !== null),
                     ])
                     ->columns(3),
             ])
@@ -205,6 +228,7 @@ class BarangResource extends Resource
         return $table
             ->poll('15s')
             ->defaultGroup('kategori.nama_kategori')
+            ->recordUrl(null)
             ->columns([
                 Tables\Columns\TextColumn::make('serial_number')
                     ->label('Serial Number')
@@ -214,30 +238,30 @@ class BarangResource extends Resource
                     ->color('primary')
                     ->weight(FontWeight::Bold)
                     ->icon('heroicon-m-identification'),
-                    
+
                 Tables\Columns\TextColumn::make('kode_barang')
                     ->label('Kode Barang')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
-                    
+
                 Tables\Columns\TextColumn::make('nama_barang')
                     ->label('Nama Barang')
                     ->searchable()
                     ->sortable()
                     ->limit(30)
                     ->wrap(),
-                    
+
                 Tables\Columns\TextColumn::make('jumlah_barang')
                     ->label('Jumlah Barang')
                     ->sortable()
                     ->numeric()
                     ->badge()
                     ->alignCenter()
-                    ->color(fn (int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
-                    ->icon(fn (int $state): string => $state > 10 ? 'heroicon-m-check-circle' : ($state > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-x-circle'))
+                    ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
+                    ->icon(fn(int $state): string => $state > 10 ? 'heroicon-m-check-circle' : ($state > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-x-circle'))
                     ->size(Tables\Columns\TextColumn\TextColumnSize::Large),
-                    
+
                 Tables\Columns\TextColumn::make('kategori.nama_kategori')
                     ->label('Kategori')
                     ->searchable()
@@ -246,20 +270,20 @@ class BarangResource extends Resource
                     ->icon('heroicon-m-tag')
                     ->color(Color::Emerald)
                     ->toggleable(),
-                    
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Diperbarui')
                     ->dateTime('d M Y')
                     ->sortable()
                     ->since()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
+
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->label('Dihapus')
                     ->dateTime('d M Y')
@@ -271,13 +295,13 @@ class BarangResource extends Resource
                 TrashedFilter::make()
                     ->label('Barang Terhapus')
                     ->indicator('Terhapus'),
-                    
+
                 SelectFilter::make('kategori')
                     ->relationship('kategori', 'nama_kategori')
                     ->searchable()
                     ->preload()
                     ->indicator('Kategori'),
-                    
+
                 Tables\Filters\SelectFilter::make('stok')
                     ->label('Status Stok')
                     ->options([
@@ -297,83 +321,83 @@ class BarangResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                Tables\Actions\ViewAction::make()
-                    ->tooltip('Lihat Barang')
-                    ->extraAttributes(['class' => 'bg-primary-500/10']),
-                    
-                Tables\Actions\EditAction::make()
-                    ->tooltip('Edit Barang')
-                    ->extraAttributes(['class' => 'bg-warning-500/10']),
-                    
-                Action::make('tambah_stok')
-                    ->label('+ Stok')
-                    ->icon('heroicon-m-plus')
-                    ->color('success')
-                    ->action(function (Barang $record, array $data): void {
-                        $record->update([
-                            'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
-                        ]);
-                    })
-                 
-                    ->form([
-                        Forms\Components\TextInput::make('jumlah')
-                            ->label('Jumlah Stok Tambahan')
-                            ->required()
-                            ->numeric()
-                            ->minValue(1)
-                            ->default(1),
-                    ])
-                    ->modalHeading('Tambah Stok Barang')
-                    ->modalSubmitActionLabel('Tambah Stok')
-                    ->tooltip('Tambah Stok Barang')
-                    ->successNotificationTitle('Stok barang berhasil ditambahkan'),
-                    
-                Action::make('kurangi_stok')
-                    ->label('- Stok')
-                    ->icon('heroicon-m-minus')
-                    ->color('warning')
-                    ->action(function (Barang $record, array $data): void {
-                        $jumlahBaru = max(0, $record->jumlah_barang - $data['jumlah']);
-                        $record->update([
-                            'jumlah_barang' => $jumlahBaru,
-                        ]);
-                    })
-                    ->form([
-                        Forms\Components\TextInput::make('jumlah')
-                            ->label('Jumlah Pengurangan Stok')
-                            ->required()
-                            ->numeric()
-                            ->minValue(1)
-                            ->default(1)
-                            ->maxValue(fn (Barang $record) => $record->jumlah_barang),
-                    ])
-                    ->modalHeading('Kurangi Stok Barang')
-                    ->modalSubmitActionLabel('Kurangi Stok')
-                    ->tooltip('Kurangi Stok Barang')
-                    ->successNotificationTitle('Stok barang berhasil dikurangi')
-                    ->hidden(fn (Barang $record) => $record->jumlah_barang <= 0),
-                    
-                Tables\Actions\DeleteAction::make()
-                    ->tooltip('Hapus Barang')
-                    ->extraAttributes(['class' => 'bg-danger-500/10']),
-                    
-                Tables\Actions\RestoreAction::make()
-                    ->tooltip('Pulihkan Barang'),
+                    Tables\Actions\ViewAction::make()
+                        ->tooltip('Lihat Barang')
+                        ->extraAttributes(['class' => 'bg-primary-500/10']),
+
+                    Tables\Actions\EditAction::make()
+                        ->tooltip('Edit Barang')
+                        ->extraAttributes(['class' => 'bg-warning-500/10']),
+
+                    Action::make('tambah_stok')
+                        ->label('+ Stok')
+                        ->icon('heroicon-m-plus')
+                        ->color('success')
+                        ->action(function (Barang $record, array $data): void {
+                            $record->update([
+                                'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
+                            ]);
+                        })
+
+                        ->form([
+                            Forms\Components\TextInput::make('jumlah')
+                                ->label('Jumlah Stok Tambahan')
+                                ->required()
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(1),
+                        ])
+                        ->modalHeading('Tambah Stok Barang')
+                        ->modalSubmitActionLabel('Tambah Stok')
+                        ->tooltip('Tambah Stok Barang')
+                        ->successNotificationTitle('Stok barang berhasil ditambahkan'),
+
+                    Action::make('kurangi_stok')
+                        ->label('- Stok')
+                        ->icon('heroicon-m-minus')
+                        ->color('warning')
+                        ->action(function (Barang $record, array $data): void {
+                            $jumlahBaru = max(0, $record->jumlah_barang - $data['jumlah']);
+                            $record->update([
+                                'jumlah_barang' => $jumlahBaru,
+                            ]);
+                        })
+                        ->form([
+                            Forms\Components\TextInput::make('jumlah')
+                                ->label('Jumlah Pengurangan Stok')
+                                ->required()
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(1)
+                                ->maxValue(fn(Barang $record) => $record->jumlah_barang),
+                        ])
+                        ->modalHeading('Kurangi Stok Barang')
+                        ->modalSubmitActionLabel('Kurangi Stok')
+                        ->tooltip('Kurangi Stok Barang')
+                        ->successNotificationTitle('Stok barang berhasil dikurangi')
+                        ->hidden(fn(Barang $record) => $record->jumlah_barang <= 0),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->tooltip('Hapus Barang')
+                        ->extraAttributes(['class' => 'bg-danger-500/10']),
+
+                    Tables\Actions\RestoreAction::make()
+                        ->tooltip('Pulihkan Barang'),
+                ])
             ])
-          ])
             ->BulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
-                        
+
                     Tables\Actions\RestoreBulkAction::make()
                         ->deselectRecordsAfterCompletion(),
-                        
+
                     Tables\Actions\ForceDeleteBulkAction::make()
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
-                        
+
                     Tables\Actions\BulkAction::make('tambah_stok_massal')
                         ->label('Tambah Stok Massal')
                         ->icon('heroicon-m-plus')
@@ -425,6 +449,4 @@ class BarangResource extends Resource
             'edit' => Pages\EditBarang::route('/{record}/edit'),
         ];
     }
-
-  
 }

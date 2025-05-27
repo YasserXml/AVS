@@ -57,6 +57,11 @@ class UserResource extends Resource
         return 'danger';
     }
 
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Jumlah Pengguna Terdaftar';
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -114,6 +119,7 @@ class UserResource extends Resource
         return $table
             ->defaultPaginationPageOption(10)
             ->poll('60s')
+            ->recordUrl(null) 
             ->columns([
                 Tables\Columns\TextColumn::make('index')
                     ->label('No')

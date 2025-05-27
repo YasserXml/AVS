@@ -23,7 +23,6 @@ class ListPengajuans extends ListRecords
                 ->label('Buat Pengajuan')
                 ->iconPosition(IconPosition::Before)
                 ->color('success')
-                ->tooltip('Klik untuk membuat pengajuan')
                 ->size('lg')
                 ->extraAttributes([
                     'class' => 'font-semibold shadow-lg hover:shadow-xl transition-all duration-200'

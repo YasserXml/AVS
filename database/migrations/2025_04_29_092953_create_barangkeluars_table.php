@@ -19,7 +19,10 @@ return new class extends Migration
             $table->integer('jumlah_barang_keluar');
             $table->date('tanggal_keluar_barang')->nullable;
             $table->text('keterangan')->nullable();
+            $table->string('project_name')->nullable();
             $table->enum('status', ['oprasional_kantor', 'project']);
+            $table->foreignId('kategori_id')->nullable()->constrained('kategoris');
+             $table->enum('sumber', ['manual', 'pengajuan'])->default('manual');
             $table->timestamps();
             $table->softDeletes();
         });

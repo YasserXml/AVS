@@ -26,8 +26,7 @@ class ListBarangs extends ListRecords
                 ->icon('heroicon-o-plus-circle')
                 ->iconPosition(IconPosition::Before)
                 ->color('success')
-                ->size('lg')
-                ->tooltip('Tambah barang baru ke inventory'),
+                ->size('lg'),
         ];
     }
 

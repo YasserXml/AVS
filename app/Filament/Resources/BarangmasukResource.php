@@ -27,7 +27,7 @@ class BarangmasukResource extends Resource
 {
     protected static ?string $model = Barangmasuk::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-left-end-on-rectangle';
+    protected static ?string $navigationIcon = 'heroicon-o-arrow-left-circle';
 
     protected static ?string $navigationGroup = 'Flow Barang';
 
@@ -49,6 +49,11 @@ class BarangmasukResource extends Resource
     public static function getNavigationBadgeColor(): ?string
     {
         return 'success';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Jumlah total barang masuk yang tercatat';
     }
 
     public static function form(Form $form): Form
@@ -125,7 +130,6 @@ class BarangmasukResource extends Resource
                             ->required(fn(Get $get) => $get('status') === 'project')
                             ->visible(fn(Get $get) => $get('status') === 'project')
                             ->prefixIcon('heroicon-o-briefcase')
-                            ->suffixIconColor('warning')
                             ->columnSpanFull(),
                     ]),
 
@@ -160,6 +164,7 @@ class BarangmasukResource extends Resource
 
                         // Repeater for Existing Items
                         Forms\Components\Repeater::make('barang_lama_items')
+                                    ->label('Barang Yang Sudah Ada')
                             ->schema([
                                 Forms\Components\Grid::make(['sm' => 1, 'md' => 3])
                                     ->schema([
@@ -211,7 +216,7 @@ class BarangmasukResource extends Resource
                                 fn(array $state): ?string =>
                                 isset($state['barang_id']) ?
                                     \App\Models\Barang::find($state['barang_id'])?->nama_barang . ' (' . ($state['jumlah_barang_masuk'] ?? '0') . ' unit)' :
-                                    'Barang Baru'
+                                    'Barang Yang Sudah Ada'
                             )
                             ->collapsible()
                             ->defaultItems(1)
@@ -224,6 +229,7 @@ class BarangmasukResource extends Resource
 
                         // Repeater for New Items
                         Forms\Components\Repeater::make('barang_baru_items')
+                                ->label('Barang Baru')
                             ->schema([
                                 Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
                                     ->schema([
@@ -233,7 +239,6 @@ class BarangmasukResource extends Resource
                                             ->unique(table: 'barangs', column: 'serial_number', ignoreRecord: true)
                                             ->dehydrated()
                                             ->prefixIcon('heroicon-o-identification')
-                                            ->placeholder('SN-XXXX-XXXX')
                                             ->extraAttributes(['style' => 'font-family: monospace;']),
 
                                         Forms\Components\TextInput::make('kode_barang')
@@ -243,7 +248,6 @@ class BarangmasukResource extends Resource
                                             ->required()
                                             ->dehydrated()
                                             ->prefixIcon('heroicon-o-hashtag')
-                                            ->placeholder('Contoh: 12345')
                                             ->extraAttributes(['style' => 'font-family: monospace;']),
 
                                         Forms\Components\TextInput::make('nama_barang')
@@ -271,11 +275,8 @@ class BarangmasukResource extends Resource
                                             ->label('Jumlah Barang Masuk')
                                             ->numeric()
                                             ->required()
-                                            ->minValue(1)
-                                            ->placeholder('0')
                                             ->prefixIcon('heroicon-o-plus')
                                             ->prefix('Qty:')
-                                            ->suffix('Unit')
                                             ->extraAttributes(['class' => 'font-mono text-center'])
                                             ->columnSpan(2),
                                     ]),
@@ -288,6 +289,8 @@ class BarangmasukResource extends Resource
                             )
                             ->collapsible()
                             ->defaultItems(1)
+                            ->reactive()
+                            ->live()
                             ->addActionLabel('+ Tambah Barang Baru')
                             ->reorderableWithButtons()
                             ->deleteAction(
@@ -295,13 +298,16 @@ class BarangmasukResource extends Resource
                             )
                             ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru'),
                     ]),
-            ]);
+            ])
+            ->live()
+            ->reactive();
     }
 
 
     public static function table(Table $table): Table
     {
         return $table
+         ->recordUrl(null) 
             ->columns([
                 TextColumn::make('barang.serial_number')
                     ->label('Serial Number')
@@ -335,11 +341,7 @@ class BarangmasukResource extends Resource
 
                 TextColumn::make('jumlah_barang_masuk')
                     ->label('Jumlah Masuk')
-                    ->numeric(
-                        decimalPlaces: 0,
-                        decimalSeparator: ',',
-                        thousandsSeparator: '.'
-                    )
+                    ->numeric()
                     ->sortable()
                     ->icon('heroicon-o-arrow-trending-up')
                     ->alignCenter()

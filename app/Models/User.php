@@ -87,7 +87,7 @@ class User extends Authenticatable
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Tambahkan kondisi admin_verified
+        //kondisi admin_verified
         return $this->admin_verified && $this->hasVerifiedEmail();
     }
 }

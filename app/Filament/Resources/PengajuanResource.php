@@ -71,6 +71,12 @@ class PengajuanResource extends Resource
         return 'warning';
     }
 
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        $count = static::getModel()::where('status', 'pending')->count();
+        return $count > 0 ? "Ada {$count} pengajuan yang menunggu persetujuan" : null;
+    }
+
     // public static function getEloquentQuery(): Builder
     // {
     //     $query = parent::getEloquentQuery();
@@ -160,7 +166,7 @@ class PengajuanResource extends Resource
                                                     ->prefixIcon('heroicon-o-magnifying-glass')
                                                     ->afterStateUpdated(function ($state, callable $set) {
                                                         if ($state) {
-                                                            $barang = \App\Models\Barang::find($state);
+                                                            $barang = Barang::find($state);
                                                             if ($barang) {
                                                                 $set('nama_barang', $barang->nama_barang);
                                                                 $set('kategori_id', $barang->kategori_id);
@@ -237,10 +243,12 @@ class PengajuanResource extends Resource
                                         fn(array $state): ?string =>
                                         isset($state['barang_id']) && isset($state['nama_barang']) ?
                                             $state['nama_barang'] . ' (' . ($state['Jumlah_barang_diajukan'] ?? '0') . ' unit)' :
-                                            'Barang Yang Diajukan'
+                                            'Barang Yang Diajukan' 
                                     )
                                     ->collapsible()
                                     ->defaultItems(1)
+                                    ->reactive()
+                                    ->live()
                                     ->addActionLabel('+ Tambah Barang')
                                     ->reorderableWithButtons()
                                     ->deleteAction(
@@ -255,6 +263,7 @@ class PengajuanResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+         ->recordUrl(null) 
             ->columns([
                 Split::make([
                     Stack::make([
@@ -416,21 +425,6 @@ class PengajuanResource extends Resource
                     ->preload()
                     ->searchable(),
 
-                // Filter untuk pengajuan bersamaan
-                Tables\Filters\Filter::make('has_group')
-                    ->label('Pengajuan Bersamaan')
-                    ->toggle()
-                    ->query(function (Builder $query, array $data): Builder {
-                        if ($data['isActive']) {
-                            return $query->whereNotNull('batch_id')
-                                ->whereHas('batchSiblings', function ($q) {
-                                    $q->havingRaw('COUNT(*) > 1');
-                                });
-                        }
-                        return $query;
-                    })
-                    ->indicator('Pengajuan Bersamaan'),
-
                 Tables\Filters\Filter::make('tanggal_pengajuan')
                     ->form([
                         Forms\Components\DatePicker::make('dari_tanggal')
@@ -459,13 +453,6 @@ class PengajuanResource extends Resource
                                 fn(Builder $query, $date): Builder => $query->whereDate('tanggal_pengajuan', '<=', $date),
                             );
                     }),
-
-                Tables\Filters\SelectFilter::make('barang_id')
-                    ->relationship('barang', 'nama_barang')
-                    ->label('Barang')
-                    ->searchable()
-                    ->preload()
-                    ->indicator('Barang'),
             ])
             ->actions([
                 // APPROVE ACTION
