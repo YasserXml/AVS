@@ -8,6 +8,7 @@ use App\Models\Barang;
 use App\Models\Barangkeluar;
 use Carbon\Carbon;
 use Closure;
+use CreateBarangKeluar;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -38,11 +39,6 @@ class BarangkeluarResource extends Resource
     protected static ?string $pluralModelLabel = 'Barang Keluar';
 
     protected static ?int $navigationSort = 5;
-
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count() > 0 ? (string) static::getModel()::count() : null;
-    }
 
     protected static ?string $slug = 'barang-keluar';
 
@@ -537,7 +533,7 @@ class BarangkeluarResource extends Resource
     {
         return [
             'index' => Pages\ListBarangkeluars::route('/'),
-            'create' => Pages\CreateBarangkeluar::route('/create'),
+            'create' => CreateBarangKeluar::route('/create'),
             'edit' => Pages\EditBarangkeluar::route('/{record}/edit'),
         ];
     }

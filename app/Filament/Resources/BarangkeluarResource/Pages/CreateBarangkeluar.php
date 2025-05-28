@@ -1,20 +1,17 @@
 <?php
 
-namespace App\Filament\Resources\BarangKeluarResource\Pages;
-
-use App\Filament\Resources\BarangKeluarResource;
-use App\Models\Barang;
-use App\Models\BarangKeluar;
-use Filament\Actions;
+use App\Filament\Resources\BarangkeluarResource;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Barang;
+use App\Models\BarangKeluar;
 
 class CreateBarangKeluar extends CreateRecord
 {
-    protected static string $resource = BarangKeluarResource::class;
+    protected static string $resource = BarangkeluarResource::class;
 
     protected function getRedirectUrl(): string
     {
@@ -32,25 +29,10 @@ class CreateBarangKeluar extends CreateRecord
         }
 
         // PENTING: Set pengajuan_id sebagai null untuk input manual
-        if (!isset($data['pengajuan_id']) || empty($data['pengajuan_id'])) {
-            $data['pengajuan_id'] = null;
-        }
-
-        // Remove fields yang tidak ada di database
-        $fieldsToRemove = [
-            'stok_tersedia',
-            'sisa_stok_display', 
-            'nama_barang_display',
-            'kode_barang_display',
-            'barang_items' // Jika menggunakan repeater
-        ];
-
-        foreach ($fieldsToRemove as $field) {
-            unset($data[$field]);
-        }
+        $data['pengajuan_id'] = null;
 
         // Log data untuk debugging
-        Log::info('Data before create:', $data);
+        Log::info('Data sebelum diproses:', $data);
 
         return $data;
     }
@@ -58,69 +40,111 @@ class CreateBarangKeluar extends CreateRecord
     protected function handleRecordCreation(array $data): Model
     {
         try {
-            // Validasi stok sebelum membuat record
-            $barang = Barang::find($data['barang_id']);
-            
-            if (!$barang) {
+            // Validasi apakah ada barang_items
+            if (!isset($data['barang_items']) || empty($data['barang_items'])) {
                 Notification::make()
                     ->title('Error!')
-                    ->body('Barang tidak ditemukan')
+                    ->body('Tidak ada barang yang dipilih untuk dikeluarkan')
                     ->danger()
-                    ->send();
-                
-                $this->halt();
-            }
-
-            if ($barang->jumlah_barang < $data['jumlah_barang_keluar']) {
-                Notification::make()
-                    ->title('Stok Tidak Mencukupi!')
-                    ->body("Stok tersedia hanya {$barang->jumlah_barang} unit")
-                    ->danger()
-                    ->persistent()
                     ->send();
                 
                 $this->halt();
             }
 
             // Gunakan database transaction untuk keamanan
-            return DB::transaction(function () use ($data, $barang) {
-                // Buat record barang keluar dengan pengajuan_id = null
-                $barangKeluar = BarangKeluar::create($data);
+            return DB::transaction(function () use ($data) {
+                $createdRecords = [];
+                
+                // Loop setiap barang dalam repeater
+                foreach ($data['barang_items'] as $itemData) {
+                    // Validasi data item
+                    if (!isset($itemData['barang_id']) || !isset($itemData['jumlah_barang_keluar'])) {
+                        continue; // Skip item yang tidak lengkap
+                    }
 
-                // Kurangi stok barang
-                $barang->decrement('jumlah_barang', $data['jumlah_barang_keluar']);
+                    // Validasi stok
+                    $barang = Barang::find($itemData['barang_id']);
+                    
+                    if (!$barang) {
+                        Notification::make()
+                            ->title('Error!')
+                            ->body('Barang tidak ditemukan')
+                            ->danger()
+                            ->send();
+                        
+                        throw new \Exception('Barang tidak ditemukan');
+                    }
 
-                // Log successful creation
-                Log::info('Barang keluar created successfully:', [
-                    'id' => $barangKeluar->id,
-                    'barang_id' => $barangKeluar->barang_id,
-                    'pengajuan_id' => $barangKeluar->pengajuan_id, // Should be null
-                    'jumlah' => $barangKeluar->jumlah_barang_keluar
-                ]);
+                    if ($barang->jumlah_barang < $itemData['jumlah_barang_keluar']) {
+                        Notification::make()
+                            ->title('Stok Tidak Mencukupi!')
+                            ->body("Stok {$barang->nama_barang} tersedia hanya {$barang->jumlah_barang} unit")
+                            ->danger()
+                            ->persistent()
+                            ->send();
+                        
+                        throw new \Exception('Stok tidak mencukupi');
+                    }
+
+                    // Siapkan data untuk create
+                    $createData = [
+                        'barang_id' => $itemData['barang_id'],
+                        'jumlah_barang_keluar' => $itemData['jumlah_barang_keluar'],
+                        'tanggal_keluar_barang' => $data['tanggal_keluar_barang'],
+                        'status' => $data['status'],
+                        'user_id' => $data['user_id'],
+                        'keterangan' => $data['keterangan'] ?? null,
+                        'project_name' => $data['project_name'] ?? null,
+                        'sumber' => $data['sumber'],
+                        'pengajuan_id' => $data['pengajuan_id'],
+                    ];
+
+                    // Buat record barang keluar
+                    $barangKeluar = BarangKeluar::create($createData);
+                    $createdRecords[] = $barangKeluar;
+
+                    // Kurangi stok barang
+                    $barang->decrement('jumlah_barang', $itemData['jumlah_barang_keluar']);
+
+                    // Log successful creation
+                    Log::info('Barang keluar berhasil dibuat:', [
+                        'id' => $barangKeluar->id,
+                        'barang_id' => $barangKeluar->barang_id,
+                        'nama_barang' => $barang->nama_barang,
+                        'jumlah' => $barangKeluar->jumlah_barang_keluar
+                    ]);
+
+                    // Peringatan jika stok rendah setelah transaksi  
+                    $sisaStok = $barang->fresh()->jumlah_barang;
+                    if ($sisaStok <= 5) {
+                        Notification::make()
+                            ->title('Peringatan Stok Rendah!')
+                            ->body("Sisa stok {$barang->nama_barang} tinggal {$sisaStok} unit")
+                            ->warning()
+                            ->persistent()
+                            ->send();
+                    }
+                }
+
+                // Validasi apakah ada record yang berhasil dibuat
+                if (empty($createdRecords)) {
+                    throw new \Exception('Tidak ada barang yang berhasil diproses');
+                }
 
                 // Kirim notifikasi sukses
+                $totalItems = count($createdRecords);
                 Notification::make()
                     ->title('Barang Keluar Berhasil Dicatat!')
-                    ->body("Barang {$barang->nama_barang} sebanyak {$data['jumlah_barang_keluar']} unit telah dikeluarkan")
+                    ->body("Berhasil mencatat {$totalItems} item barang keluar")
                     ->success()
                     ->send();
 
-                // Peringatan jika stok rendah setelah transaksi  
-                $sisaStok = $barang->fresh()->jumlah_barang;
-                if ($sisaStok <= 5) {
-                    Notification::make()
-                        ->title('Peringatan Stok Rendah!')
-                        ->body("Sisa stok {$barang->nama_barang} tinggal {$sisaStok} unit")
-                        ->warning()
-                        ->persistent()
-                        ->send();
-                }
-
-                return $barangKeluar;
+                // Return record pertama (untuk kompatibilitas dengan Filament)
+                return $createdRecords[0];
             });
 
         } catch (\Exception $e) {
-            Log::error('Error creating barang keluar:', [
+            Log::error('Error membuat barang keluar:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'data' => $data
@@ -128,12 +152,13 @@ class CreateBarangKeluar extends CreateRecord
             
             Notification::make()
                 ->title('Terjadi Kesalahan!')
-                ->body('Gagal menyimpan data barang keluar. Silakan coba lagi atau hubungi administrator.')
+                ->body('Gagal menyimpan data barang keluar. ' . $e->getMessage())
                 ->danger()
                 ->persistent()
                 ->send();
             
-            $this->halt();
+            // Return model kosong jika terjadi error
+            return new BarangKeluar();
         }
     }
 
