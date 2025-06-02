@@ -3,12 +3,10 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BarangkeluarResource\Pages;
-use App\Filament\Resources\BarangkeluarResource\RelationManagers;
 use App\Models\Barang;
 use App\Models\Barangkeluar;
 use Carbon\Carbon;
 use Closure;
-use CreateBarangKeluar;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -17,9 +15,11 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -66,6 +66,8 @@ class BarangkeluarResource extends Resource
                                             ->default(now())
                                             ->required()
                                             ->live()
+                                            ->disabled()
+                                            ->dehydrated(true)
                                             ->native(false)
                                             ->reactive()
                                             ->prefixIcon('heroicon-o-calendar')
@@ -101,15 +103,15 @@ class BarangkeluarResource extends Resource
                                             ->preload()
                                             ->prefixIcon('heroicon-o-user'),
 
-                                      
-                                            Forms\Components\TextInput::make('project_name')
-                                                ->label('Nama Project')
-                                                ->placeholder('Masukkan nama project')
-                                                ->reactive()
-                                                ->live()
-                                                ->required(fn(Get $get) => $get('status') === 'project')
-                                                ->visible(fn(Get $get) => $get('status') === 'project')
-                                                ->prefixIcon('heroicon-o-briefcase'),
+
+                                        Forms\Components\TextInput::make('project_name')
+                                            ->label('Nama Project')
+                                            ->placeholder('Masukkan nama project')
+                                            ->reactive()
+                                            ->live()
+                                            ->required(fn(Get $get) => $get('status') === 'project')
+                                            ->visible(fn(Get $get) => $get('status') === 'project')
+                                            ->prefixIcon('heroicon-o-briefcase'),
                                     ]),
                             ]),
 
@@ -132,7 +134,6 @@ class BarangkeluarResource extends Resource
                     ->aside()
                     ->compact()
                     ->schema([
-                        // Repeater for Items
                         Forms\Components\Repeater::make('barang_items')
                             ->label('Daftar Barang Keluar')
                             ->reactive()
@@ -276,7 +277,7 @@ class BarangkeluarResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-         ->recordUrl(null) 
+            ->recordUrl(null)
             ->columns([
                 Tables\Columns\TextColumn::make('tanggal_keluar_barang')
                     ->label('Tanggal Keluar')
@@ -333,7 +334,7 @@ class BarangkeluarResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->toggleable()
-                    ->placeholder('Tidak ada project')
+                    ->placeholder('Bukan dari project')
                     ->description('Khusus untuk status project')
                     ->icon('heroicon-o-folder'),
 
@@ -377,6 +378,8 @@ class BarangkeluarResource extends Resource
                     ->icon('heroicon-o-clock'),
             ])
             ->filters([
+
+                TrashedFilter::make(),
                 // Filter berdasarkan Status
                 SelectFilter::make('status')
                     ->label('Status Penggunaan')
@@ -394,24 +397,6 @@ class BarangkeluarResource extends Resource
                     ->searchable()
                     ->preload()
                     ->multiple(),
-
-                // Filter berdasarkan sumber (manual atau dari pengajuan)
-                SelectFilter::make('sumber_transaksi')
-                    ->label('Sumber Transaksi')
-                    ->options([
-                        'manual' => 'Input Manual',
-                        'pengajuan' => 'Dari Pengajuan',
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query->when(
-                            $data['value'] === 'manual',
-                            fn(Builder $query): Builder => $query->whereNull('pengajuan_id')
-                        )->when(
-                            $data['value'] === 'pengajuan',
-                            fn(Builder $query): Builder => $query->whereNotNull('pengajuan_id')
-                        );
-                    })
-                    ->placeholder('Semua Sumber'),
 
                 // Filter berdasarkan tanggal
                 Filter::make('tanggal_keluar')
@@ -442,55 +427,32 @@ class BarangkeluarResource extends Resource
                         }
                         return $indicators;
                     }),
-
-                // Filter stok kritis
-                Filter::make('stok_kritis')
-                    ->label('Barang dengan Stok Kritis')
-                    ->query(function (Builder $query): Builder {
-                        return $query->whereHas('barang', function (Builder $query) {
-                            $query->where('jumlah_barang', '<=', 5);
-                        });
-                    })
-                    ->toggle(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->modalHeading('Detail Barang Keluar')
                     ->modalWidth('3xl'),
 
-                Tables\Actions\EditAction::make()
-                    ->modalHeading('Edit Barang Keluar')
-                    ->modalWidth('4xl')
-                    ->before(function ($record) {
-                        // Notifikasi sebelum edit
-                        Notification::make()
-                            ->title('Mode Edit Aktif')
-                            ->body('Pastikan perubahan data sudah sesuai')
-                            ->info()
-                            ->send();
-                    })
-                    ->after(function ($record) {
-                        // Notifikasi setelah edit
-                        Notification::make()
-                            ->title('Data Berhasil Diperbarui')
-                            ->body("Barang keluar {$record->barang->nama_barang} telah diperbarui")
-                            ->success()
-                            ->send();
-                    }),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->modalHeading('Edit Barang Keluar')
+                        ->modalWidth('4xl')
+                        ->color('info'),
 
-                Tables\Actions\DeleteAction::make()
-                    ->modalHeading('Hapus Barang Keluar')
-                    ->modalDescription('Apakah Anda yakin ingin menghapus data barang keluar ini? Tindakan ini tidak dapat dibatalkan.')
-                    ->before(function ($record) {
-                        // Kembalikan stok barang
-                        $record->barang->increment('jumlah_barang', $record->jumlah_barang_keluar);
+                    Tables\Actions\DeleteAction::make()
+                        ->modalHeading('Hapus Barang Keluar')
+                        ->modalDescription('Apakah Anda yakin ingin menghapus data barang keluar ini? Tindakan ini tidak dapat dibatalkan.')
+                        ->before(function ($record) {
+                            // Kembalikan stok barang
+                            $record->barang->increment('jumlah_barang', $record->jumlah_barang_keluar);
 
-                        Notification::make()
-                            ->title('Stok Dikembalikan')
-                            ->body("Stok {$record->barang->nama_barang} dikembalikan sebanyak {$record->jumlah_barang_keluar} unit")
-                            ->success()
-                            ->send();
-                    }),
+                            Notification::make()
+                                ->title('Stok Dikembalikan')
+                                ->body("Stok {$record->barang->nama_barang} dikembalikan sebanyak {$record->jumlah_barang_keluar} unit")
+                                ->success()
+                                ->send();
+                        }),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
@@ -516,7 +478,7 @@ class BarangkeluarResource extends Resource
             ->striped()
             ->poll('10s') // Auto refresh setiap 10 detik untuk real-time updates
             ->emptyStateHeading('Belum Ada Data Barang Keluar')
-            ->emptyStateDescription('Belum ada transaksi barang keluar yang tercatat dalam sistem.')
+            ->emptyStateDescription('Belum ada barang keluar yang tercatat dalam sistem.')
             ->emptyStateIcon('heroicon-o-cube-transparent')
             ->recordUrl(null) // Disable row click navigation
             ->recordAction(null); // Disable default row action
@@ -533,7 +495,7 @@ class BarangkeluarResource extends Resource
     {
         return [
             'index' => Pages\ListBarangkeluars::route('/'),
-            'create' => CreateBarangKeluar::route('/create'),
+            'create' => Pages\CreateBarangkeluar::route('/create'),
             'edit' => Pages\EditBarangkeluar::route('/{record}/edit'),
         ];
     }

@@ -40,43 +40,35 @@ class CreatePengajuan extends CreateRecord
             }
 
             $baseData = [
-                'batch_id' => $batchId, //batch_id untuk mengelompokkan
+                'batch_id' => $batchId, // batch_id untuk mengelompokkan
                 'user_id' => $data['user_id'],
                 'tanggal_pengajuan' => $data['tanggal_pengajuan'],
                 'status_barang' => $data['status_barang'],
                 'nama_project' => $data['nama_project'] ?? null,
                 'keterangan' => $data['keterangan'] ?? null,
                 'status' => 'pending',
-            ]; 
+            ];
 
             $createdRecords = [];
 
             if (isset($data['detail_pengajuan']) && count($data['detail_pengajuan']) > 0) {
                 foreach ($data['detail_pengajuan'] as $detailItem) {
-                    if (!isset($detailItem['barang_id']) || empty($detailItem['barang_id'])) {
+                    if (!isset($detailItem['nama_barang']) || empty($detailItem['nama_barang'])) {
                         continue;
                     }
 
-                    $barang = Barang::findOrFail($detailItem['barang_id']);
-
+                    // Menggunakan field nama_barang dan detail_barang yang baru
                     $pengajuanData = array_merge($baseData, [
-                        'barang_id' => $detailItem['barang_id'],
-                        'kategoris_id' => $detailItem['kategoris_id'] ?? $barang->kategori_id,
+                        'barang_id' => null, // Nullable sekarang
+                        'kategoris_id' => null, // Nullable sekarang
+                        'nama_barang' => $detailItem['nama_barang'], // Field baru untuk nama barang
+                        'detail_barang' => $detailItem['detail_barang'] ?? null, // Field baru untuk detail barang
                         'Jumlah_barang_diajukan' => $detailItem['Jumlah_barang_diajukan'],
                     ]);
 
-                    $finalKeterangan = $pengajuanData['keterangan'] ?? '';
-
-                    if (!empty($detailItem['catatan_barang'])) {
-                        if (!empty($finalKeterangan)) {
-                            $finalKeterangan .= "\n\n--- Catatan Barang: " . $barang->nama_barang . " ---\n";
-                            $finalKeterangan .= $detailItem['catatan_barang'];
-                        } else {
-                            $finalKeterangan = "Catatan Barang: " . $barang->nama_barang . "\n" . $detailItem['catatan_barang'];
-                        }
-                    }
-
-                    $pengajuanData['keterangan'] = $finalKeterangan;
+                    // Keterangan tetap menggunakan field keterangan yang sudah ada
+                    // Detail barang sekarang disimpan di field terpisah
+                    $pengajuanData['keterangan'] = $baseData['keterangan'];
                     $createdRecords[] = static::getModel()::create($pengajuanData);
                 }
 
@@ -93,7 +85,7 @@ class CreatePengajuan extends CreateRecord
 
                 Notification::make()
                     ->title('Pengajuan barang berhasil dibuat')
-                    ->body('Sebanyak ' . count($createdRecords))
+                    ->body('Sebanyak ' . count($createdRecords) . ' barang berhasil diajukan')
                     ->success()
                     ->send();
             }
@@ -105,12 +97,11 @@ class CreatePengajuan extends CreateRecord
             Notification::make()
                 ->danger()
                 ->title('Terjadi kesalahan')
-                ->body($e->getMessage())
+                ->body('Gagal membuat pengajuan: ' . $e->getMessage())
                 ->send();
             throw $e;
         }
     }
-
     public function getTitle(): string|Htmlable
     {
         return 'Buat Pengajuan Barang';

@@ -27,6 +27,8 @@ class Divisi3dResource extends Resource
 
     protected static ?string $label = 'Divisi 3D';
 
+    protected static ?string $slug = 'divisi-3d';
+
     public static function form(Form $form): Form
     {
         return $form

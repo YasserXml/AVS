@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('pengajuans', function (Blueprint $table) {
             $table->id();
-             $table->string('batch_id')->nullable()->after('id');
+            $table->string('batch_id')->nullable()->after('id');
             $table->index('batch_id');
-            $table->foreignId('barang_id')->constrained('barangs');
+            $table->foreignId('barang_id')->nullable()->constrained('barangs'); 
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('kategoris_id')->constrained('kategoris');
+            $table->foreignId('kategoris_id')->nullable()->constrained('kategoris');
             $table->integer('Jumlah_barang_diajukan');
             $table->enum('status',['pending','approved','rejected'])->default('pending');
             $table->date('tanggal_pengajuan');
@@ -28,6 +28,8 @@ return new class extends Migration
             $table->text('reject_reason')->nullable();
             $table->string('reject_at')->nullable()->after('reject_reason');
             $table->enum('status_barang',['oprasional_kantor', 'project']);
+            $table->string('nama_barang')->nullable();
+            $table->text('detail_barang')->nullable();
             $table->string('nama_project')->nullable();
             $table->timestamps();
             $table->softDeletes();

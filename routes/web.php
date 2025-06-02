@@ -12,15 +12,9 @@ use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Socialite\Facades\Socialite;
 
-Route::redirect('/', 'admin');
+Route::redirect('/', 'avs');
 
-Route::get('/admin/login/{provider}/redirect', [SocialiteController::class, 'redirect'])
-    ->name('filament.admin.auth.socialite.redirect');
-
-Route::get('/admin/login/{provider}/callback', [SocialiteController::class, 'handleCallback'])
-    ->name('filament.admin.auth.socialite.callback');
-
-Route::get('/admin/verify-user/{user}', [AdminVerificationController::class, 'verifyUser'])
+Route::get('/avs/verify-user/{user}', [AdminVerificationController::class, 'verifyUser'])
     ->name('admin.verify-user')
     ->middleware(['signed']);
 

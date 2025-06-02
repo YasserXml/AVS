@@ -25,6 +25,8 @@ class DivisimekanikResource extends Resource
 
     protected static ?int $navigationSort = 18;
 
+    protected static ?string $slug = 'divisi-mekanik';
+
     public static function form(Form $form): Form
     {
         return $form

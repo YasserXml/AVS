@@ -27,6 +27,8 @@ class DivisimanagerhrdResource extends Resource
 
     protected static ?string $label = 'Divisi Manager HRD';
 
+    protected static ?string $slug = 'divisi-manager-hrd';
+
     public static function form(Form $form): Form
     {
         return $form

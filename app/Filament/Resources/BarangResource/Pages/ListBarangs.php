@@ -70,18 +70,8 @@ class ListBarangs extends ListRecords
     public function getBreadcrumbs(): array
     {
         return [
-            url('/') => 'Dashboard',
-            url($this->getResource()::getUrl()) => 'Inventaris',
+            url($this->getResource()::getUrl()) => 'Ketersediaan Barang',
             'Daftar Barang',
         ];
     }
-    
-    // protected function getFooter(): View|Htmlable|null
-    // {
-    //     return FilamentView::make('filament.pages.barang-footer')
-    //         ->with([
-    //             'totalBarang' => Barang::count(),
-    //             'lastUpdated' => Barang::latest('updated_at')->first()?->updated_at?->diffForHumans() ?? 'Belum ada update',
-    //         ]);
-    // }
 }

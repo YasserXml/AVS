@@ -30,6 +30,8 @@ class DivisiKeuanganResource extends Resource
 
     protected static ?string $label = 'Divisi Keuangan';
 
+    protected static ?string $slug = 'divisi-keuangan';
+
     public static function form(Form $form): Form
     {
         return $form

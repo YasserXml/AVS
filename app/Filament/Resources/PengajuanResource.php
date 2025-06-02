@@ -30,6 +30,7 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\ForceDeleteAction;
+use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Columns\Layout\Split;
@@ -37,6 +38,7 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -44,6 +46,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Viewpengajuan;
 
 class PengajuanResource extends Resource
 {
@@ -77,20 +80,20 @@ class PengajuanResource extends Resource
         return $count > 0 ? "Ada {$count} pengajuan yang menunggu persetujuan" : null;
     }
 
-    // public static function getEloquentQuery(): Builder
-    // {
-    //     $query = parent::getEloquentQuery();
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
 
-    //     // Ambil user yang sedang login
-    //     $user = filament()->auth()->user();
+        // Ambil user yang sedang login
+        $user = filament()->auth()->user();
 
-    //     // Jika role-nya user, hanya tampilkan pengajuan miliknya
-    //     if ($user->hasRole('user')) {
-    //         $query->where('user_id', $user->id);
-    //     }
+        // Jika role-nya user, hanya tampilkan pengajuan miliknya
+        if ($user->hasRole('user')) {
+            $query->where('user_id', $user->id);
+        }
 
-    //     return $query;
-    // }
+        return $query;
+    }
 
 
     public static function form(Form $form): Form
@@ -128,6 +131,7 @@ class PengajuanResource extends Resource
                                     ->preload()
                                     ->required()
                                     ->reactive()
+                                    ->live()
                                     ->afterStateUpdated(fn(callable $set) => $set('nama_project', null)),
 
                                 Forms\Components\TextInput::make('nama_project')
@@ -155,71 +159,15 @@ class PengajuanResource extends Resource
                                     ->schema([
                                         Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
                                             ->schema([
-                                                Forms\Components\Select::make('barang_id')
-                                                    ->label('Pilih Barang')
-                                                    ->relationship('barang', 'nama_barang')
-                                                    ->searchable()
-                                                    ->preload()
+                                                Forms\Components\TextInput::make('nama_barang')
+                                                    ->label('Nama Barang')
+                                                    ->placeholder('Masukkan nama barang yang dibutuhkan')
                                                     ->required()
                                                     ->reactive()
                                                     ->live()
-                                                    ->prefixIcon('heroicon-o-magnifying-glass')
-                                                    ->afterStateUpdated(function ($state, callable $set) {
-                                                        if ($state) {
-                                                            $barang = Barang::find($state);
-                                                            if ($barang) {
-                                                                $set('nama_barang', $barang->nama_barang);
-                                                                $set('kategori_id', $barang->kategori_id);
-                                                                $set('jumlah_barang', $barang->jumlah_barang);
-                                                                $set('kode_barang', $barang->kode_barang);
-                                                                $set('serial_number', $barang->serial_number);
-                                                                $set('kategoris_id', $barang->kategori_id);
-                                                            }
-                                                        }
-                                                    }),
-
-                                                Forms\Components\Grid::make(2)
-                                                    ->schema([
-                                                        Forms\Components\TextInput::make('kode_barang')
-                                                            ->label('Kode Barang')
-                                                            ->disabled()
-                                                            ->dehydrated(false)
-                                                            ->prefixIcon('heroicon-o-hashtag'),
-
-                                                        Forms\Components\TextInput::make('serial_number')
-                                                            ->label('Serial Number')
-                                                            ->disabled()
-                                                            ->dehydrated(false)
-                                                            ->prefixIcon('heroicon-o-identification'),
-                                                    ]),
-
-                                                Forms\Components\TextInput::make('nama_barang')
-                                                    ->label('Nama Barang')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
                                                     ->prefixIcon('heroicon-o-tag')
                                                     ->columnSpan(1),
 
-                                                Forms\Components\Select::make('kategori_id')
-                                                    ->relationship('kategori', 'nama_kategori')
-                                                    ->label('Kategori Barang')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-folder')
-                                                    ->columnSpan(1),
-
-                                                Forms\Components\Hidden::make('kategoris_id'),
-
-                                                Forms\Components\TextInput::make('jumlah_barang')
-                                                    ->label('Stok Tersedia')
-                                                    ->numeric()
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefix('Tersedia:')
-                                                    ->prefixIcon('heroicon-o-clipboard-document-check')
-                                                    ->columnSpan(1),
-
-                                                //nama field yang benar sesuai DB
                                                 Forms\Components\TextInput::make('Jumlah_barang_diajukan')
                                                     ->label('Jumlah Yang Diajukan')
                                                     ->numeric()
@@ -227,23 +175,26 @@ class PengajuanResource extends Resource
                                                     ->reactive()
                                                     ->live()
                                                     ->minValue(1)
-                                                    ->maxValue(function (callable $get) {
-                                                        $stokTersedia = (int) $get('jumlah_barang');
-                                                        return $stokTersedia;
-                                                    })
-                                                    ->validationMessages([
-                                                        'max' => 'Jumlah yang diajukan tidak boleh melebihi stok tersedia (:max)'
-                                                    ])
                                                     ->helperText('Masukkan jumlah barang yang dibutuhkan')
                                                     ->prefixIcon('heroicon-o-shopping-cart')
-                                                    ->reactive(),
+                                                    ->suffix('Qty')
+                                                    ->columnSpan(1),
+
+                                                Forms\Components\Textarea::make('detail_barang')
+                                                    ->label('Detail Barang')
+                                                    ->placeholder('Berikan detail spesifikasi barang yang diajukan')
+                                                    ->required()
+                                                    ->maxLength(500)
+                                                    ->rows(3)
+                                                    ->columnSpanFull()
+                                                    ->helperText('Berikan detail seperti spesifikasi, merek, ukuran, atau informasi penting lainnya'),
                                             ]),
                                     ])
                                     ->itemLabel(
                                         fn(array $state): ?string =>
-                                        isset($state['barang_id']) && isset($state['nama_barang']) ?
+                                        isset($state['nama_barang']) ?
                                             $state['nama_barang'] . ' (' . ($state['Jumlah_barang_diajukan'] ?? '0') . ' unit)' :
-                                            'Barang Yang Diajukan' 
+                                            'Barang Yang Diajukan'
                                     )
                                     ->collapsible()
                                     ->defaultItems(1)
@@ -252,22 +203,43 @@ class PengajuanResource extends Resource
                                     ->addActionLabel('+ Tambah Barang')
                                     ->reorderableWithButtons()
                                     ->deleteAction(
-                                        fn(Forms\Components\Actions\Action $action) => $action->requiresConfirmation()
+                                        fn(Forms\Components\Actions\Action $action) => $action
                                     )
                                     ->columns(1),
                             ]),
-                    ]),
+                    ])
+                    ->reactive()
+                    ->live(),
+
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-         ->recordUrl(null) 
+            ->recordUrl(null)
             ->columns([
                 Split::make([
                     Stack::make([
+                        // Header dengan Batch Info
                         Split::make([
+                            BadgeColumn::make('batch_info')
+                                ->label('')
+                                ->formatStateUsing(function ($record) {
+                                    // Null check untuk record
+                                    if (!$record || !method_exists($record, 'isPartOfGroup')) {
+                                        return "📦 Item Tunggal";
+                                    }
+
+                                    if ($record->isPartOfGroup()) {
+                                        $groupSize = $record->getGroupSize();
+                                        return "📦 Batch ({$groupSize} item)";
+                                    }
+                                    return "📦 Item Tunggal";
+                                })
+                                ->color('info')
+                                ->size('sm'),
+
                             BadgeColumn::make('status')
                                 ->colors([
                                     'warning' => 'pending',
@@ -291,10 +263,11 @@ class PengajuanResource extends Resource
                                 ->size('md'),
                         ]),
 
+                        // Info Pemohon dan Tanggal
                         Split::make([
                             TextColumn::make('user.name')
                                 ->label('Pemohon')
-                                ->formatStateUsing(fn($state) => "👤 " . $state)
+                                ->formatStateUsing(fn($state) => $state ? "👤 " . $state : "👤 Unknown")
                                 ->searchable()
                                 ->color('gray')
                                 ->weight('medium'),
@@ -302,28 +275,57 @@ class PengajuanResource extends Resource
                             TextColumn::make('tanggal_pengajuan')
                                 ->label('Tanggal')
                                 ->weight('medium')
-                                ->formatStateUsing(fn($state) => "📅 " . Carbon::parse($state)->format('d M Y'))
+                                ->formatStateUsing(fn($state) => $state ? "📅 " . Carbon::parse($state)->format('d M Y') : "📅 -")
                                 ->color('gray'),
+                        ]),
 
-                            TextColumn::make('barang.nama_barang')
+                        // Batch ID untuk identifikasi grup
+                        TextColumn::make('batch_id')
+                            ->label('ID Batch')
+                            ->formatStateUsing(fn($state) => $state ? "🏷️ " . substr($state, -8) : "🏷️ -")
+                            ->color('blue')
+                            ->size('sm')
+                            ->searchable()
+                            ->toggleable(isToggledHiddenByDefault: true),
+
+                        // Info Barang (menggunakan field baru nama_barang)
+                        Split::make([
+                            TextColumn::make('nama_barang')
                                 ->label('Nama Barang')
-                                ->formatStateUsing(fn($state) => "📦 " . $state)
+                                ->formatStateUsing(fn($state) => $state ? "📦 " . $state : "📦 -")
                                 ->weight('medium')
                                 ->color('gray')
                                 ->searchable()
-                        ]),
+                                ->wrap(),
 
-                        Split::make([
                             TextColumn::make('Jumlah_barang_diajukan')
-                                ->label('Jumlah Diajukan')
-                                ->formatStateUsing(fn($state) => "📊 " . $state . ' unit')
+                                ->label('Jumlah')
+                                ->formatStateUsing(fn($state) => $state ? "📊 " . $state . ' unit' : "📊 0 unit")
                                 ->color('gray')
                                 ->weight('medium'),
                         ]),
 
+                        // Detail Barang (field baru)
+                        Panel::make([
+                            TextColumn::make('detail_barang')
+                                ->label('Detail Barang')
+                                ->formatStateUsing(function ($state) {
+                                    if (empty($state)) {
+                                        return "📝 Tidak ada detail";
+                                    }
+                                    return "📝 " . (strlen($state) > 80 ? substr($state, 0, 80) . '...' : $state);
+                                })
+                                ->color('gray')
+                                ->size('sm')
+                                ->wrap()
+                                ->tooltip(fn($state) => $state ?: 'Tidak ada detail')
+                        ])
+                            ->collapsible(false),
+
+                        // Keterangan Umum
                         Panel::make([
                             TextColumn::make('keterangan')
-                                ->label('Keterangan')
+                                ->label('Keterangan Pengajuan')
                                 ->formatStateUsing(function ($state) {
                                     if (empty($state)) {
                                         return "📝 Tidak ada keterangan";
@@ -337,23 +339,8 @@ class PengajuanResource extends Resource
                         ])
                             ->collapsible(false),
 
+                        // Status Barang dan Project
                         Split::make([
-                            TextColumn::make('approvedBy.name')
-                                ->label('Disetujui Oleh')
-                                ->formatStateUsing(fn($state) => $state ? "✅ " . $state : '')
-                                ->color('success')
-                                ->visible(
-                                    fn(?Model $record): bool =>
-                                    $record instanceof Pengajuan && $record->status === 'approved'
-                                )
-                                ->tooltip(
-                                    fn(Pengajuan $record) =>
-                                    $record->approved_at
-                                        ? 'Disetujui pada ' . Carbon::parse($record->approved_at)->format('d M Y H:i')
-                                        : null
-                                )
-                                ->size('sm'),
-
                             TextColumn::make('status_barang')
                                 ->label('Diperuntukan')
                                 ->formatStateUsing(function ($state, $record) {
@@ -366,13 +353,33 @@ class PengajuanResource extends Resource
                                     if ($state === 'project' && !empty($record->nama_project)) {
                                         $statusText .= ' - ' . $record->nama_project;
                                     }
-
                                     return "" . $statusText;
                                 })
                                 ->color('gray')
+                                ->size('sm')
+                                ->wrap(),
+                        ]),
+
+                        // Info Persetujuan (hanya tampil jika approved)
+                        Split::make([
+                            TextColumn::make('approvedBy.name')
+                                ->label('Disetujui Oleh')
+                                ->formatStateUsing(fn($state) => $state ? "✅ " . $state : '')
+                                ->color('success')
+                                ->visible(
+                                    fn(?Model $record): bool =>
+                                    $record && $record instanceof Pengajuan && $record->status === 'approved'
+                                )
+                                ->tooltip(
+                                    fn(Pengajuan $record) =>
+                                    $record->approved_at
+                                        ? 'Disetujui pada ' . Carbon::parse($record->approved_at)->format('d M Y H:i')
+                                        : null
+                                )
                                 ->size('sm'),
                         ]),
 
+                        // Info Penolakan (hanya tampil jika rejected)
                         Split::make([
                             TextColumn::make('rejectedBy.name')
                                 ->label('Ditolak Oleh')
@@ -380,7 +387,7 @@ class PengajuanResource extends Resource
                                 ->color('danger')
                                 ->visible(
                                     fn(?Model $record): bool =>
-                                    $record instanceof Pengajuan && $record->status === 'rejected'
+                                    $record && $record instanceof Pengajuan && $record->status === 'rejected'
                                 )
                                 ->tooltip(
                                     fn(Pengajuan $record) =>
@@ -396,12 +403,34 @@ class PengajuanResource extends Resource
                                 ->color('danger')
                                 ->visible(
                                     fn(?Model $record): bool =>
-                                    $record instanceof Pengajuan && $record->status === 'rejected'
+                                    $record && $record instanceof Pengajuan && $record->status === 'rejected'
                                 )
                                 ->size('sm')
-                                ->limit(30)
-                                ->tooltip(fn($state) => $state),
+                                ->limit(50)
+                                ->tooltip(fn($state) => $state)
+                                ->wrap(),
                         ]),
+
+                        // Info Grup Batch (tambahan untuk menunjukkan berapa item dalam batch)
+                        TextColumn::make('group_info')
+                            ->label('Info Grup')
+                            ->formatStateUsing(function ($record) {
+                                if (!$record || !method_exists($record, 'isPartOfGroup')) {
+                                    return "";
+                                }
+
+                                if ($record->isPartOfGroup()) {
+                                    $groupSize = $record->getGroupSize();
+                                    $groupName = $record->getGroupName();
+                                    return "👥 {$groupName} ({$groupSize} item)";
+                                }
+                                return "";
+                            })
+                            ->color('info')
+                            ->size('sm')
+                            ->visible(fn($record) => $record && method_exists($record, 'isPartOfGroup') && $record->isPartOfGroup())
+                            ->toggleable(isToggledHiddenByDefault: false),
+
                     ])->space(3),
                 ])->from('md'),
             ])
@@ -409,6 +438,7 @@ class PengajuanResource extends Resource
                 'md' => 2,
                 'xl' => 3,
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 TrashedFilter::make()
                     ->preload()
@@ -488,7 +518,6 @@ class PengajuanResource extends Resource
                             Log::error('Group approval failed: ' . ($result['error'] ?? 'Unknown error'));
                         }
                     }),
-
                 // REJECT ACTION
                 ActionsAction::make('reject')
                     ->icon('heroicon-o-x-circle')
@@ -522,7 +551,6 @@ class PengajuanResource extends Resource
                             Log::error('Group rejection failed: ' . ($result['error'] ?? 'Unknown error'));
                         }
                     }),
-
                 ActionGroup::make([
                     EditAction::make()
                         ->visible(
@@ -538,27 +566,29 @@ class PengajuanResource extends Resource
                             $record->status === 'pending' &&
                                 (Auth::user()->id === $record->user_id || Auth::user()->hasAnyRole(['super_admin', 'administrator']))
                         ),
-
                     ForceDeleteAction::make(),
                 ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->visible(fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator'])),
+                        ->visible(fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator']))
+                        ->label('Hapus Dipilih')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->modalHeading('Hapus Pengguna Yang Dipilih')
+                        ->modalDescription('Apakah Anda yakin ingin menghapus semua pengguna yang dipilih? Tindakan ini tidak dapat dibatalkan.')
+                        ->modalSubmitActionLabel('Ya, Hapus Semua'),
                     Tables\Actions\ForceDeleteBulkAction::make()
-                ]),
+                        ->visible(fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator'])),
+                ])
+                    ->icon('heroicon-m-adjustments-horizontal')
+                    ->color('danger')
+                    ->tooltip('Aksi untuk pengguna yang dipilih'),
             ])
             ->emptyStateIcon('heroicon-o-clipboard-document-list')
             ->emptyStateHeading('Belum ada pengajuan barang')
             ->emptyStateDescription('Pengajuan barang akan muncul di sini setelah Anda atau pengguna lain membuat pengajuan.')
-            ->emptyStateActions([
-                Tables\Actions\Action::make('create')
-                    ->label('Buat Pengajuan Baru')
-                    ->url(route('filament.admin.resources.pengajuan.create'))
-                    ->icon('heroicon-m-plus-circle')
-                    ->color('success')
-            ])
             ->poll('15s')
             ->striped()
             ->paginated([10, 25, 50, 100, 'all'])

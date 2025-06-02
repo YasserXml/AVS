@@ -27,6 +27,8 @@ class DivisipurchasingResource extends Resource
 
     protected static ?string $label = 'Divisi Purchasing';
 
+    protected static ?string $slug = 'divisi-purchasing';
+
     public static function form(Form $form): Form
     {
         return $form

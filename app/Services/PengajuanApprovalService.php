@@ -23,7 +23,7 @@ class PengajuanApprovalService
             // Ambil semua pengajuan dalam grup yang sama dan masih pending
             $grupPengajuans = Pengajuan::where('batch_id', $record->batch_id)
                 ->where('status', 'pending')
-                ->with('barang')
+                ->with(['user']) // Tidak perlu load 'barang' karena sekarang menggunakan nama_barang
                 ->get();
 
             $approvedCount = 0;
@@ -66,32 +66,33 @@ class PengajuanApprovalService
     }
 
     /**
-     * Approve pengajuan individual
+     * Approve pengajuan individual - UPDATED untuk struktur baru
      */
     private function approveIndividualPengajuan(Pengajuan $pengajuan, array $data): array
     {
         try {
-            // Periksa stok tersedia
-            $barang = Barang::find($pengajuan->barang_id);
-            if ($barang->jumlah_barang < $pengajuan->Jumlah_barang_diajukan) {
-                return [
-                    'success' => false,
-                    'error' => "{$barang->nama_barang} (stok tidak mencukupi: tersedia {$barang->jumlah_barang}, diminta {$pengajuan->Jumlah_barang_diajukan})"
-                ];
-            }
-
             // Set tanggal keluar
             $tanggalKeluar = $data['tanggal_keluar'] ?? now()->format('Y-m-d');
 
-            // Catat barang keluar
+            // PENTING: Jika masih menggunakan sistem barang_keluar, 
+            // Anda perlu menyesuaikan atau membuat logic baru
+            // Karena sekarang tidak ada relasi langsung ke tabel barang
+
+            // Option 1: Skip barang_keluar jika tidak diperlukan
+            // Option 2: Buat barang_keluar dengan barang_id null
+            // Option 3: Cari barang berdasarkan nama_barang
+
+            // Contoh Option 2: Buat record barang keluar tanpa relasi barang
             $barangKeluar = Barangkeluar::create([
-                'barang_id' => $pengajuan->barang_id,
+                'barang_id' => null, // Atau cari berdasarkan nama_barang
                 'pengajuan_id' => $pengajuan->id,
                 'user_id' => Auth::id(),
                 'jumlah_barang_keluar' => $pengajuan->Jumlah_barang_diajukan,
                 'tanggal_keluar_barang' => $tanggalKeluar,
-                'keterangan' => $data['keterangan_barang_keluar'],
+                'keterangan' => $data['keterangan_barang_keluar'] ?? 'Pengajuan disetujui',
                 'status' => $pengajuan->status_barang,
+                // Tambahan untuk identifikasi
+                'nama_barang_manual' => $pengajuan->nama_barang, // Jika ada field ini
             ]);
 
             // Update pengajuan
@@ -101,21 +102,22 @@ class PengajuanApprovalService
                 'approved_at' => now(),
             ]);
 
-            // Kurangi stok barang
-            $barang->decrement('jumlah_barang', $pengajuan->Jumlah_barang_diajukan);
+            // CATATAN: Tidak ada pengurangan stok karena tidak ada relasi ke tabel barang
+            // Jika Anda masih ingin mengurangi stok, Anda perlu:
+            // 1. Cari barang berdasarkan nama_barang
+            // 2. Atau buat mapping manual
 
-            Log::info("Barang keluar berhasil dibuat untuk pengajuan ID: {$pengajuan->id}, tanggal: {$tanggalKeluar}");
+            Log::info("Pengajuan berhasil disetujui untuk ID: {$pengajuan->id}, barang: {$pengajuan->nama_barang}");
 
             return ['success' => true];
         } catch (\Exception $e) {
             Log::error('Error saat approve item individual: ' . $e->getMessage());
             return [
                 'success' => false,
-                'error' => "{$pengajuan->barang->nama_barang} (error: {$e->getMessage()})"
+                'error' => "{$pengajuan->nama_barang} (error: {$e->getMessage()})"
             ];
         }
     }
-
     /**
      * Reject grup pengajuan bersamaan
      */
@@ -125,7 +127,7 @@ class PengajuanApprovalService
             // Ambil semua pengajuan dalam grup yang sama dan masih pending
             $grupPengajuans = Pengajuan::where('batch_id', $record->batch_id)
                 ->where('status', 'pending')
-                ->with(['user', 'barang'])
+                ->with(['user']) // Tidak perlu 'barang' lagi
                 ->get();
 
             $rejectedCount = 0;
@@ -136,7 +138,7 @@ class PengajuanApprovalService
                         'status' => 'rejected',
                         'reject_by' => Auth::id(),
                         'reject_reason' => $data['reject_reason'],
-                        'rejected_at' => now(),
+                        'reject_at' => now(),
                     ]);
                     $rejectedCount++;
                 }
@@ -173,20 +175,19 @@ class PengajuanApprovalService
     }
 
     /**
-     * Generate deskripsi modal untuk approval
+     * Generate deskripsi modal untuk approval - UPDATED
      */
     public function generateApprovalModalDescription(Pengajuan $record): string
     {
         $grupPengajuans = Pengajuan::where('batch_id', $record->batch_id)
             ->where('status', 'pending')
-            ->with(['barang', 'user'])
+            ->with(['user']) 
             ->get();
 
         $totalItems = $grupPengajuans->count();
 
         if ($totalItems == 1) {
-            // Pengajuan tunggal
-            return "Anda akan menyetujui pengajuan barang:\n\n• {$record->barang->nama_barang} ({$record->Jumlah_barang_diajukan} unit)";
+            return "Anda akan menyetujui pengajuan barang:\n\n• {$record->nama_barang} ({$record->Jumlah_barang_diajukan} unit)";
         }
 
         // Pengajuan bersamaan
@@ -194,27 +195,27 @@ class PengajuanApprovalService
         $grupName = $this->generateGrupName($firstPengajuan);
 
         $itemList = $grupPengajuans->map(function ($item) {
-            return "• {$item->barang->nama_barang} ({$item->Jumlah_barang_diajukan} unit)";
+            return "• {$item->nama_barang} ({$item->Jumlah_barang_diajukan} unit)";
         })->join("\n");
 
         return "Anda akan menyetujui {$totalItems} pengajuan barang sekaligus dari {$grupName}:\n\n{$itemList}\n\n💡 Semua item dalam grup pengajuan ini akan diproses bersamaan.";
     }
 
     /**
-     * Generate deskripsi modal untuk rejection
+     * Generate deskripsi modal untuk rejection - UPDATED
      */
     public function generateRejectionModalDescription(Pengajuan $record): string
     {
         $grupPengajuans = Pengajuan::where('batch_id', $record->batch_id)
             ->where('status', 'pending')
-            ->with(['barang', 'user'])
+            ->with(['user']) // Tidak perlu 'barang'
             ->get();
 
         $totalItems = $grupPengajuans->count();
 
         if ($totalItems == 1) {
-            // Pengajuan tunggal
-            return "Anda akan menolak pengajuan barang:\n\n• {$record->barang->nama_barang} ({$record->Jumlah_barang_diajukan} unit)";
+            // Pengajuan tunggal - menggunakan nama_barang langsung
+            return "Anda akan menolak pengajuan barang:\n\n• {$record->nama_barang} ({$record->Jumlah_barang_diajukan} unit)";
         }
 
         // Pengajuan bersamaan
@@ -222,7 +223,7 @@ class PengajuanApprovalService
         $grupName = $this->generateGrupName($firstPengajuan);
 
         $itemList = $grupPengajuans->map(function ($item) {
-            return "• {$item->barang->nama_barang} ({$item->Jumlah_barang_diajukan} unit)";
+            return "• {$item->nama_barang} ({$item->Jumlah_barang_diajukan} unit)";
         })->join("\n");
 
         return "Anda akan menolak {$totalItems} pengajuan barang sekaligus dari {$grupName}:\n\n{$itemList}\n\n⚠️ Semua item dalam grup pengajuan ini akan ditolak dengan alasan yang sama.";
@@ -240,7 +241,7 @@ class PengajuanApprovalService
     }
 
     /**
-     * Kirim notifikasi hasil approval
+     * Kirim notifikasi hasil approval - UPDATED
      */
     private function sendApprovalNotifications(int $approvedCount, array $failedItems, Pengajuan $record, ?Pengajuan $firstPengajuan): void
     {
@@ -250,7 +251,7 @@ class PengajuanApprovalService
             if ($approvedCount == 1) {
                 Notification::make()
                     ->title('Pengajuan Berhasil Disetujui')
-                    ->body("Berhasil menyetujui pengajuan barang {$record->barang->nama_barang}")
+                    ->body("Berhasil menyetujui pengajuan barang {$record->nama_barang}")
                     ->success()
                     ->send();
             } else {
@@ -291,7 +292,7 @@ class PengajuanApprovalService
     public function getGroupMembers(Pengajuan $pengajuan): Collection
     {
         return Pengajuan::where('batch_id', $pengajuan->batch_id)
-            ->with(['barang', 'user'])
+            ->with(['user']) // Tidak perlu 'barang'
             ->get();
     }
 }

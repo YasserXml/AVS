@@ -92,6 +92,7 @@ class Register extends FilamentRegister
             'divisi_r&d' => 'R&D',
             'divisi_3d' => '3D',
             'divisi_mekanik' => 'Mekanik',
+            'divisi_pmo' => 'PMO',  
         ];
         
         return Select::make('divisi_role')

@@ -68,12 +68,13 @@ class KategoriResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+        ->recordUrl(null)
             ->columns([
                Tables\Columns\TextColumn::make('id')
                     ->label('No')
-                    // ->state(static function ($rowLoop): string {
-                    //     return (string) $rowLoop->iteration;
-                    // })
+                    ->state(static function ($rowLoop): string {
+                        return (string) $rowLoop->iteration;
+                    })
                     ->alignCenter()
                     ->color('gray')
                     ->weight(FontWeight::Bold)

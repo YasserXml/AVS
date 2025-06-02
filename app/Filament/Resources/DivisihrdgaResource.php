@@ -27,6 +27,8 @@ class DivisihrdgaResource extends Resource
 
     protected static ?string $label = 'Divisi HRD & GA';
 
+    protected static ?string $slug = 'divisi-hrd-ga';
+
     public static function form(Form $form): Form
     {
         return $form

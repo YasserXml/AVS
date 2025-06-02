@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pengembalian extends Model
 {
-    protected $table ='penegembalians';
+    use HasFactory, SoftDeletes;
+
+    protected $table ='pengembalians';
 
     protected $fillable = [
         'pengajuan_id',

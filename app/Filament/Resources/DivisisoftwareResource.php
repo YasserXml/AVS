@@ -25,6 +25,8 @@ class DivisisoftwareResource extends Resource
 
     protected static ?int $navigationSort = 12;
 
+    protected static ?string $slug = 'divisi-software';
+
     public static function form(Form $form): Form
     {
         return $form

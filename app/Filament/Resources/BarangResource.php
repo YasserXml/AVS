@@ -179,8 +179,7 @@ class BarangResource extends Resource
 
                         Infolists\Components\TextEntry::make('nama_barang')
                             ->label('Nama Barang')
-                            ->weight(FontWeight::Bold)
-                            ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                            ->weight(FontWeight::Bold),
 
                         Infolists\Components\TextEntry::make('jumlah_barang')
                             ->label('Jumlah Barang')
@@ -235,7 +234,7 @@ class BarangResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->copyable()
-                    ->color('primary')
+                    ->color('gray')
                     ->weight(FontWeight::Bold)
                     ->icon('heroicon-m-identification'),
 
@@ -266,9 +265,7 @@ class BarangResource extends Resource
                     ->label('Kategori')
                     ->searchable()
                     ->sortable()
-                    ->badge()
                     ->icon('heroicon-m-tag')
-                    ->color(Color::Emerald)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -317,21 +314,23 @@ class BarangResource extends Resource
                             default => $query,
                         };
                     })
-                    ->indicator('Status'),
+                    ->indicator('Status')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->tooltip('Lihat Barang')
+                    ->extraAttributes(['class' => 'bg-primary-500/10']),
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make()
-                        ->tooltip('Lihat Barang')
-                        ->extraAttributes(['class' => 'bg-primary-500/10']),
 
                     Tables\Actions\EditAction::make()
                         ->tooltip('Edit Barang')
-                        ->extraAttributes(['class' => 'bg-warning-500/10']),
+                        ->extraAttributes(['class' => 'bg-warning-500/10'])
+                        ->color('info'),
 
                     Action::make('tambah_stok')
                         ->label('+ Stok')
-                        ->icon('heroicon-m-plus')
                         ->color('success')
                         ->action(function (Barang $record, array $data): void {
                             $record->update([
@@ -354,7 +353,6 @@ class BarangResource extends Resource
 
                     Action::make('kurangi_stok')
                         ->label('- Stok')
-                        ->icon('heroicon-m-minus')
                         ->color('warning')
                         ->action(function (Barang $record, array $data): void {
                             $jumlahBaru = max(0, $record->jumlah_barang - $data['jumlah']);
@@ -421,17 +419,7 @@ class BarangResource extends Resource
                         ->successNotificationTitle('Stok barang berhasil ditambahkan'),
                 ]),
             ])
-            ->defaultSort('nama_barang', 'asc')
-            ->emptyStateHeading('Belum ada data barang')
-            ->emptyStateDescription('Silahkan tambahkan data barang baru dengan klik tombol "Tambah Barang"')
-            ->emptyStateIcon('heroicon-o-cube')
-            ->emptyStateActions([
-                Tables\Actions\Action::make('create')
-                    ->label('Tambah Barang')
-                    ->url(route('filament.admin.resources.barang.create'))
-                    ->icon('heroicon-o-plus-circle')
-                    ->button(),
-            ]);
+            ->defaultSort('nama_barang', 'asc');
     }
 
     public static function getRelations(): array

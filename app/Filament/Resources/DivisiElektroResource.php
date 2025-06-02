@@ -27,6 +27,8 @@ class DivisiElektroResource extends Resource
 
     protected static ?string $label = 'Divisi Elektro';
 
+    protected static ?string $slug = 'divisi-elektro';
+
     public static function form(Form $form): Form
     {
         return $form

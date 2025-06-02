@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Pengembalian;
 use App\Models\User;
+use App\Observers\PengembalianObserver;
 use App\Observers\UserObserver;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
        User::observe(UserObserver::class);
+       Pengembalian::observe(PengembalianObserver::class);
       
     }
 }

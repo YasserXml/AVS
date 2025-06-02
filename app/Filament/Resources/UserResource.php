@@ -74,9 +74,8 @@ class UserResource extends Resource
                         Grid::make(2)
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Nama Lengkap')
+                                    ->label('Nama Pengguna')
                                     ->required()
-                                    ->placeholder('Masukkan nama lengkap')
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('email')
                                     ->label('Alamat Email')
@@ -92,7 +91,6 @@ class UserResource extends Resource
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $operation): bool => $operation === 'create')
                             ->placeholder('Masukkan kata sandi baru')
-                            ->hint('Kosongkan jika tidak ingin mengubah kata sandi')
                             ->autocomplete('new-password'),
                     ])
                     ->columns(1),
@@ -186,13 +184,17 @@ class UserResource extends Resource
                     ->placeholder('Semua Pengguna')
                     ->trueLabel('Terverifikasi Admin')
                     ->falseLabel('Belum Terverifikasi Admin')
-                    ->indicator('Status Verifikasi'),
+                    ->indicator('Status Verifikasi')
+                    ->preload()
+                    ->searchable(),
 
                 TernaryFilter::make('email_verified_at')
                     ->label('Status Verifikasi Email')
                     ->placeholder('Semua Pengguna')
                     ->trueLabel('Email Terverifikasi')
                     ->falseLabel('Email Belum Terverifikasi')
+                    ->searchable()
+                    ->preload()
                     ->queries(
                         true: fn($query) => $query->whereNotNull('email_verified_at'),
                         false: fn($query) => $query->whereNull('email_verified_at'),
@@ -215,7 +217,7 @@ class UserResource extends Resource
                         ->modalDescription(fn(User $record): string => "Apakah Anda yakin ingin menghapus {$record->name}? Tindakan ini tidak dapat dibatalkan.")
                         ->modalSubmitActionLabel('Ya, Hapus Pengguna')
                 ])
-                    ->color('danger')
+                    ->color('gray')
                     ->icon('heroicon-m-cog-6-tooth')
                     ->label('Aksi')
                     ->size('md')
@@ -224,27 +226,16 @@ class UserResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->label('Hapus Massal')
+                        ->label('Hapus Dipilih')
                         ->icon('heroicon-o-trash')
                         ->color('danger')
-                        ->modalHeading('Hapus Pengguna Massal')
+                        ->modalHeading('Hapus Pengguna Yang Dipilih')
                         ->modalDescription('Apakah Anda yakin ingin menghapus semua pengguna yang dipilih? Tindakan ini tidak dapat dibatalkan.')
                         ->modalSubmitActionLabel('Ya, Hapus Semua')
                 ])
-                    ->label('Aksi Massal')
                     ->icon('heroicon-m-adjustments-horizontal')
-                    ->color('danger')
+                    ->color('danger') 
                     ->tooltip('Aksi untuk pengguna yang dipilih'),
-            ])
-            ->emptyStateHeading('Belum Ada Pengguna')
-            ->emptyStateDescription('Tambahkan pengguna baru untuk mengakses sistem.')
-            ->emptyStateIcon('heroicon-o-user-plus')
-            ->emptyStateActions([
-                Tables\Actions\Action::make('createUser')
-                    ->label('Tambah Pengguna')
-                    ->url(route('filament.admin.resources.pengguna.create'))
-                    ->icon('heroicon-o-user-plus')
-                    ->color('danger')
             ]);
     }
 

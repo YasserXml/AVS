@@ -27,6 +27,10 @@ class DivisiRndResource extends Resource
 
     protected static ?string $label = 'Divisi R&D';
 
+    protected static ?string $pluralLabel = 'Divisi R&D';
+
+    protected static ?string $slug = 'divisi-rnd';
+
     public static function form(Form $form): Form
     {
         return $form

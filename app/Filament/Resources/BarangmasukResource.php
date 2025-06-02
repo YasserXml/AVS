@@ -8,9 +8,16 @@ use App\Models\Barangmasuk;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms;
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Components\Actions\Action as ActionsAction;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Infolists\Components\Card;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\ActionGroup;
@@ -164,7 +171,7 @@ class BarangmasukResource extends Resource
 
                         // Repeater for Existing Items
                         Forms\Components\Repeater::make('barang_lama_items')
-                                    ->label('Barang Yang Sudah Ada')
+                            ->label('Barang Yang Sudah Ada')
                             ->schema([
                                 Forms\Components\Grid::make(['sm' => 1, 'md' => 3])
                                     ->schema([
@@ -172,7 +179,7 @@ class BarangmasukResource extends Resource
                                             ->label('Pilih Barang')
                                             ->relationship('barang', 'nama_barang')
                                             ->searchable()
-                                            ->preload() 
+                                            ->preload()
                                             ->reactive()
                                             ->live()
                                             ->required()
@@ -215,21 +222,21 @@ class BarangmasukResource extends Resource
                             ->itemLabel(
                                 fn(array $state): ?string =>
                                 isset($state['barang_id']) ?
-                                    \App\Models\Barang::find($state['barang_id'])?->nama_barang . ' (' . ($state['jumlah_barang_masuk'] ?? '0') . ' unit)' :
+                                    Barang::find($state['barang_id'])?->nama_barang . ' (' . ($state['jumlah_barang_masuk'] ?? '0') . ' unit)' :
                                     'Barang Yang Sudah Ada'
                             )
                             ->collapsible()
                             ->defaultItems(1)
-                            ->addActionLabel('+ Tambah Barang Lama')
+                            ->addActionLabel('+ Tambah')
                             ->reorderableWithButtons()
                             ->deleteAction(
-                                fn(Forms\Components\Actions\Action $action) => $action->requiresConfirmation()
+                                fn(ActionsAction $action) => $action
                             )
                             ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_lama'),
 
                         // Repeater for New Items
                         Forms\Components\Repeater::make('barang_baru_items')
-                                ->label('Barang Baru')
+                            ->label('Barang Baru')
                             ->schema([
                                 Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
                                     ->schema([
@@ -291,10 +298,10 @@ class BarangmasukResource extends Resource
                             ->defaultItems(1)
                             ->reactive()
                             ->live()
-                            ->addActionLabel('+ Tambah Barang Baru')
+                            ->addActionLabel('+ Tambah')
                             ->reorderableWithButtons()
                             ->deleteAction(
-                                fn(Forms\Components\Actions\Action $action) => $action->requiresConfirmation()
+                                fn(ActionsAction $action) => $action
                             )
                             ->visible(fn(Get $get) => $get('tipe_transaksi') === 'barang_baru'),
                     ]),
@@ -307,7 +314,8 @@ class BarangmasukResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-         ->recordUrl(null) 
+            ->recordUrl(null)
+            ->defaultGroup('status')
             ->columns([
                 TextColumn::make('barang.serial_number')
                     ->label('Serial Number')
@@ -318,7 +326,6 @@ class BarangmasukResource extends Resource
                     ->copyMessageDuration(1500)
                     ->icon('heroicon-o-identification')
                     ->weight('bold')
-                    ->color('primary')
                     ->toggleable(),
 
                 TextColumn::make('barang.nama_barang')
@@ -334,7 +341,6 @@ class BarangmasukResource extends Resource
                 TextColumn::make('barang.kode_barang')
                     ->label('Kode Barang')
                     ->searchable()
-                    ->badge()
                     ->color('gray')
                     ->icon('heroicon-o-qr-code')
                     ->toggleable(),
@@ -353,13 +359,14 @@ class BarangmasukResource extends Resource
                     ->date('d M Y')
                     ->sortable()
                     ->icon('heroicon-o-calendar')
-                    ->color('success')
+                    ->color('info')
                     ->toggleable(),
 
                 TextColumn::make('dibeli')
                     ->label('Diajukan Oleh')
                     ->searchable()
                     ->sortable()
+                    ->weight('semibold')
                     ->formatStateUsing(fn($state) => ucwords($state))
                     ->icon('heroicon-o-user')
                     ->toggleable(),
@@ -426,25 +433,28 @@ class BarangmasukResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->striped()
             ->searchable()
-            ->persistFiltersInSession()
-            ->filtersFormColumns(3)
             ->filters([
-                TrashedFilter::make(),
-
+                TrashedFilter::make()
+                ->searchable()
+                ->preload()
+                ->label('Dihapus'),
                 SelectFilter::make('status')
                     ->label('Status Penggunaan')
                     ->options([
                         'oprasional_kantor' => 'Operasional Kantor',
                         'project' => 'Project',
-                    ])
-                    ->multiple(),
+                    ])  
+                    ->searchable()
+                    ->preload(),
 
                 Filter::make('tanggal_barang_masuk')
                     ->form([
                         Forms\Components\DatePicker::make('dari_tanggal')
-                            ->label('Dari Tanggal'),
+                            ->label('Dari Tanggal')
+                            ->native(false),
                         Forms\Components\DatePicker::make('sampai_tanggal')
-                            ->label('Sampai Tanggal'),
+                            ->label('Sampai Tanggal')
+                            ->native(false),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -472,8 +482,8 @@ class BarangmasukResource extends Resource
                     }),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make()
                         ->color('info')
                         ->icon('heroicon-o-pencil'),
@@ -514,16 +524,182 @@ class BarangmasukResource extends Resource
                     ->color('danger')
                     ->tooltip('Aksi untuk barang masuk yang dipilih'),
             ])
-            ->defaultSort('created_at', 'desc')
-            ->emptyStateHeading('Belum Ada Data Barang Masuk')
-            ->emptyStateDescription('Silakan tambahkan data barang masuk dengan klik tombol di bawah')
-            ->emptyStateIcon('heroicon-o-archive-box')
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make()
-                    ->label('Tambah Barang Masuk')
-                    ->icon('heroicon-o-plus')
-                    ->color('success'),
-            ]);
+            ->defaultSort('created_at', 'desc');
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                // Header Section dengan Informasi Utama
+                Section::make()
+                    ->heading('Ringkasan Transaksi')
+                    ->description('Informasi utama transaksi barang masuk')
+                    ->icon('heroicon-o-document-text')
+                    ->aside()
+                    ->schema([
+                        Grid::make(['sm' => 1, 'md' => 2, 'lg' => 3])
+                            ->schema([
+                                TextEntry::make('tanggal_barang_masuk')
+                                    ->label('Tanggal Masuk')
+                                    ->date('d F Y')
+                                    ->icon('heroicon-o-calendar')
+                                    ->weight('bold')
+                                    ->extraAttributes(['class' => 'text-lg']),
+
+                                TextEntry::make('status')
+                                    ->label('Status Penggunaan')
+                                    ->badge()
+                                    ->icon(fn(string $state): string => match ($state) {
+                                        'oprasional_kantor' => 'heroicon-o-building-office',
+                                        'project' => 'heroicon-o-briefcase',
+                                        default => 'heroicon-o-question-mark-circle',
+                                    })
+                                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                                        'oprasional_kantor' => 'Operasional Kantor',
+                                        'project' => 'Project',
+                                        default => ucfirst($state),
+                                    }),
+
+                                TextEntry::make('jumlah_barang_masuk')
+                                    ->label('Total Barang Masuk')
+                                    ->numeric()
+                                    ->icon('heroicon-o-arrow-trending-up')
+                                    ->weight('bold')
+                                    ->suffix(' unit')
+                                    ->extraAttributes(['class' => 'text-lg']),
+                            ]),
+
+                        // Project Name (Conditional)
+                        TextEntry::make('project_name')
+                            ->label('Nama Project')
+                            ->placeholder('Tidak ada project')
+                            ->icon('heroicon-o-briefcase')
+                            ->color('info')
+                            ->weight('semibold')
+                            ->visible(fn($record) => $record->status === 'project' && !empty($record->project_name))
+                            ->columnSpanFull(),
+                    ]),
+
+                // Informasi Penanggung Jawab
+                Section::make()
+                    ->heading('Informasi Penanggung Jawab')
+                    ->description('Detail penanggung jawab dan yang menginput data')
+                    ->icon('heroicon-o-users')
+                    ->aside()
+                    ->schema([
+                        Grid::make(['sm' => 1, 'md' => 2])
+                            ->schema([
+                                TextEntry::make('dibeli')
+                                    ->label('Diajukan Oleh')
+                                    ->formatStateUsing(fn($state) => ucwords($state))
+                                    ->icon('heroicon-o-user')
+                                    ->weight('semibold'),
+
+                                TextEntry::make('user.name')
+                                    ->label('Yang Menginput')
+                                    ->formatStateUsing(fn($state) => ucwords($state))
+                                    ->icon('heroicon-o-user-circle')
+                                    ->weight('semibold'),
+                            ]),
+                    ]),
+
+                // Detail Barang Section
+                Section::make()
+                    ->heading('Detail Barang')
+                    ->description('Informasi lengkap barang yang masuk ke inventori')
+                    ->icon('heroicon-o-cube')
+                    ->aside()
+                    ->schema([
+                        Grid::make(['sm' => 1, 'md' => 2, 'lg' => 3])
+                            ->schema([
+                                TextEntry::make('barang.serial_number')
+                                    ->label('Serial Number')
+                                    ->copyable()
+                                    ->copyMessage('Serial number berhasil disalin!')
+                                    ->copyMessageDuration(1500)
+                                    ->icon('heroicon-o-identification')
+                                    ->weight('bold')
+                                    ->extraAttributes(['class' => 'font-mono text-sm']),
+
+                                TextEntry::make('barang.kode_barang')
+                                    ->label('Kode Barang')
+                                    ->icon('heroicon-o-qr-code')
+                                    ->extraAttributes(['class' => 'font-mono']),
+
+                                TextEntry::make('barang.nama_barang')
+                                    ->label('Nama Barang')
+                                    ->icon('heroicon-o-tag')
+                                    ->weight('semibold'),
+                            ]),
+
+                        // Kategori Barang (jika ada)
+                        TextEntry::make('barang.kategori.nama_kategori')
+                            ->label('Kategori Barang')
+                            ->icon('heroicon-o-tag')
+                            ->placeholder('Belum dikategorikan')
+                            ->columnSpanFull(),
+                    ]),
+
+                // Statistik dan Informasi Tambahan
+                Section::make()
+                    ->heading('Informasi Sistem')
+                    ->description('Data tambahan dan riwayat perubahan')
+                    ->icon('heroicon-o-information-circle')
+                    ->aside()
+                    ->collapsible()
+                    ->collapsed(true)
+                    ->schema([
+                        Grid::make(['sm' => 1, 'md' => 2])
+                            ->schema([
+                                TextEntry::make('created_at')
+                                    ->label('Dibuat Pada')
+                                    ->dateTime('d M Y, H:i')
+                                    ->since()
+                                    ->icon('heroicon-o-clock')
+                                    ->color('gray'),
+
+                                TextEntry::make('updated_at')
+                                    ->label('Terakhir Diperbarui')
+                                    ->dateTime('d M Y, H:i')
+                                    ->since()
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('gray'),
+                            ]),
+                    ]),
+
+                // Summary Card dengan Statistik
+                Card::make([
+                    Grid::make(['sm' => 1, 'md' => 3])
+                        ->schema([
+                            TextEntry::make('barang.jumlah_barang')
+                                ->label('Stok Saat Ini')
+                                ->numeric()
+                                ->suffix(' unit')
+                                ->icon('heroicon-o-archive-box')
+                                ->weight('bold'),
+
+                            TextEntry::make('jumlah_barang_masuk')
+                                ->label('Barang Masuk')
+                                ->numeric()
+                                ->suffix(' unit')
+                                ->icon('heroicon-o-plus-circle')
+                                ->weight('bold'),
+
+                            TextEntry::make('calculated_previous_stock')
+                                ->label('Stok Sebelumnya')
+                                ->state(fn($record) => $record->barang->jumlah_barang - $record->jumlah_barang_masuk)
+                                ->numeric()
+                                ->suffix(' unit')
+                                ->icon('heroicon-o-minus-circle')
+                                ->weight('bold'),
+                        ]),
+                ])
+                    ->extraAttributes([
+                        'class' => 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-dashed border-blue-200 dark:border-blue-700'
+                    ]),
+            ])
+            ->columns(['sm' => 1, 'lg' => 2]);
     }
 
     public static function getRelations(): array
