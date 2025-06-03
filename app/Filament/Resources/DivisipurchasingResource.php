@@ -23,7 +23,7 @@ class DivisipurchasingResource extends Resource
 
     protected static ?string $navigationLabel = 'Divisi Purchasing';
 
-    protected static ?int $navigationSort = 13;
+    protected static ?int $navigationSort = 12;
 
     protected static ?string $label = 'Divisi Purchasing';
 

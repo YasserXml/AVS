@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\DivisisoftwareResource\Pages;
-use App\Filament\Resources\DivisisoftwareResource\RelationManagers;
-use App\Models\Divisisoftware;
+use App\Filament\Resources\DirektoratResource\Pages;
+use App\Filament\Resources\DirektoratResource\RelationManagers;
+use App\Models\Direktorat;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,25 +13,26 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class DivisisoftwareResource extends Resource
+class DirektoratResource extends Resource
 {
-    protected static ?string $model = Divisisoftware::class;
+    protected static ?string $model = Direktorat::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
     protected static ?string $navigationGroup = 'Arsip';
 
-    protected static ?string $navigationLabel = 'Divisi Software';
+    protected static ?string $navigationLabel = 'Direktorat';
 
-    protected static ?int $navigationSort = 13;
+    protected static ?string $slug = 'direktorat';
 
-    protected static ?string $slug = 'divisi-software';
+    protected static ?int $navigationSort = 8;
+
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                //
+                
             ]);
     }
 
@@ -39,10 +40,10 @@ class DivisisoftwareResource extends Resource
     {
         return $table
             ->columns([
-                //
+                
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(),
+                
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -50,8 +51,6 @@ class DivisisoftwareResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
                 ]),
             ]);
     }
@@ -66,11 +65,9 @@ class DivisisoftwareResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDivisisoftware::route('/'),
-            'create' => Pages\CreateDivisisoftware::route('/create'),
-            'edit' => Pages\EditDivisisoftware::route('/{record}/edit'),
+            'index' => Pages\ListDirektorats::route('/'),
+            'create' => Pages\CreateDirektorat::route('/create'),
+            'edit' => Pages\EditDirektorat::route('/{record}/edit'),
         ];
     }
-
-   
 }

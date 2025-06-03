@@ -13,6 +13,15 @@ return new class extends Migration
     {
         Schema::create('asetpts', function (Blueprint $table) {
             $table->id();
+            $table->date('tanggal')->nullable()->after('id');
+            $table->string('nama_barang')->after('tanggal');
+            $table->foreignId('barang_id')->nullable()->constrained('barangs')->nullOnDelete()->cascadeOnUpdate();
+            $table->integer('qty')->after('nama_barang');
+            $table->string('brand')->nullable()->after('qty');
+            $table->enum('status', ['pengembalian', 'stok'])->default('stok')->after('brand');
+            $table->string('pic')->nullable()->after('status');
+            $table->enum('kondisi', ['baik', 'rusak'])->default('baik')->after('pic');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

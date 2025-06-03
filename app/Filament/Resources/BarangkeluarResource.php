@@ -470,6 +470,16 @@ class BarangkeluarResource extends Resource
                             ->success()
                             ->send();
                     }),
+                Tables\Actions\ForceDeleteBulkAction::make()
+                    ->modalHeading('Hapus Permanen')
+                    ->modalDescription('Apakah Anda yakin ingin menghapus data barang keluar ini secara permanen? Tindakan ini tidak dapat dibatalkan.')
+                    ->requiresConfirmation()
+                    ->color('danger'),
+                Tables\Actions\RestoreBulkAction::make()
+                    ->modalHeading('Pulihkan Data')
+                    ->modalDescription('Apakah Anda yakin ingin memulihkan data barang keluar yang dipilih?')
+                    ->requiresConfirmation()
+                    ->color('success'),
             ])
             ->defaultSort('created_at', 'desc')
             ->persistSortInSession()

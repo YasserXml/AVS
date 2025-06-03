@@ -107,8 +107,7 @@ class KategoriResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make()
-                ->label('Dihapus')
-                    ->default(),
+                ->label('Dihapus'),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
@@ -125,11 +124,6 @@ class KategoriResource extends Resource
                     Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
             ])
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
-            ])
-            ->defaultSort('id', 'desc')
-            ->striped()
             ->paginated([10, 25, 50, 100, 'all']);
     }
     public static function getRelations(): array
