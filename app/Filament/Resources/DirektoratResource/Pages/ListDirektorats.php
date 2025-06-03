@@ -13,7 +13,9 @@ class ListDirektorats extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+            ->label('Buat Folder')
+            ->icon('heroicon-o-folder-plus'),
         ];
     }
 }

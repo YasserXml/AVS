@@ -10,8 +10,13 @@ class Divisisoftware extends Model
 
     protected $fillable = [
         'nama',
-        'keterangan',
-        'created_at',
-        'updated_at'
+        'date_modified',
+        'type',
+        'size',
+    ]; 
+
+    protected $casts = [
+        'date_modified' => 'datetime',
     ];
+
 }

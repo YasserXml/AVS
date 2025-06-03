@@ -79,6 +79,8 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
                 // FilamentThemeInspectorPlugin::make()
                 //     ->disabled(fn()=> ! app()->hasDebugModeEnabled()),
+                FilamentMediaManagerPlugin::make()
+                ->allowSubFolders(),
                 
             ])
             ->authMiddleware([

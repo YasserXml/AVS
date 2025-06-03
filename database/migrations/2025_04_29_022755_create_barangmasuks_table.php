@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('diajukan_oleh');
             $table->enum('status', ['oprasional_kantor', 'project']);
             $table->string('dibeli')->nullable();
-            $table->string('project_name');
+            $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete()->cascadeOnUpdate();
             $table->foreignId('kategori_id')->nullable()->constrained('kategoris')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes(); 

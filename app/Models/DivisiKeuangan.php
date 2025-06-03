@@ -8,5 +8,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DivisiKeuangan extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'divisikeuangans';
+
+    protected $fillable = [
+        'nama',
+        'date_modified',
+        'type',
+        'size',
+    ];
+
+    protected $casts = [
+        'date_modified' => 'datetime',
+    ];
 }

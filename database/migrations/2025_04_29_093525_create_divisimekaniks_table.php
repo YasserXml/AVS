@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('divisimekaniks', function (Blueprint $table) {
             $table->id();
+            $table->string('nama');
+            $table->date('date_modified')->nullable();
+            $table->string('type')->nullable();
+            $table->string('size')->nullable();
+            $table->softDeletes();
             $table->timestamps();
+            $table->foreignId('folder_id')->constrained('folders')->onDelete('cascade');
+            $table->foreignId('media_id')->constrained('media')->onDelete('cascade');
         });
     }
 

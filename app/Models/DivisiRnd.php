@@ -10,7 +10,17 @@ class DivisiRnd extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $table = 'divisirnds';
+
     protected $fillable = [
-        
+        'nama',
+        'date_modified',
+        'type',
+        'size',
     ];
+
+    protected $casts = [
+        'date_modified' => 'datetime',
+    ];
+
 }
