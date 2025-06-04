@@ -35,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('web')
-            // ->topNavigation()
+            ->topNavigation()
             ->login(Login::class)
             ->registration(Register::class)
             ->passwordReset()
