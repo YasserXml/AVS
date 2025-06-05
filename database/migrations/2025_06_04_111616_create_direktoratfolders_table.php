@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('direktoratfolders', function (Blueprint $table) {
-             $table->id();
+            $table->id();
 
             //Morph
             $table->string('model_type')->nullable();

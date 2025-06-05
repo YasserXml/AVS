@@ -41,6 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->sidebarCollapsibleOnDesktop()
             ->emailVerification()
+            ->breadcrumbs(false)
             ->profile(isSimple: false)
             ->loginRouteSlug('login')
             ->registrationRouteSlug('registrasi')
@@ -79,8 +80,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
                 // FilamentThemeInspectorPlugin::make()
                 //     ->disabled(fn()=> ! app()->hasDebugModeEnabled()),
-                FilamentMediaManagerPlugin::make()
-                ->allowSubFolders(),
+                
                 
             ])
             ->authMiddleware([

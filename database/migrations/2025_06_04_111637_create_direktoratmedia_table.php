@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('direktoratmedia', function (Blueprint $table) {
-           $table->id();
+            $table->id();
 
             $table->morphs('model');
             $table->uuid()->nullable()->unique();
