@@ -5,8 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Support\Str;
 
-class Direktoratfolder extends Model 
+class Direktoratfolder extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
@@ -14,6 +15,7 @@ class Direktoratfolder extends Model
         'parent_id',
         'model_type',
         'model_id',
+        'slug',
         'name',
         'collection',
         'description',
@@ -22,139 +24,290 @@ class Direktoratfolder extends Model
         'is_protected',
         'password',
         'is_hidden',
-        'is_favorite',
         'is_public',
         'has_user_access',
         'user_id',
         'user_type',
     ];
 
-    protected $casts =[
+    protected $casts = [
         'is_protected' => 'boolean',
         'is_hidden' => 'boolean',
         'is_favorite' => 'boolean',
         'is_public' => 'boolean',
-        'has_user_access' => 'boolean'
+        'has_user_access' => 'boolean',
     ];
 
+    
     public function model()
     {
         return $this->morphTo();
     }
 
-     public function user()
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
-
-    /**
-     * Relasi ke media yang ada di folder ini
-     */
-    public function media()
+    
+    public function direktoratmedia()
     {
-        return $this->hasMany(DirektoratMedia::class, 'model_id')
-            ->where('model_type', self::class);
+        return $this->hasMany(Direktoratmedia::class, 'model_id')
+        ->where('model_type', self::class);
+    }
+    
+    public function direksimedia()
+    {
+        return $this->direktoratmedia();
+    }
+    
+    public function parent()
+    {
+        return $this->belongsTo(Direktoratfolder::class, 'parent_id');
+    }
+    
+    public function children()
+    {
+        return $this->hasMany(Direktoratfolder::class, 'parent_id');
     }
 
-    /**
-     * Relasi ke subfolder
-     */
     public function subfolders()
     {
-        return $this->hasMany(self::class, 'model_id')
-            ->where('model_type', self::class);
+        return $this->children();
     }
 
-    /**
-     * Relasi ke parent folder
-     */
     public function parentFolder()
     {
-        return $this->belongsTo(self::class, 'model_id');
+        return $this->parent();
+    }
+    
+    public function getAllMedia()
+    {
+        // Gunakan direktoratmedia(), bukan media
+        $media = collect($this->direktoratmedia);
+        
+        foreach ($this->subfolders as $subfolder) {
+            $media = $media->merge($subfolder->getAllMedia());
+        }
+
+        return $media;
+    }
+    
+    public function deleteRecursively()
+    {
+        // Hapus semua media dalam folder ini
+        foreach ($this->direktoratmedia as $mediaItem) {
+            if (method_exists($mediaItem, 'deleteFile')) {
+                $mediaItem->deleteFile();
+            }
+            $mediaItem->delete();
+        }
+        
+        // Hapus subfolder secara rekursif
+        foreach ($this->subfolders as $subfolder) {
+            $subfolder->deleteRecursively();
+        }
+        
+        // Hapus folder ini
+        $this->delete();
+    }
+    
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 
-    /**
-     * Scope untuk folder publik
-     */
+    public function generateUniqueSlug(string $name): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
+        
+        // Cek apakah slug sudah ada (kecuali untuk record ini sendiri)
+        while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
     public function scopePublic($query)
     {
         return $query->where('is_public', true);
     }
 
-    /**
-     * Scope untuk folder favorit
-     */
-    public function scopeFavorite($query)
+    protected static function boot()
     {
-        return $query->where('is_favorite', true);
+        parent::boot();
+
+        static::creating(function ($model) {
+            // Generate slug jika belum ada
+            if (empty($model->slug) && !empty($model->name)) {
+                $model->slug = $model->generateUniqueSlug($model->name);
+            }
+
+            // Set default values untuk mencegah null constraint error
+            if (empty($model->icon)) {
+                $model->icon = 'heroicon-o-folder';
+            }
+
+            if (empty($model->color)) {
+                $model->color = '#ffab09';
+            }
+
+            // Set default boolean values
+            if (is_null($model->is_protected)) {
+                $model->is_protected = false;
+            }
+
+            if (is_null($model->is_hidden)) {
+                $model->is_hidden = false;
+            }
+
+            if (is_null($model->is_public)) {
+                $model->is_public = false;
+            }
+
+            if (is_null($model->has_user_access)) {
+                $model->has_user_access = false;
+            }
+
+            // Logika untuk membedakan folder root dan subfolder
+            if (!is_null($model->parent_id)) {
+                // Ini adalah subfolder, kosongkan collection dan model_type/model_id
+                $model->collection = null;
+                $model->model_type = null;
+                $model->model_id = null;
+            } else {
+                // Ini adalah folder root, pastikan ada collection jika belum diset
+                if (empty($model->collection) && !empty($model->name)) {
+                    $model->collection = Str::slug($model->name);
+                }
+            }
+        });
+
+        static::updating(function ($model) {
+            // Update slug jika name berubah dan slug kosong atau sama dengan slug lama dari name lama
+            if ($model->isDirty('name')) {
+                $newSlug = Str::slug($model->name);
+                $oldSlug = Str::slug($model->getOriginal('name'));
+                
+                // Update slug jika kosong atau slug lama sama dengan nama lama
+                if (empty($model->slug) || $model->slug === $oldSlug) {
+                    $model->slug = $model->generateUniqueSlug($model->name);
+                }
+            }
+        });
     }
 
-    /**
-     * Scope untuk folder yang tidak tersembunyi
-     */
+    // Method untuk mendapatkan URL media dengan slug
+    public function getMediaUrl(): string
+    {
+        return route('filament.admin.resources.arsip.direktorat.folder.index', [
+            'folder' => $this->slug
+        ]);
+    }
+
+    // Method untuk mendapatkan URL lengkap dengan nested path
+    public function getFullUrl(): string
+    {
+        return route('filament.admin.resources.arsip.direktorat.folder.index', [
+            'folder' => $this->full_slug_path
+        ]);
+    }
+
     public function scopeVisible($query)
     {
         return $query->where('is_hidden', false);
     }
 
-    /**
-     * Scope untuk folder berdasarkan user
-     */
     public function scopeByUser($query, $userId)
     {
         return $query->where('user_id', $userId);
     }
 
-    /**
-     * Accessor untuk mendapatkan jumlah total item (media + subfolder)
-     */
+    public function scopeRoot($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeMainFolders($query)
+    {
+        return $query->whereNull('parent_id')
+            ->where(function ($q) {
+                $q->whereNull('model_type')
+                    ->orWhere('model_id', null);
+            });
+    }
+
+    public function scopeSubfoldersOf($query, $parentId)
+    {
+        return $query->where('parent_id', $parentId);
+    }
+
+    public function scopeByLevel($query, $level = 0)
+    {
+        if ($level === 0) {
+            return $query->whereNull('parent_id');
+        }
+
+        // Untuk level yang lebih dalam, perlu recursive query
+        return $query->whereNotNull('parent_id');
+    }
+
+    public function scopeStandalone($query)
+    {
+        return $query->whereNull('model_type')
+            ->whereNull('model_id');
+    }
+
     public function getTotalItemsAttribute()
     {
-        return $this->media()->count() + $this->subfolders()->count();
+        return $this->direktoratmedia()->count() + $this->subfolders()->count();
     }
 
-    /**
-     * Accessor untuk mendapatkan path lengkap folder
-     */
-    public function getFullPathAttribute()
+    public function getFullSlugPathAttribute(): string
     {
-        $path = [$this->name];
-        $parent = $this->parentFolder;
-        
-        while ($parent) {
-            array_unshift($path, $parent->name);
-            $parent = $parent->parentFolder;
+        $path = collect();
+        $current = $this;
+
+        while ($current) {
+            $path->prepend($current->slug);
+            $current = $current->parent;
         }
-        
-        return implode(' / ', $path);
+
+        return $path->join('/');
     }
 
-    /**
-     * Method untuk cek apakah folder memiliki password
-     */
+    public function getFullNamePathAttribute(): string
+    {
+        $path = collect();
+        $current = $this;
+
+        while ($current) {
+            $path->prepend($current->name);
+            $current = $current->parent;
+        }
+
+        return $path->join(' / ');
+    }
+
     public function isProtected(): bool
     {
         return $this->is_protected && !empty($this->password);
     }
 
-    /**
-     * Method untuk cek password folder
-     */
     public function checkPassword(string $password): bool
     {
         return $this->isProtected() && hash_equals($this->password, $password);
     }
 
-    /**
-     * Method untuk mendapatkan icon default berdasarkan konten
-     */
     public function getDefaultIcon(): string
     {
-        if ($this->icon) {
+        if ($this->icon && $this->icon !== 'heroicon-o-folder') {
             return $this->icon;
         }
 
-        $mediaCount = $this->media()->count();
+        $mediaCount = $this->direktoratmedia()->count();
         $folderCount = $this->subfolders()->count();
 
         if ($mediaCount > 0 && $folderCount === 0) {
@@ -166,12 +319,31 @@ class Direktoratfolder extends Model
         return 'heroicon-o-folder';
     }
 
-    /**
-     * Method untuk mendapatkan warna default
-     */
     public function getDefaultColor(): string
     {
-        return $this->color ?? '#10b981';
+        return $this->color ?? '#ffab09';
     }
 
+    public function isRootFolder(): bool
+    {
+        return is_null($this->parent_id);
+    }
+
+    public function isSubfolder(): bool
+    {
+        return !is_null($this->parent_id);
+    }
+
+    public function getDepthLevel(): int
+    {
+        $level = 0;
+        $parent = $this->parent;
+
+        while ($parent) {
+            $level++;
+            $parent = $parent->parent;
+        }
+
+        return $level;
+    }
 }

@@ -28,7 +28,7 @@ class KategoriResource extends Resource
 
     protected static ?string $pluralLabel = 'Kategori';
 
-    protected static ?string $slug = 'kategori';
+    protected static ?string $slug = 'inventory/kategori';
 
     // protected static ?string $modelLabel = 'Kategori Barang';
 

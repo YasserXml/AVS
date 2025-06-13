@@ -62,7 +62,7 @@ class PengajuanResource extends Resource
 
     protected static ?string $pluralLabel = 'Pengajuan';
 
-    protected static ?string $slug = 'pengajuan';
+    protected static ?string $slug = 'inventory/pengajuan';
 
     public static function getNavigationBadge(): ?string
     {

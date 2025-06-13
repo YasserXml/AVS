@@ -42,7 +42,7 @@ class BarangmasukResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
-    protected static ?string $slug = 'barang-masuk';
+    protected static ?string $slug = 'flow/barang-masuk';
 
     protected static ?string $modelLabel = 'Barang Masuk';
 

@@ -15,6 +15,7 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DirektoratmediaResource extends Resource
@@ -25,9 +26,33 @@ class DirektoratmediaResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
-     public static function setBreadcrumb(?string $breadcrumb): void
+    public static function setBreadcrumb(?string $breadcrumb): void
     {
         self::$breadcrumb = $breadcrumb;
+    }
+
+    public static function getSlug(): string
+    {
+        return 'arsip/direktorat/folder';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 8;
+    }
+
+    public static function getUrl(string $name = 'index', array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?Model $tenant = null): string
+    {
+        // Jika ada folder_id, convert ke slug
+        if (isset($parameters['folder_id'])) {
+            $folder = Direktoratfolder::find($parameters['folder_id']);
+            if ($folder && $folder->slug) {
+                $parameters['folder'] = $folder->slug;
+                unset($parameters['folder_id']);
+            }
+        }
+
+        return parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant);
     }
 
     public static function form(Form $form): Form
@@ -40,10 +65,22 @@ class DirektoratmediaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                if (request()->has('folder_id') && !empty(request()->get('folder_id'))) {
+                // Ambil folder berdasarkan slug dari parameter
+                if (request()->has('folder')) {
+                    $folderSlug = request()->get('folder');
+                    $folder = Direktoratfolder::where('slug', $folderSlug)->first();
+
+                    if ($folder) {
+                        $query->where('model_type', Direktoratfolder::class)
+                            ->where('model_id', $folder->id);
+                    }
+                }
+                // Fallback untuk folder_id (untuk backward compatibility)
+                elseif (request()->has('folder_id')) {
                     $folder = Direktoratfolder::find(request()->get('folder_id'));
                     if ($folder) {
-                        $query->where('collection_name', $folder->collection);
+                        $query->where('model_type', Direktoratfolder::class)
+                            ->where('model_id', $folder->id);
                     }
                 }
             })
@@ -91,23 +128,23 @@ class DirektoratmediaResource extends Resource
                     TextColumn::make('size')
                         ->label('Ukuran')
                         ->numeric()
-                        ->sortable()
+                        ->searchable()
                         ->formatStateUsing(function ($state) {
                             return $this->formatBytes($state);
                         }),
                     TextColumn::make('order_column')
                         ->label('Urutan')
-                        ->numeric()
-                        ->sortable(),
+                        ->numeric(),
                     TextColumn::make('created_at')
                         ->label('Dibuat pada')
                         ->dateTime()
-                        ->sortable()
+
+                        ->searchable()
                         ->toggleable(isToggledHiddenByDefault: true),
                     TextColumn::make('updated_at')
                         ->label('Diubah pada')
                         ->dateTime()
-                        ->sortable()
+                        ->searchable()
                         ->toggleable(isToggledHiddenByDefault: true),
                 ])
             ])
@@ -115,7 +152,6 @@ class DirektoratmediaResource extends Resource
                 'md' => 2,
                 'xl' => 3,
             ])
-            ->defaultSort('order_column', 'asc')
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])

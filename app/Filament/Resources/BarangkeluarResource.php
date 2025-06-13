@@ -40,7 +40,7 @@ class BarangkeluarResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $slug = 'barang-keluar';
+    protected static ?string $slug = 'flow/barang-keluar';
 
     public static function form(Form $form): Form
     {

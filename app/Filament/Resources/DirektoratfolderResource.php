@@ -39,42 +39,34 @@ class DirektoratfolderResource extends Resource
 
     protected static ?string $navigationLabel = 'Direktorat';
 
-  public static function getPluralLabel(): ?string
+    public static function getPluralLabel(): ?string
     {
-        if(request()->has('model_type') && !request()->has('collection')){
+        if (request()->has('model_type') && !request()->has('collection')) {
             return str(request()->get('model_type'))->afterLast('\\')->title();
-        }
-        else if(request()->has('model_type') && request()->has('collection')){
+        } else if (request()->has('model_type') && request()->has('collection')) {
             return str(request()->get('collection'))->title();
-        }
-        else {
+        } else {
             return ('Direktorat');
         }
     }
-     protected function getFormActions(): array
+
+    public static function getSlug(): string
     {
-        return [
-            $this->getCreateFormAction()
-                ->label('Simpan Data')
-                ->icon('heroicon-o-check')
-                ->size('lg')
-                ->extraAttributes([
-                    'class' => 'font-semibold'
-                ]),
-            $this->getCancelFormAction()
-                ->label('Batal')
-                ->icon('heroicon-o-x-mark')
-                ->color('gray'),
-        ];
+        return 'arsip/direktorat';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 7;
     }
 
     protected static ?string $slug = 'direktorat';
 
-   public static function form(Form $form): Form
+    public static function form(Form $form): Form
     {
         return $form
             ->schema([
-              Hidden::make('user_id')
+                Hidden::make('user_id')
                     ->default(filament()->auth()->id()),
                 Hidden::make('user_type')
                     ->default(get_class(filament()->auth()->user())),
@@ -97,8 +89,6 @@ class DirektoratfolderResource extends Resource
                     ->label('Deskripsi')
                     ->columnSpanFull()
                     ->maxLength(255),
-                IconPicker::make('icon')
-                    ->label('Ikon'),
                 ColorPicker::make('color')
                     ->label('Warna'),
                 Toggle::make('is_protected')
@@ -126,27 +116,32 @@ class DirektoratfolderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-        ->modifyQueryUsing(function (Builder $query) {
-                if(request()->has('model_type') && !request()->has('collection')){
+             ->modifyQueryUsing(function (Builder $query) {
+                if (request()->has('model_type') && !request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->where('model_id', null)
                         ->whereNotNull('collection');
-                }
-                else if(request()->has('model_type') && request()->has('collection')){
+                } else if (request()->has('model_type') && request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->whereNotNull('model_id')
                         ->where('collection', request()->get('collection'));
-                }
-                else {
-                    $query->where('model_id', null)
-                        ->where('collection', null)->orWhere('model_type', null);
+                } else {
+                    // PERBAIKAN: Hanya tampilkan folder root (tanpa parent_id)
+                    // dan folder yang bukan subfolder dari folder lain
+                    $query->where(function ($q) {
+                        $q->where('model_id', null)
+                          ->where('collection', null)
+                          ->orWhere('model_type', null);
+                    })
+                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
+                    ->whereNull('parent_id');
                 }
             })
             ->content(function () {
                 return view('folders.folder');
             })
             ->columns([
-               Stack::make([
+                Stack::make([
                     TextColumn::make('name')
                         ->label('Nama')
                         ->searchable(),
@@ -183,12 +178,8 @@ class DirektoratfolderResource extends Resource
                 'md' => 3,
                 'xl' => 4,
             ])
-            ->filters([
-               
-            ])
-            ->actions([
-                
-            ])
+            ->filters([])
+            ->actions([])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

@@ -6,67 +6,105 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
 
-class Direktoratmedia extends Model
-{   
+class Direktoratmedia extends Model implements HasMedia
+{
     use InteractsWithMedia;
+
+    protected $table = 'direktoratmedia';
 
     protected $fillable = [
         'uuid',
         'model_type',
         'model_id',
+        'collection_name',
         'name',
         'file_name',
         'disk',
         'mime_type',
         'size',
         'order_column',
+        'manipulations',
+        'custom_properties',
+        'generated_conversions',
+        'responsive_images',
     ];
 
+    protected $casts = [
+        'manipulations' => 'array',
+        'custom_properties' => 'array',
+        'generated_conversions' => 'array',
+        'responsive_images' => 'array',
+    ];
 
-
-     public function model()
+    public function folder()
     {
-        return $this->morphTo();
+        return $this->belongsTo(Direktoratfolder::class, 'model_id')
+            ->where('model_type', Direktoratfolder::class);
     }
 
-    /**
-     * Accessor untuk mendapatkan URL file
-     */
+    public function model()
+    {
+        return $this->morphTo('model', 'model_type', 'model_id');
+    }
+
     public function getUrlAttribute(): string
     {
+        // Langsung return URL berdasarkan disk
         if ($this->disk === 'public') {
             return asset('storage/' . $this->file_name);
         }
-        return Storage::disk($this->disk)->path($this->file_name);
+
+        // Untuk disk lainnya, gunakan URL helper
+        return Storage::disk($this->disk)->exists($this->file_name)
+            ? asset(Storage::url($this->file_name))
+            : url('storage/' . $this->file_name);
     }
 
-    /**
-     * Accessor untuk mendapatkan path lengkap file
-     */
+    public function getPublicUrl(): string
+    {
+        try {
+            // Jika file ada di disk public
+            if ($this->disk === 'public') {
+                return asset('storage/' . $this->file_name);
+            }
+
+            // Jika file ada di disk local, copy ke public jika belum ada
+            if ($this->disk === 'local') {
+                if (!Storage::disk('public')->exists($this->file_name)) {
+                    // Copy file dari local ke public
+                    $fileContent = Storage::disk('local')->get($this->file_name);
+                    Storage::disk('public')->put($this->file_name, $fileContent);
+                }
+
+                return asset('storage/' . $this->file_name);
+            }
+
+            // Fallback
+            return '#';
+        } catch (\Exception $e) {
+            return '#';
+        }
+    }
+
     public function getPathAttribute(): string
     {
         return Storage::disk($this->disk)->path($this->file_name);
     }
 
-    /**
-     * Accessor untuk mendapatkan ukuran file yang dapat dibaca manusia
-     */
     public function getHumanReadableSizeAttribute(): string
     {
         $bytes = $this->size;
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
-    /**
-     * Accessor untuk mendapatkan tipe media
-     */
     public function getMediaTypeAttribute(): string
     {
         if (str_starts_with($this->mime_type, 'image/')) {
@@ -92,9 +130,6 @@ class Direktoratmedia extends Model
         }
     }
 
-    /**
-     * Accessor untuk mendapatkan icon berdasarkan tipe file
-     */
     public function getIconAttribute(): string
     {
         return match ($this->media_type) {
@@ -108,9 +143,6 @@ class Direktoratmedia extends Model
         };
     }
 
-    /**
-     * Scope untuk filter berdasarkan tipe media
-     */
     public function scopeByMediaType($query, string $type)
     {
         return match ($type) {
@@ -128,79 +160,152 @@ class Direktoratmedia extends Model
         };
     }
 
-    /**
-     * Scope untuk media yang diunggah dalam rentang waktu tertentu
-     */
     public function scopeRecentlyUploaded($query, int $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
 
-    /**
-     * Scope untuk urutkan berdasarkan order_column
-     */
     public function scopeOrdered($query)
     {
         return $query->orderBy('order_column')->orderBy('created_at', 'desc');
     }
 
-    /**
-     * Method untuk cek apakah file ada di storage
-     */
+    public function scopeFolder($query, $folderId = null)
+    {
+        if (!$folderId) {
+            $folderId = session()->get('folder_id');
+        }
+
+        if ($folderId) {
+            $query->where('model_type', Direktoratfolder::class)
+                ->where('model_id', $folderId);
+        }
+
+        return $query;
+    }
+
     public function exists(): bool
     {
         return Storage::disk($this->disk)->exists($this->file_name);
     }
 
-    /**
-     * Method untuk hapus file dari storage
-     */
     public function deleteFile(): bool
     {
         if ($this->exists()) {
             return Storage::disk($this->disk)->delete($this->file_name);
         }
-        
+
         return true;
     }
 
-    /**
-     * Method untuk duplikasi media
-     */
     public function duplicate(): self
     {
         $newMedia = $this->replicate();
         $newMedia->uuid = Str::uuid();
         $newMedia->name = $this->name . ' (Copy)';
-        
+
         // Copy file jika diperlukan
         $pathinfo = pathinfo($this->file_name);
         $newFileName = $pathinfo['filename'] . '_copy.' . $pathinfo['extension'];
-        
+
         if (Storage::disk($this->disk)->copy($this->file_name, $newFileName)) {
             $newMedia->file_name = $newFileName;
         }
-        
+
         $newMedia->save();
-        
+
         return $newMedia;
     }
 
-    /**
-     * Boot method untuk auto-generate UUID
-     */
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->uuid)) {
                 $model->uuid = Str::uuid();
             }
+
+            // Set default values untuk mencegah null constraint error
+            if (empty($model->model_type)) {
+                $model->model_type = Direktoratfolder::class;
+            }
+
+            if (empty($model->collection_name)) {
+                $model->collection_name = 'default';
+            }
+
+            if (empty($model->manipulations)) {
+                $model->manipulations = [];
+            }
+
+            if (empty($model->custom_properties)) {
+                $model->custom_properties = [];
+            }
+
+            if (empty($model->generated_conversions)) {
+                $model->generated_conversions = [];
+            }
+
+            if (empty($model->responsive_images)) {
+                $model->responsive_images = [];
+            }
         });
-        
+
         static::deleting(function ($model) {
             $model->deleteFile();
         });
+    }
+
+    public function hasCustomProperty(string $key): bool
+    {
+        return isset($this->custom_properties[$key]) && !empty($this->custom_properties[$key]);
+    }
+
+    public function getCustomProperty(string $key, $default = null)
+    {
+        return $this->custom_properties[$key] ?? $default;
+    }
+
+    public function setCustomProperty(string $key, $value): self
+    {
+        $customProperties = $this->custom_properties ?? [];
+        $customProperties[$key] = $value;
+        $this->custom_properties = $customProperties;
+
+        return $this;
+    }
+
+    public function removeCustomProperty(string $key): self
+    {
+        $customProperties = $this->custom_properties ?? [];
+        unset($customProperties[$key]);
+        $this->custom_properties = $customProperties;
+
+        return $this;
+    }
+
+    public function getCustomProperties(): array
+    {
+        $properties = $this->custom_properties;
+
+        // Pastikan return array
+        if (is_string($properties)) {
+            return json_decode($properties, true) ?? [];
+        }
+
+        return is_array($properties) ? $properties : [];
+    }
+
+    public function getDisplayableCustomProperties(): array
+    {
+        $properties = $this->getCustomProperties();
+
+        // Exclude properties yang sudah ditampilkan di tempat lain
+        $excludeKeys = ['title', 'description'];
+
+        return array_filter($properties, function ($value, $key) use ($excludeKeys) {
+            return !empty($value) && !in_array($key, $excludeKeys);
+        }, ARRAY_FILTER_USE_BOTH);
     }
 }

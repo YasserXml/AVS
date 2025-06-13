@@ -1,6 +1,5 @@
 <?php
 
-use TomatoPHP\FilamentMediaManager\FilamentMediaManagerServiceProvider;
 
 return [
     App\Providers\AppServiceProvider::class,
@@ -8,5 +7,4 @@ return [
     // App\Providers\Filament\UsersPanelProvider::class,
     BezhanSalleh\FilamentShield\FilamentShieldServiceProvider::class,
     Spatie\Permission\PermissionServiceProvider::class,
-    FilamentMediaManagerServiceProvider::class,
 ];

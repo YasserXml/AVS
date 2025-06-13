@@ -37,7 +37,7 @@ class BarangResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    protected static ?string $slug = 'barang';
+    protected static ?string $slug = 'inventory/barang';
 
     protected static ?string $pluralModelLabel = 'Ketersediaan Barang';
 

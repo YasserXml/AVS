@@ -20,10 +20,11 @@ return new class extends Migration
 
             //Folder
             $table->string('name')->index();
+            $table->string('slug')->nullable();
             $table->string('collection')->nullable()->index();
             $table->string('description')->nullable();
-            $table->string('icon')->nullable();
-            $table->string('color')->nullable();
+            $table->string('icon')->nullable()->default('heroicon-o-folder')->change();
+            $table->string('color')->nullable()->default('#ffab09')->change();
 
             //Options
             $table->boolean('is_protected')->default(false)->nullable();
@@ -34,6 +35,9 @@ return new class extends Migration
             $table->boolean('is_public')->default(false)->nullable();
             $table->boolean('has_user_access')->default(false)->nullable();
             $table->string('user_type')->nullable();
+            $table->index(['parent_id']);
+            $table->foreignId('parent_id')->nullable()->constrained('direktoratfolders')->onDelete('cascade');
+            $table->index(['model_type', 'model_id']);
             $table->timestamps();
         });
     }

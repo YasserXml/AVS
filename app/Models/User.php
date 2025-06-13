@@ -13,12 +13,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Testing\Fluent\Concerns\Has;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use TomatoPHP\FilamentMediaManager\Traits\InteractsWithMediaFolders;
 
 class User extends Authenticatable 
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasDatabaseNotifications, InteractsWithMediaFolders;
+    use HasFactory, Notifiable, HasRoles, HasDatabaseNotifications;
 
     /**
      * The attributes that are mass assignable.

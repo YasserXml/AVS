@@ -23,7 +23,7 @@ class OprasionalResource extends Resource
 
     protected static ?string $navigationLabel = 'Oprasional';
 
-    protected static ?string $slug = 'oprasional';
+    protected static ?string $slug = 'inventory/oprasional';
 
     protected static ?int $navigationSort = 7;
 
