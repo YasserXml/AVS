@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('keuanganmedia', function (Blueprint $table) {
             $table->id();
 
-            $table->string('model_type')->nullable();
-            $table->unsignedBigInteger('model');
-            $table->uuid()->nullable()->unique();
-            $table->string('collection_name');
+            $table->string('model_type');
+            $table->unsignedBigInteger('model_id');
+            $table->uuid()->nullable()->unique(); 
+            $table->string('collection_name'); 
             $table->string('name');
             $table->string('file_name');
             $table->string('mime_type')->nullable();
@@ -31,6 +31,7 @@ return new class extends Migration
             $table->unsignedInteger('order_column')->nullable()->index();
 
             $table->nullableTimestamps();
+            $table->softDeletes();
         });
     }
 

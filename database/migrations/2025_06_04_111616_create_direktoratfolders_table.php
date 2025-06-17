@@ -21,10 +21,11 @@ return new class extends Migration
             //Folder
             $table->string('name')->index();
             $table->string('slug')->nullable();
+            $table->index('slug');
             $table->string('collection')->nullable()->index();
             $table->string('description')->nullable();
-            $table->string('icon')->nullable()->default('heroicon-o-folder')->change();
-            $table->string('color')->nullable()->default('#ffab09')->change();
+            $table->string('icon')->nullable()->default('heroicon-o-folder');
+            $table->string('color')->nullable()->default('#ffab09');
 
             //Options
             $table->boolean('is_protected')->default(false)->nullable();
@@ -39,6 +40,7 @@ return new class extends Migration
             $table->foreignId('parent_id')->nullable()->constrained('direktoratfolders')->onDelete('cascade');
             $table->index(['model_type', 'model_id']);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

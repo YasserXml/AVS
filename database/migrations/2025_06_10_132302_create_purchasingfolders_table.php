@@ -17,13 +17,15 @@ return new class extends Migration
             //Morph
             $table->string('model_type')->nullable();
             $table->unsignedBigInteger('model_id')->nullable();
-
+ 
             //Folder
             $table->string('name')->index();
+            $table->string('slug')->nullable();
+            $table->index('slug');
             $table->string('collection')->nullable()->index();
             $table->string('description')->nullable();
-            $table->string('icon')->nullable();
-            $table->string('color')->nullable();
+            $table->string('icon')->nullable()->default('heroicon-o-folder');
+            $table->string('color')->nullable()->default('#ffab09');
 
             //Options
             $table->boolean('is_protected')->default(false)->nullable();
@@ -34,7 +36,11 @@ return new class extends Migration
             $table->boolean('is_public')->default(false)->nullable();
             $table->boolean('has_user_access')->default(false)->nullable();
             $table->string('user_type')->nullable();
+            $table->index(['parent_id']);
+            $table->foreignId('parent_id')->nullable()->constrained('purchasingfolders')->onDelete('cascade');
+            $table->index(['model_type', 'model_id']);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
