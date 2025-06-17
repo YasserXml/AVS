@@ -1,5 +1,5 @@
 @php
-  $currentFolder = $this->folder; // Dari ListDirektoratmedia
+    $currentFolder = $this->folder; // Dari ListDirektoratmedia
     if (config('media-manager.allow_sub_folders', true)) {
         $folders = $this->subfolders; // Dari ListDirektoratmedia
     } else {

@@ -1,5 +1,7 @@
 <?php
 
+use App\Filament\Resources\DirektoratmediaResource;
+use App\Filament\Resources\DirektoratmediaResource\Pages\ListDirektoratmedia;
 use App\Http\Controllers\Admin\AdminUserVerificationController;
 use App\Http\Controllers\Admin\AdminVerificationController as AdminAdminVerificationController;
 use App\Http\Controllers\Admin\UserVerificationController;
@@ -28,32 +30,8 @@ Route::get('/verify-user/{id}/{hash}', [ControllersUserVerificationController::c
     ->name('user.verify')
     ->middleware('signed');
 
-// Route::bind('folder', function ($slug) {
-//     return Direktoratfolder::where('slug', $slug)->firstOrFail();
-// });
-
-// // Route untuk akses folder dengan slug
-// Route::bind('folder', function ($slug) {
-//     return Direktoratfolder::where('slug', $slug)->firstOrFail();
-// });
-
-// // Route untuk akses langsung folder dengan slug (redirect ke resource)
-// Route::get('/admin/arsip/direktorat/folder/{folder}', function (Direktoratfolder $folder) {
-//     return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-//         'folder' => $folder->slug
-//     ]);
-// })->name('arsip.direktorat.folder.show');
-
-// // Route untuk folder yang terproteksi password
-// Route::post('/admin/arsip/direktorat/folder/{folder}/verify-password', function (Direktoratfolder $folder) {
-//     $password = request()->input('password');
-
-//     if ($folder->password === $password) {
-//         session()->put('folder_password_' . $folder->id, true);
-//         return redirect()->route('filament.admin.resources.arsip.direktoratS.folder.index', [
-//             'folder' => $folder->slug
-//         ])->with('success', 'Password benar. Anda dapat mengakses folder ini.');
-//     }
-
-//     return redirect()->back()->with('error', 'Password salah.');
-// })->name('arsip.direktorat.folder.verify-password');
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/admin/arsip/direktorat/folder/{folder}', 
+        [ListDirektoratmedia::class, 'render'])
+        ->name('filament.admin.resources.arsip.direktorat.folder.index');
+});

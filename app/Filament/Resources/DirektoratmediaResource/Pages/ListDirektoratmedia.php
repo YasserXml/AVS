@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DirektoratmediaResource\Pages;
 
+use App\Filament\Resources\DirektoratfolderResource;
 use App\Filament\Resources\DirektoratmediaResource;
 use App\Models\Direktoratfolder;
 use App\Models\Direktoratmedia;
@@ -25,11 +26,12 @@ class ListDirektoratmedia extends ListRecords
 {
     protected static string $resource = DirektoratmediaResource::class;
 
+    public ?string $folderSlug = null;
     public ?int $folder_id = null;
     public ?Direktoratfolder $folder = null;
-    public $subfolders = null; //Property untuk menyimpan subfolder
+    public $subfolders = null;
 
-   public function getTitle(): string|Htmlable
+    public function getTitle(): string|Htmlable
     {
         return $this->folder?->full_name_path ?? 'Media Direktorat';
     }
@@ -57,17 +59,17 @@ class ListDirektoratmedia extends ListRecords
         }
 
         $this->folder = $folder;
-        $this->slug = $folderSlug;
+        $this->folder_id = $folder->id; // Set folder_id untuk kompatibilitas
+        $this->folderSlug = $folderSlug; // Gunakan folderSlug instead of slug
 
         // Set session untuk backward compatibility
         session()->put('folder_id', $this->folder->id);
-        session()->put('folder_slug', $this->folder_slug);
+        session()->put('folder_slug', $folderSlug);
 
         // Load subfolders
         $this->loadSubfolders();
     }
 
-    // TAMBAHAN: Method untuk load subfolders
     protected function loadSubfolders()
     {
         $this->subfolders = $this->getSubfoldersQuery()->get();
@@ -82,18 +84,16 @@ class ListDirektoratmedia extends ListRecords
             $this->deleteFolderAction(),
         ];
 
-        //  Tombol kembali ke parent folder
+        // Tombol kembali
         if ($this->folder && $this->folder->parent_id) {
             array_unshift($actions, $this->backToParentAction());
         } else {
-            // Jika ini root folder, tombol kembali ke daftar folder utama
             array_unshift($actions, $this->backToMainAction());
         }
 
         return $actions;
     }
 
-    // TAMBAHAN: Action untuk kembali ke parent folder
     protected function backToParentAction()
     {
         return Actions\Action::make('backToParent')
@@ -102,25 +102,21 @@ class ListDirektoratmedia extends ListRecords
             ->color('gray')
             ->url(function () {
                 if ($this->folder->parent_id) {
-                    return route('filament.admin.resources.arsip.direktorat.folder.index', [
-                        'folder_id' => $this->folder->parent_id
-                    ]);
+                    $parentFolder = Direktoratfolder::find($this->folder->parent_id);
+                    if ($parentFolder) {
+                        return route('filament.admin.resources.arsip.direktorat.folder.index', [
+                            'folder' => $parentFolder->slug // Gunakan slug, bukan folder_id
+                        ]);
+                    }
                 }
                 return route('filament.admin.resources.arsip.direktorat.index');
             });
     }
 
-    protected function getRedirectUrl(): string
-    {
-        // Redirect kembali ke halaman list setelah membuat folder
-        return $this->getResource()::getUrl('index');
-    }
-
-    // TAMBAHAN: Action untuk kembali ke halaman utama
     protected function backToMainAction()
     {
         return Actions\Action::make('backToMain')
-            ->label('Kembali')
+            ->label('Kembali ke Halaman Utama')
             ->icon('heroicon-o-arrow-left')
             ->color('gray')
             ->url(route('filament.admin.resources.arsip.direktorat.index'));
@@ -128,7 +124,6 @@ class ListDirektoratmedia extends ListRecords
 
     protected function getTableQuery(): Builder
     {
-        // Hanya tampilkan media yang ada di folder ini
         return Direktoratmedia::query()
             ->where('model_type', Direktoratfolder::class)
             ->where('model_id', $this->folder_id);
@@ -136,37 +131,11 @@ class ListDirektoratmedia extends ListRecords
 
     protected function getSubfoldersQuery(): Builder
     {
-        // Query untuk subfolder
         return Direktoratfolder::query()
             ->where('parent_id', $this->folder_id)
             ->orderBy('name');
     }
 
-    public function deleteMedia()
-    {
-        return Actions\Action::make('deleteMedia')
-            ->label('Hapus Media')
-            ->icon('heroicon-o-trash')
-            ->color('danger')
-            ->requiresConfirmation()
-            ->action(function (array $arguments) {
-                // Hapus media  
-                $media = Direktoratmedia::find($arguments['record']['id']);
-                $media->delete();
-
-                Notification::make()
-                    ->title('Media berhasil dihapus')
-                    ->success()
-                    ->send();
-
-                // Refresh halaman
-                return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                    'folder_id' => $this->folder_id
-                ]);
-            });
-    }
-
-    // Method folderAction untuk membuka subfolder
     public function folderAction($folder)
     {
         return Actions\Action::make('openFolder_' . $folder->id)
@@ -177,16 +146,15 @@ class ListDirektoratmedia extends ListRecords
             ->action(function () use ($folder) {
                 // Cek apakah folder terproteksi
                 if ($folder->is_protected) {
-                    // Jika belum ada session password untuk folder ini
                     if (!session()->has('folder_password_' . $folder->id)) {
                         $this->dispatch('open-modal', id: 'folder-password-' . $folder->id);
                         return;
                     }
                 }
 
-                // Redirect ke folder
+                // Redirect menggunakan slug
                 return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                    'folder_id' => $folder->id
+                    'folder' => $folder->slug // Gunakan slug, bukan folder_id
                 ]);
             })
             ->extraAttributes([
@@ -221,8 +189,6 @@ class ListDirektoratmedia extends ListRecords
 
                 foreach ($data['files'] as $file) {
                     $media = new Direktoratmedia();
-
-                    // Relasi polymorphic ke folder yang benar
                     $media->model_type = Direktoratfolder::class;
                     $media->model_id = $folder_id;
                     $media->uuid = Str::uuid();
@@ -249,9 +215,9 @@ class ListDirektoratmedia extends ListRecords
                     ->success()
                     ->send();
 
-                // Refresh halaman
+                // Redirect menggunakan slug
                 return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                    'folder_id' => $folder_id
+                    'folder' => $this->folder->slug
                 ]);
             });
     }
@@ -275,38 +241,19 @@ class ListDirektoratmedia extends ListRecords
                     ->default('#ffab09'),
             ])
             ->action(function (array $data) {
-                $folder_id = $this->folder_id;
-                $parentFolder = Direktoratfolder::find($folder_id);
-
-                if (!$parentFolder) {
-                    Notification::make()
-                        ->title('Folder utama tidak ditemukan')
-                        ->danger()
-                        ->send();
-                    return;
-                }
                 try {
-                    // Buat subfolder baru
                     $folder = new Direktoratfolder();
                     $folder->name = $data['name'];
                     $folder->description = $data['description'] ?? null;
                     $folder->color = $data['color'] ?? '#ffab09';
                     $folder->icon = 'heroicon-o-folder';
-                    // KUNCI UTAMA: Set parent_id untuk menandai ini adalah subfolder
-                    $folder->parent_id = $folder_id;
-                    // PENTING: Untuk subfolder, kosongkan field ini agar tidak muncul di halaman utama
+                    $folder->parent_id = $this->folder_id;
                     $folder->collection = null;
                     $folder->model_type = null;
                     $folder->model_id = null;
-                    // Set user info
                     $folder->user_id = filament()->auth()->id();
                     $folder->user_type = get_class(filament()->auth()->user());
-                    // Set proteksi password jika ada
-                    $folder->is_protected = $data['is_protected'] ?? false;
-                    if ($folder->is_protected && !empty($data['password'])) {
-                        $folder->password = $data['password'];
-                    }
-                    // Set default values
+                    $folder->is_protected = false;
                     $folder->is_hidden = false;
                     $folder->is_public = false;
                     $folder->has_user_access = false;
@@ -317,15 +264,12 @@ class ListDirektoratmedia extends ListRecords
                         ->title('Sub folder "' . $data['name'] . '" berhasil dibuat')
                         ->success()
                         ->send();
-                    // Refresh data subfolder
+
                     $this->loadSubfolders();
 
-                    // Refresh tabel
-                    $this->dispatch('refresh-table');
-
-                    // Redirect untuk memastikan data ter-refresh
+                    // Redirect menggunakan slug parent
                     return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                        'folder_id' => $folder_id
+                        'folder' => $this->folder->slug
                     ]);
                 } catch (\Exception $e) {
                     Notification::make()
@@ -347,28 +291,23 @@ class ListDirektoratmedia extends ListRecords
             ->modalHeading('Hapus Folder')
             ->modalDescription('Apakah Anda yakin ingin menghapus folder ini? Semua media dan subfolder di dalamnya akan ikut terhapus.')
             ->action(function () {
-                $folder_id = $this->folder_id;
-                $folder = Direktoratfolder::find($folder_id);
+                $folder = $this->folder;
+                $parentFolder = $folder->parent;
 
-                if ($folder) {
-                    $parentId = $folder->parent_id;
+                $folder->deleteRecursively();
 
-                    // Gunakan method deleteRecursively
-                    $folder->deleteRecursively();
+                Notification::make()
+                    ->title('Folder berhasil dihapus')
+                    ->success()
+                    ->send();
 
-                    Notification::make()
-                        ->title('Folder berhasil dihapus')
-                        ->success()
-                        ->send();
-
-                    // Redirect ke parent folder atau halaman utama
-                    if ($parentId) {
-                        return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                            'folder_id' => $parentId
-                        ]);
-                    } else {
-                        return redirect()->route('filament.admin.resources.arsip.direktorat.index');
-                    }
+                // Redirect ke parent atau halaman utama
+                if ($parentFolder) {
+                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                        'folder' => $parentFolder->slug
+                    ]);
+                } else {
+                    return redirect()->route('filament.admin.resources.arsip.direktorat.index');
                 }
             });
     }
@@ -394,17 +333,7 @@ class ListDirektoratmedia extends ListRecords
                     ->default(fn() => $this->folder->color ?? '#10b981'),
             ])
             ->action(function (array $data) {
-                $folder_id = $this->folder_id;
-                $folder = Direktoratfolder::find($folder_id);
-
-                // Update password hanya jika folder terproteksi
-                if ($data['is_protected']) {
-                    $data['password'] = $data['password'];
-                } else {
-                    $data['password'] = null;
-                }
-
-                $folder->update($data);
+                $this->folder->update($data);
 
                 Notification::make()
                     ->title('Folder berhasil diubah')
@@ -412,7 +341,12 @@ class ListDirektoratmedia extends ListRecords
                     ->send();
 
                 // Refresh folder data
-                $this->folder = $folder->fresh();
+                $this->folder = $this->folder->fresh();
+                
+                // Jika nama berubah, slug mungkin berubah, redirect ke slug baru
+                return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                    'folder' => $this->folder->slug
+                ]);
             });
     }
 }

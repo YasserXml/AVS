@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
+
 class DirektoratmediaResource extends Resource
 {
     protected static ?string $model = Direktoratmedia::class;
@@ -41,18 +42,9 @@ class DirektoratmediaResource extends Resource
         return 8;
     }
 
-    public static function getUrl(string $name = 'index', array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?Model $tenant = null): string
+    public static function getUrlFromFolder(Direktoratfolder $folder, string $name = 'index'): string
     {
-        // Jika ada folder_id, convert ke slug
-        if (isset($parameters['folder_id'])) {
-            $folder = Direktoratfolder::find($parameters['folder_id']);
-            if ($folder && $folder->slug) {
-                $parameters['folder'] = $folder->slug;
-                unset($parameters['folder_id']);
-            }
-        }
-
-        return parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant);
+        return static::getUrl($name, ['folder' => $folder->slug]);
     }
 
     public static function form(Form $form): Form
@@ -65,7 +57,7 @@ class DirektoratmediaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                // Ambil folder berdasarkan slug dari parameter
+                // Ambil folder berdasarkan slug
                 if (request()->has('folder')) {
                     $folderSlug = request()->get('folder');
                     $folder = Direktoratfolder::where('slug', $folderSlug)->first();
@@ -73,15 +65,19 @@ class DirektoratmediaResource extends Resource
                     if ($folder) {
                         $query->where('model_type', Direktoratfolder::class)
                             ->where('model_id', $folder->id);
+                    } else {
+                        // Jika folder tidak ditemukan, kosongkan query
+                        $query->whereRaw('1 = 0');
                     }
                 }
-                // Fallback untuk folder_id (untuk backward compatibility)
+                // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
-                    $folder = Direktoratfolder::find(request()->get('folder_id'));
-                    if ($folder) {
-                        $query->where('model_type', Direktoratfolder::class)
-                            ->where('model_id', $folder->id);
-                    }
+                    $folderId = request()->get('folder_id');
+                    $query->where('model_type', Direktoratfolder::class)
+                        ->where('model_id', $folderId);
+                } else {
+                    // Tidak ada parameter folder, kosongkan query
+                    $query->whereRaw('1 = 0');
                 }
             })
             ->emptyState(fn() => view('folders.media'))
@@ -187,7 +183,7 @@ class DirektoratmediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDirektoratmedia::route('/'),
+            'index' => Pages\ListDirektoratmedia::route('/{folder}'),
         ];
     }
 }
