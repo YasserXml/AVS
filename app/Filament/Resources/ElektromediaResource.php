@@ -4,11 +4,15 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ElektromediaResource\Pages;
 use App\Filament\Resources\ElektromediaResource\RelationManagers;
+use App\Models\Elektrofolder;
 use App\Models\Elektromedia;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -19,31 +23,152 @@ class ElektromediaResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static bool $shouldRegisterNavigation = false;
+
+    public static function setBreadcrumb(?string $breadcrumb): void
+    {
+        self::$breadcrumb = $breadcrumb;
+    }
+
+    public static function getSlug(): string
+    {
+        return 'arsip/elektro/folder';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 24;
+    }
+
+    public static function getUrlFromFolder(Elektrofolder $folder, string $name = 'index'): string
+    {
+        return static::getUrl($name, ['folder' => $folder->slug]);
+    }
+
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                //
-            ]);
+            ->schema([]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                // Ambil folder berdasarkan slug
+                if (request()->has('folder')) {
+                    $folderSlug = request()->get('folder');
+                    $folder = Elektrofolder::where('slug', $folderSlug)->first();
+
+                    if ($folder) {
+                        $query->where('model_type', Elektrofolder::class)
+                            ->where('model_id', $folder->id);
+                    } else {
+                        // Jika folder tidak ditemukan, kosongkan query
+                        $query->whereRaw('1 = 0');
+                    }
+                }
+                // Fallback untuk folder_id (backward compatibility)
+                elseif (request()->has('folder_id')) {
+                    $folderId = request()->get('folder_id');
+                    $query->where('model_type', Elektrofolder::class)
+                        ->where('model_id', $folderId);
+                } else {
+                    // Tidak ada parameter folder, kosongkan query
+                    $query->whereRaw('1 = 0');
+                }
+            })
+            ->emptyState(fn() => view('folders.media'))
+            ->content(function () {
+                return view('folders.media');
+            })
             ->columns([
-                //
+                Stack::make([
+                    ImageColumn::make('image')
+                        ->width('250px')
+                        ->height('250px')
+                        ->square()
+                        ->label('Gambar')
+                        ->getStateUsing(function (Elektromedia $record) {
+                            return $record->getUrl();
+                        }),
+                ]),
+                Stack::make([
+                    TextColumn::make('model.name')
+                        ->label('Model')
+                        ->searchable(),
+                    TextColumn::make('collection_name')
+                        ->label('Koleksi')
+                        ->badge()
+                        ->icon('heroicon-o-folder')
+                        ->searchable(),
+                ]),
+                Stack::make([
+                    TextColumn::make('name')
+                        ->label('Nama')
+                        ->searchable(),
+                    TextColumn::make('file_name')
+                        ->label('Nama File')
+                        ->searchable(),
+                    TextColumn::make('mime_type')
+                        ->label('Tipe MIME')
+                        ->searchable(),
+                    TextColumn::make('disk')
+                        ->label('Disk')
+                        ->searchable(),
+                    TextColumn::make('conversions_disk')
+                        ->label('Disk Konversi')
+                        ->searchable(),
+                    TextColumn::make('size')
+                        ->label('Ukuran')
+                        ->numeric()
+                        ->searchable()
+                        ->formatStateUsing(function ($state) {
+                            return $this->formatBytes($state);
+                        }),
+                    TextColumn::make('order_column')
+                        ->label('Urutan')
+                        ->numeric(),
+                    TextColumn::make('created_at')
+                        ->label('Dibuat pada')
+                        ->dateTime()
+
+                        ->searchable()
+                        ->toggleable(isToggledHiddenByDefault: true),
+                    TextColumn::make('updated_at')
+                        ->label('Diubah pada')
+                        ->dateTime()
+                        ->searchable()
+                        ->toggleable(isToggledHiddenByDefault: true),
+                ])
             ])
-            ->filters([
-                //
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+            ])
+            ->defaultPaginationPageOption(12)
+            ->paginationPageOptions([
+                "12",
+                "24",
+                "48",
+                "96",
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    private function formatBytes($size, $precision = 2)
+    {
+        $base = log($size, 1024);
+        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
+
+        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
     }
 
     public static function getRelations(): array
@@ -57,8 +182,6 @@ class ElektromediaResource extends Resource
     {
         return [
             'index' => Pages\ListElektromedia::route('/'),
-            'create' => Pages\CreateElektromedia::route('/create'),
-            'edit' => Pages\EditElektromedia::route('/{record}/edit'),
         ];
     }
 }
