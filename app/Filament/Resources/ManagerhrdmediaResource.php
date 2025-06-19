@@ -13,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -40,7 +41,15 @@ class ManagerhrdmediaResource extends Resource
         return 10;
     }
 
-    public static function getUrlFromFolder(Managerhrdfolder $folder, string $name = 'index'): string
+    private function formatBytes($size, $precision = 2)
+    {
+        $base = log($size, 1024);
+        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
+
+        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
+    }
+
+    public static function getUrlFromFolderManager(Managerhrdfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -55,32 +64,38 @@ class ManagerhrdmediaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                // Ambil folder berdasarkan slug
+                // FIX: Pastikan folder_id ter-set dengan benar
+                $folderId = null;
+                
+                // Cek dari parameter slug terlebih dahulu
                 if (request()->has('folder')) {
                     $folderSlug = request()->get('folder');
                     $folder = Managerhrdfolder::where('slug', $folderSlug)->first();
-
                     if ($folder) {
-                        $query->where('model_type', Managerhrdfolder::class)
-                            ->where('model_id', $folder->id);
-                    } else {
-                        // Jika folder tidak ditemukan, kosongkan query
-                        $query->whereRaw('1 = 0');
+                        $folderId = $folder->id;
                     }
                 }
-                // Fallback untuk folder_id (backward compatibility)
+                // Fallback ke folder_id
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
+                }
+                // Cek dari session
+                elseif (session()->has('folder_id')) {
+                    $folderId = session()->get('folder_id');
+                }
+
+                if ($folderId) {
                     $query->where('model_type', Managerhrdfolder::class)
-                        ->where('model_id', $folderId);
+                        ->where('model_id', $folderId)
+                        ->orderBy('created_at', 'desc');
                 } else {
-                    // Tidak ada parameter folder, kosongkan query
+                    // Jika tidak ada folder, kosongkan query
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.managerhrdmedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.managerhrdmedia');
             })
             ->columns([
                 Stack::make([
@@ -146,6 +161,9 @@ class ManagerhrdmediaResource extends Resource
                 'md' => 2,
                 'xl' => 3,
             ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
@@ -163,13 +181,6 @@ class ManagerhrdmediaResource extends Resource
             ]);
     }
 
-    private function formatBytes($size, $precision = 2)
-    {
-        $base = log($size, 1024);
-        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
-
-        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
-    }
     public static function getRelations(): array
     {
         return [

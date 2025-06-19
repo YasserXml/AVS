@@ -40,7 +40,7 @@ class PmomediaResource extends Resource
         return 20;
     }
 
-    public static function getUrlFromFolder(Pmofolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderPmo(Pmofolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -72,9 +72,9 @@ class PmomediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.pmomedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.pmomedia');
             })
             ->columns([
                 Stack::make([

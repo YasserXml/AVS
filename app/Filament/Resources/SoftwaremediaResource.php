@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SoftwaremediaResource\Pages;
+use App\Filament\Resources\SoftwaremediaResource\Pages\ListSoftwaremedia;
 use App\Filament\Resources\SoftwaremediaResource\RelationManagers;
 use App\Models\Softwarefolder;
 use App\Models\Softwaremedia;
@@ -40,7 +41,7 @@ class SoftwaremediaResource extends Resource
         return 22;
     }
 
-    public static function getUrlFromFolder(Softwarefolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderSoftware(Softwarefolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -72,9 +73,9 @@ class SoftwaremediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.softwaremedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.softwaremedia');
             })
             ->columns([
                 Stack::make([
@@ -175,7 +176,7 @@ class SoftwaremediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSoftwaremedia::route('/'),
+            'index' => ListSoftwaremedia::route('/'),
         ];
     }
 }

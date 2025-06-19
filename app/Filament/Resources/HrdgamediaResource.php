@@ -37,10 +37,10 @@ class HrdgamediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 12;
+        return 24;
     }
 
-    public static function getUrlFromFolder(Hrdgafolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderHrdGa(Hrdgafolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -78,9 +78,9 @@ class HrdgamediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.hrdgamedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.hrdgamedia');
             })
             ->columns([
                 Stack::make([
@@ -163,13 +163,7 @@ class HrdgamediaResource extends Resource
             ]);
     }
 
-    private function formatBytes($size, $precision = 2)
-    {
-        $base = log($size, 1024);
-        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
 
-        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
-    }
 
     public static function getRelations(): array
     {

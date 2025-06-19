@@ -19,6 +19,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
@@ -126,7 +127,8 @@ class ListDirektoratmedia extends ListRecords
     {
         return Direktoratmedia::query()
             ->where('model_type', Direktoratfolder::class)
-            ->where('model_id', $this->folder_id);
+            ->where('model_id', $this->folder_id)
+            ->orderBy('created_at', 'desc');
     }
 
     protected function getSubfoldersQuery(): Builder
@@ -215,10 +217,62 @@ class ListDirektoratmedia extends ListRecords
                     ->success()
                     ->send();
 
-                // Redirect menggunakan slug
-                return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                    'folder' => $this->folder->slug
+                // FIX: Refresh data dan tetap di halaman yang sama
+                $this->loadSubfolders();
+                $this->dispatch('$refresh');
+
+                // Jangan redirect, biarkan tetap di halaman
+                // return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                //     'folder' => $this->folder->slug
+                // ]);
+            });
+    }
+
+    public function deleteMedia()
+    {
+        return Actions\Action::make('deleteMedia')
+            ->label('Hapus Media')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Konfirmasi Hapus')
+            ->modalDescription('Apakah Anda yakin ingin menghapus media ini?')
+            ->action(function (array $arguments) {
+                try {
+                    // Pastikan record ada
+                    if (!isset($arguments['record']) || !isset($arguments['record']['id'])) {
+                        throw new \Exception('Record tidak ditemukan');
+                    }
+
+                    $media = Direktoratmedia::find($arguments['record']['id']);
+
+                    if (!$media) {
+                        throw new \Exception('Media tidak ditemukan');
+                    }
+
+                    // Hapus file fisik terlebih dahulu
+                    if ($media->exists()) {
+                        $media->deleteFile();
+                    }
+
+                    // Kemudian hapus record dari database
+                    $media->delete();
+
+                    Notification::make()
+                        ->title('Media berhasil dihapus')
+                        ->success()
+                        ->send();
+
+                     return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                    'folder' => $this->folder->slug // Gunakan slug, bukan folder_id
                 ]);
+                } catch (\Exception $e) {
+                    Notification::make()
+                        ->title('Gagal menghapus media')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+                }
             });
     }
 
@@ -291,23 +345,44 @@ class ListDirektoratmedia extends ListRecords
             ->modalHeading('Hapus Folder')
             ->modalDescription('Apakah Anda yakin ingin menghapus folder ini? Semua media dan subfolder di dalamnya akan ikut terhapus.')
             ->action(function () {
-                $folder = $this->folder;
-                $parentFolder = $folder->parent;
+                try {
+                    $folder = $this->folder;
+                    $parentFolder = $folder->parent;
 
-                $folder->deleteRecursively();
+                    // Hapus semua media dalam folder terlebih dahulu
+                    $medias = Direktoratmedia::where('model_type', Direktoratfolder::class)
+                        ->where('model_id', $folder->id)
+                        ->get();
 
-                Notification::make()
-                    ->title('Folder berhasil dihapus')
-                    ->success()
-                    ->send();
+                    foreach ($medias as $media) {
+                        if ($media->exists()) {
+                            $media->deleteFile();
+                        }
+                        $media->delete();
+                    }
 
-                // Redirect ke parent atau halaman utama
-                if ($parentFolder) {
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                        'folder' => $parentFolder->slug
-                    ]);
-                } else {
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.index');
+                    // Kemudian hapus folder
+                    $folder->delete();
+
+                    Notification::make()
+                        ->title('Folder berhasil dihapus')
+                        ->success()
+                        ->send();
+
+                    // Redirect ke parent atau halaman utama
+                    if ($parentFolder) {
+                        return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                            'folder' => $parentFolder->slug
+                        ]);
+                    } else {
+                        return redirect()->route('filament.admin.resources.arsip.direktorat.index');
+                    }
+                } catch (\Exception $e) {
+                    Notification::make()
+                        ->title('Gagal menghapus folder')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
                 }
             });
     }
@@ -342,11 +417,24 @@ class ListDirektoratmedia extends ListRecords
 
                 // Refresh folder data
                 $this->folder = $this->folder->fresh();
-                
+
                 // Jika nama berubah, slug mungkin berubah, redirect ke slug baru
                 return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
                     'folder' => $this->folder->slug
                 ]);
             });
+    }
+
+    public function refreshData()
+    {
+        $this->loadSubfolders();
+        $this->dispatch('$refresh');
+    }
+
+    // FIX: Override method getTableRecords untuk memastikan data ter-load
+    public function getTableRecords(): Collection
+    {
+        $query = $this->getTableQuery();
+        return $query->get();
     }
 }

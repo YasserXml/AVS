@@ -40,7 +40,7 @@ class Divisi3dmediaResource extends Resource
         return 26;
     }
 
-    public static function getUrlFromFolder(Divisi3dfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolder3D(Divisi3dfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -78,9 +78,9 @@ class Divisi3dmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.3dmedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.3dmedia');
             })
             ->columns([
                 Stack::make([

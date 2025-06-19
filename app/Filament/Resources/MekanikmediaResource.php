@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\MekanikmediaResource\Pages;
+use App\Filament\Resources\MekanikmediaResource\Pages\ListMekanikmedia;
 use App\Filament\Resources\MekanikmediaResource\RelationManagers;
 use App\Models\Mekanikfolder;
 use App\Models\Mekanikmedia;
@@ -40,7 +41,7 @@ class MekanikmediaResource extends Resource
         return 28;
     }
 
-    public static function getUrlFromFolder(Mekanikfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderMekanik(Mekanikfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -78,9 +79,9 @@ class MekanikmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.mekanikmedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.mekanikmedia');
             })
             ->columns([
                 Stack::make([
@@ -181,7 +182,7 @@ class MekanikmediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListMekanikmedia::route('/'),
+            'index' => ListMekanikmedia::route('/'),
         ];
     }
 }

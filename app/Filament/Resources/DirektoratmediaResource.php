@@ -42,7 +42,7 @@ class DirektoratmediaResource extends Resource
         return 8;
     }
 
-    public static function getUrlFromFolder(Direktoratfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderDirektorat(Direktoratfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -151,12 +151,12 @@ class DirektoratmediaResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
-            ->defaultPaginationPageOption(12)
+            ->defaultPaginationPageOption(10)
             ->paginationPageOptions([
-                "12",
-                "24",
-                "48",
-                "96",
+                "10",
+                "20",
+                "40",
+                "90",
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -183,7 +183,7 @@ class DirektoratmediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDirektoratmedia::route('/{folder}'),
+            'index' => Pages\ListDirektoratmedia::route('/'),
         ];
     }
 }

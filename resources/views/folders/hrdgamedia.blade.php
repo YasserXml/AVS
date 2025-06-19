@@ -1,7 +1,7 @@
 @php
-    $currentFolder = $this->folder; // Dari ListDirektoratmedia
+    $currentFolder = $this->folder; 
     if (config('media-manager.allow_sub_folders', true)) {
-        $folders = $this->subfolders; // Dari ListDirektoratmedia
+        $folders = $this->subfolders;
     } else {
         $folders = [];
     }
@@ -12,7 +12,7 @@
         {{-- Tampilkan sub-folder dengan style konsisten --}}
         @if (config('media-manager.allow_sub_folders', true))
             @foreach ($folders as $folder)
-                <a href="{{ \App\Filament\Resources\DirektoratmediaResource::getUrlFromFolderDirektorat($folder) }}"
+                <a href="{{ \App\Filament\Resources\HrdgamediaResource::getUrlFromFolderHrdGa($folder) }}"
                     class="flex flex-col justify-center items-center gap-4 border dark:border-gray-700 rounded-lg shadow-sm p-6 w-full h-full hover:shadow-md transition-shadow cursor-pointer bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750">
 
                     {{-- Folder Icon Section --}}
@@ -71,7 +71,7 @@
                         @endif
 
                         <div class="flex flex-col items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ $folder->subfolders()->count() }} folder, {{ $folder->direktoratmedia()->count() }}
+                            <span>{{ $folder->subfolders()->count() }} folder, {{ $folder->hrdgamedia()->count() }}
                                 file</span>
                             <span>{{ $folder->created_at->diffForHumans() }}</span>
                         </div>
@@ -83,7 +83,7 @@
         {{-- Tampilkan file media --}}
         @if (isset($records))
             @foreach ($records as $item)
-                @if (!($item instanceof \App\Models\Direktoratfolder))
+                @if (!($item instanceof \App\Models\Hrdgafolder))
                     <x-filament::modal width="lg">
                         <x-slot name="trigger">
                             <div

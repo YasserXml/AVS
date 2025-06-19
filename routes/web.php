@@ -30,8 +30,3 @@ Route::get('/verify-user/{id}/{hash}', [ControllersUserVerificationController::c
     ->name('user.verify')
     ->middleware('signed');
 
-Route::middleware(['web', 'auth'])->group(function () {
-    Route::get('/admin/arsip/direktorat/folder/{folder}', 
-        [ListDirektoratmedia::class, 'render'])
-        ->name('filament.admin.resources.arsip.direktorat.folder.index');
-});

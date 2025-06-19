@@ -333,7 +333,7 @@ class BarangmasukResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(30)
-                    ->tooltip(fn($record) => $record->barang->nama_barang)
+                    
                     ->wrap()
                     ->icon('heroicon-o-cube')
                     ->toggleable(),

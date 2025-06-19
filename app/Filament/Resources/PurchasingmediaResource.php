@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\PurchasingmediaResource\Pages;
+use App\Filament\Resources\PurchasingmediaResource\Pages\ListPurchasingmedia;
 use App\Filament\Resources\PurchasingmediaResource\RelationManagers;
 use App\Models\Purchasingfolder;
 use App\Models\Purchasingmedia;
@@ -40,7 +41,7 @@ class PurchasingmediaResource extends Resource
         return 14;
     }
 
-    public static function getUrlFromFolder(Purchasingfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderPurchasing(Purchasingfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -72,9 +73,9 @@ class PurchasingmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.purchasingmedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.purchasingmedia');
             })
             ->columns([
                 Stack::make([
@@ -175,7 +176,7 @@ class PurchasingmediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPurchasingmedia::route('/'),
+            'index' => ListPurchasingmedia::route('/'),
         ];
     }
 }

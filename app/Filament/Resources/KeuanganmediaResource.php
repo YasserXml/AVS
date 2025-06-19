@@ -40,7 +40,7 @@ class KeuanganmediaResource extends Resource
         return 16;
     }
 
-    public static function getUrlFromFolder(Keuanganfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderKeuangan(Keuanganfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -78,9 +78,9 @@ class KeuanganmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.keuanganmedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.keuanganmedia');
             })
             ->columns([
                 Stack::make([

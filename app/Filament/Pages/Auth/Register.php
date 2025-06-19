@@ -44,7 +44,6 @@ class Register extends FilamentRegister
                                     ->icon('heroicon-o-user-circle')
                                     ->collapsible(false)
                                     ->compact()
-                                    
                                     ->columns(2)
                                     ->schema([
                                         $this->getNameFormComponent(),
@@ -59,7 +58,7 @@ class Register extends FilamentRegister
                                     ->schema([
                                         $this->getDivisiFormComponent(),
                                     ]),
-                                
+
                                 Section::make('Keamanan')
                                     ->description('Buat kata sandi yang kuat untuk akun Anda.')
                                     ->icon('heroicon-o-shield-check')
@@ -73,9 +72,17 @@ class Register extends FilamentRegister
                             ])
                             ->columns(1),
                     ])
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->extraAttributes([
+                        'class' => 'max-w-4xl mx-auto w-full',
+                        'style' => 'width: 100%; max-width: 56rem;'
+                    ]),
             ])
-            ->statePath('data');
+            ->statePath('data')
+            ->extraAttributes([
+                'class' => 'w-full max-w-none',
+                'style' => 'max-width: none !important; width: 100% !important;'
+            ]);
     }
 
     // Metode untuk komponen form divisi dengan UI yang lebih baik
@@ -92,9 +99,9 @@ class Register extends FilamentRegister
             'divisi_r&d' => 'R&D',
             'divisi_3d' => '3D',
             'divisi_mekanik' => 'Mekanik',
-            'divisi_pmo' => 'PMO',  
+            'divisi_pmo' => 'PMO',
         ];
-        
+
         return Select::make('divisi_role')
             ->label('Divisi')
             ->placeholder('Pilih Divisi Anda')
@@ -105,8 +112,9 @@ class Register extends FilamentRegister
             ->native(false)
             ->helperText('Pilih divisi sesuai dengan posisi Anda saat ini')
             ->reactive()
+            ->live()
             ->prefixIcon('heroicon-o-building-office-2')
-            ->extraAttributes(['class' => 'max-w-md mx-auto'])
+            ->extraAttributes(['class' => 'w-full'])
             ->columnSpanFull();
     }
 
@@ -120,7 +128,7 @@ class Register extends FilamentRegister
             ->autofocus()
             ->autocomplete('name')
             ->prefixIcon('heroicon-o-user')
-            ->extraAttributes(['class' => 'max-w-md']);
+            ->extraAttributes(['class' => 'w-full']);
     }
 
     protected function getEmailFormComponent(): Component
@@ -128,13 +136,13 @@ class Register extends FilamentRegister
         return TextInput::make('email')
             ->label('Alamat Email')
             ->email()
-            ->placeholder('contoh@gmail.com')
+            ->placeholder('contoh@avsimulator.com')
             ->required()
             ->maxLength(255)
             ->unique(table: User::class, column: 'email')
             ->autocomplete('email')
             ->prefixIcon('heroicon-o-envelope')
-            ->extraAttributes(['class' => 'max-w-md']);
+            ->extraAttributes(['class' => 'w-full']);
     }
 
     protected function getPasswordFormComponent(): Component
@@ -150,7 +158,7 @@ class Register extends FilamentRegister
             ->helperText('Kata sandi harus terdiri dari minimal 8 karakter')
             ->prefixIcon('heroicon-o-lock-closed')
             ->revealable()
-            ->extraAttributes(['class' => 'max-w-md']);
+            ->extraAttributes(['class' => 'w-full']);
     }
 
     protected function getPasswordConfirmationFormComponent(): Component
@@ -165,7 +173,7 @@ class Register extends FilamentRegister
             ->autocomplete('new-password')
             ->prefixIcon('heroicon-o-shield-check')
             ->revealable()
-            ->extraAttributes(['class' => 'max-w-md']);
+            ->extraAttributes(['class' => 'w-full']);
     }
 
     public function register(): ?RegistrationResponse
@@ -178,7 +186,7 @@ class Register extends FilamentRegister
                 ->body('Silakan coba lagi dalam beberapa saat.')
                 ->danger()
                 ->send();
-                
+
             return null;
         }
 
@@ -225,7 +233,7 @@ class Register extends FilamentRegister
     protected function getFormActions(): array
     {
         $actions = parent::getFormActions();
-        
+
         // Modifikasi tombol submit untuk tampilan yang lebih menarik
         if (isset($actions[0])) {
             $actions[0]->label('Buat Akun Sekarang')
@@ -236,7 +244,13 @@ class Register extends FilamentRegister
                     'class' => 'w-full md:w-auto',
                 ]);
         }
-        
+
         return $actions;
+    }
+
+    // Tambahkan method untuk mengatur lebar form container
+    public function getMaxWidth(): string
+    {
+        return 'xl'; // Bisa juga '5xl', '6xl', atau '7xl' untuk lebih besar
     }
 }

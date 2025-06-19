@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\RndmediaResource\Pages;
+use App\Filament\Resources\RndmediaResource\Pages\ListRndmedia;
 use App\Filament\Resources\RndmediaResource\RelationManagers;
 use App\Models\Rndfolder;
 use App\Models\Rndmedia;
@@ -40,7 +41,7 @@ class RndmediaResource extends Resource
         return 18;
     }
 
-    public static function getUrlFromFolder(Rndfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderRnd(Rndfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -72,9 +73,9 @@ class RndmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.rndmedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.rndmedia');
             })
             ->columns([
                 Stack::make([
@@ -175,7 +176,7 @@ class RndmediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListRndmedia::route('/'),
+            'index' => ListRndmedia::route('/'),
         ];
     }
 }

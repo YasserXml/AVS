@@ -60,6 +60,8 @@ class DirektoratfolderResource extends Resource
         return 7;
     }
 
+    protected static ?string $slug = 'direktorat';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -124,14 +126,14 @@ class DirektoratfolderResource extends Resource
                         ->whereNotNull('model_id')
                         ->where('collection', request()->get('collection'));
                 } else {
-                    //  Hanya tampilkan folder root (tanpa parent_id)
+                    // Hanya tampilkan folder root (tanpa parent_id)
                     // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
                           ->where('collection', null)
                           ->orWhere('model_type', null);
                     })
-                    // Hanya tampilkan folder yang tidak memiliki parent
+                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
                     ->whereNull('parent_id');
                 }
             })

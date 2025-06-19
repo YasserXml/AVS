@@ -40,7 +40,7 @@ class ElektromediaResource extends Resource
         return 24;
     }
 
-    public static function getUrlFromFolder(Elektrofolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderElektro(Elektrofolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -78,9 +78,9 @@ class ElektromediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.elektromedia'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.elektromedia');
             })
             ->columns([
                 Stack::make([
