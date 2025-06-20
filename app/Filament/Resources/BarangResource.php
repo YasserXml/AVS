@@ -74,7 +74,6 @@ class BarangResource extends Resource
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
                             ->placeholder('Masukkan nomor serial barang')
-                            ->helperText('Nomor serial harus unik')
                             ->prefixIcon('heroicon-m-hashtag')
                             ->columnSpan(['default' => 2, 'md' => 1]),
 
@@ -138,29 +137,179 @@ class BarangResource extends Resource
                     ->columns(['default' => 1, 'md' => 2])
                     ->collapsible()
                     ->persistCollapsed(),
-
-                Forms\Components\Section::make('Informasi Sistem')
-                    ->description('Informasi waktu pembuatan dan pembaruan')
-                    ->icon('heroicon-o-clock')
-                    ->schema([
-                        Forms\Components\Placeholder::make('created_at')
-                            ->label('Dibuat Pada')
-                            ->content(fn(?Barang $record): string => $record?->created_at?->format('d M Y, H:i') ?? '-')
-                            ->columnSpan(['default' => 1, 'md' => 1]),
-
-                        Forms\Components\Placeholder::make('updated_at')
-                            ->label('Diperbarui Pada')
-                            ->content(fn(?Barang $record): string => $record?->updated_at?->format('d M Y, H:i') ?? '-')
-                            ->columnSpan(['default' => 1, 'md' => 1]),
-                    ])
-                    ->columns(['default' => 1, 'md' => 2])
-                    ->collapsed()
-                    ->hidden(fn($operation) => $operation === 'create'),
             ])
             ->columns(['default' => 1, 'lg' => 2]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->poll('15s')
+            ->defaultGroup('kategori.nama_kategori')
+            ->recordUrl(null)
+            ->columns([
+                Tables\Columns\TextColumn::make('serial_number')
+                    ->label('Serial Number')
+                    ->searchable()
+                    ->sortable()
+                    ->copyable()
+                    ->color('gray'),
+
+                Tables\Columns\TextColumn::make('kode_barang')
+                    ->label('Kode Barang')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('nama_barang')
+                    ->label('Nama Barang')
+                    ->searchable()
+                    ->sortable()
+                    ->limit(30)
+                    ->wrap(),
+
+                Tables\Columns\TextColumn::make('jumlah_barang')
+                    ->label('Jumlah Barang')
+                    ->sortable()
+                    ->numeric()
+                    ->badge()
+                    ->alignCenter()
+                    ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
+                    ->icon(fn(int $state): string => $state > 10 ? 'heroicon-m-check-circle' : ($state > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-x-circle')),
+
+                Tables\Columns\TextColumn::make('kategori.nama_kategori')
+                    ->label('Kategori')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat')
+                    ->dateTime('d M Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Diperbarui')
+                    ->dateTime('d M Y')
+                    ->sortable()
+                    ->since()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('deleted_at')
+                    ->label('Dihapus')
+                    ->dateTime('d M Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->placeholder('-'),
+            ])
+            ->filters([
+                TrashedFilter::make()
+                    ->label('Sampah')
+                    ->indicator('Terhapus')
+                    ->trueLabel('Data aktif + terhapus')
+                    ->falseLabel('Terhapus'),
+
+                Tables\Filters\SelectFilter::make('stok')
+                    ->label('Status Stok')
+                    ->options([
+                        'kosong' => 'Stok Kosong',
+                        'menipis' => 'Stok Menipis',
+                        'tersedia' => 'Stok Tersedia',
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        return match ($data['value']) {
+                            'kosong' => $query->where('jumlah_barang', 0),
+                            'menipis' => $query->where('jumlah_barang', '>', 0)->where('jumlah_barang', '<', 10),
+                            'tersedia' => $query->where('jumlah_barang', '>=', 10),
+                            default => $query,
+                        };
+                    })
+                    ->indicator('Status')
+                    ->searchable()
+                    ->preload(),
+            ])
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->tooltip('Lihat Barang')
+                    ->extraAttributes(['class' => 'bg-primary-500/10']),
+                Tables\Actions\ActionGroup::make([
+
+                    Tables\Actions\EditAction::make()
+                        ->tooltip('Edit Barang')
+                        ->extraAttributes(['class' => 'bg-warning-500/10'])
+                        ->color('info'),
+
+                    Action::make('tambah_stok')
+                        ->label('+ Stok')
+                        ->color('success')
+                        ->action(function (Barang $record, array $data): void {
+                            $record->update([
+                                'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
+                            ]);
+                        })
+
+                        ->form([
+                            Forms\Components\TextInput::make('jumlah')
+                                ->label('Jumlah Stok Tambahan')
+                                ->required()
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(1),
+                        ])
+                        ->modalHeading('Tambah Stok Barang')
+                        ->modalSubmitActionLabel('Tambah Stok')
+                        ->tooltip('Tambah Stok Barang')
+                        ->successNotificationTitle('Stok barang berhasil ditambahkan'),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->tooltip('Hapus Barang')
+                        ->extraAttributes(['class' => 'bg-danger-500/10']),
+
+                    Tables\Actions\RestoreAction::make()
+                        ->tooltip('Pulihkan Barang'),
+                ])
+            ])
+            ->BulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion(),
+
+                    Tables\Actions\RestoreBulkAction::make()
+                        ->deselectRecordsAfterCompletion(),
+
+                    Tables\Actions\ForceDeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion(),
+
+                    Tables\Actions\BulkAction::make('tambah_stok_massal')
+                        ->label('Tambah Stok Massal')
+                        ->icon('heroicon-m-plus')
+                        ->color('success')
+                        ->action(function (Collection $records, array $data): void {
+                            foreach ($records as $record) {
+                                $record->update([
+                                    'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
+                                ]);
+                            }
+                        })
+                        ->form([
+                            Forms\Components\TextInput::make('jumlah')
+                                ->label('Jumlah Stok Tambahan')
+                                ->required()
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(1),
+                        ])
+                        ->deselectRecordsAfterCompletion()
+                        ->successNotificationTitle('Stok barang berhasil ditambahkan'),
+                ]),
+            ])
+            ->defaultSort('nama_barang', 'asc');
+    }
+
+     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
             ->schema([
@@ -222,210 +371,10 @@ class BarangResource extends Resource
             ->columns(3);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->poll('15s')
-            ->defaultGroup('kategori.nama_kategori')
-            ->recordUrl(null)
-            ->columns([
-                Tables\Columns\TextColumn::make('serial_number')
-                    ->label('Serial Number')
-                    ->searchable()
-                    ->sortable()
-                    ->copyable()
-                    ->color('gray')
-                    ->weight(FontWeight::Bold)
-                    ->icon('heroicon-m-identification'),
-
-                Tables\Columns\TextColumn::make('kode_barang')
-                    ->label('Kode Barang')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('nama_barang')
-                    ->label('Nama Barang')
-                    ->searchable()
-                    ->sortable()
-                    ->limit(30)
-                    ->wrap(),
-
-                Tables\Columns\TextColumn::make('jumlah_barang')
-                    ->label('Jumlah Barang')
-                    ->sortable()
-                    ->numeric()
-                    ->badge()
-                    ->alignCenter()
-                    ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
-                    ->icon(fn(int $state): string => $state > 10 ? 'heroicon-m-check-circle' : ($state > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-x-circle'))
-                    ->size(Tables\Columns\TextColumn\TextColumnSize::Large),
-
-                Tables\Columns\TextColumn::make('kategori.nama_kategori')
-                    ->label('Kategori')
-                    ->searchable()
-                    ->sortable()
-                    ->icon('heroicon-m-tag')
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Dibuat')
-                    ->dateTime('d M Y')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Diperbarui')
-                    ->dateTime('d M Y')
-                    ->sortable()
-                    ->since()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->label('Dihapus')
-                    ->dateTime('d M Y')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->placeholder('-'),
-            ])
-            ->filters([
-                TrashedFilter::make()
-                    ->label('Barang Terhapus')
-                    ->indicator('Terhapus'),
-
-                SelectFilter::make('kategori')
-                    ->relationship('kategori', 'nama_kategori')
-                    ->searchable()
-                    ->preload()
-                    ->indicator('Kategori'),
-
-                Tables\Filters\SelectFilter::make('stok')
-                    ->label('Status Stok')
-                    ->options([
-                        'kosong' => 'Stok Kosong',
-                        'menipis' => 'Stok Menipis',
-                        'tersedia' => 'Stok Tersedia',
-                    ])
-                    ->query(function (Builder $query, array $data) {
-                        return match ($data['value']) {
-                            'kosong' => $query->where('jumlah_barang', 0),
-                            'menipis' => $query->where('jumlah_barang', '>', 0)->where('jumlah_barang', '<', 10),
-                            'tersedia' => $query->where('jumlah_barang', '>=', 10),
-                            default => $query,
-                        };
-                    })
-                    ->indicator('Status')
-                    ->searchable()
-                    ->preload(),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make()
-                    ->tooltip('Lihat Barang')
-                    ->extraAttributes(['class' => 'bg-primary-500/10']),
-                Tables\Actions\ActionGroup::make([
-
-                    Tables\Actions\EditAction::make()
-                        ->tooltip('Edit Barang')
-                        ->extraAttributes(['class' => 'bg-warning-500/10'])
-                        ->color('info'),
-
-                    Action::make('tambah_stok')
-                        ->label('+ Stok')
-                        ->color('success')
-                        ->action(function (Barang $record, array $data): void {
-                            $record->update([
-                                'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
-                            ]);
-                        })
-
-                        ->form([
-                            Forms\Components\TextInput::make('jumlah')
-                                ->label('Jumlah Stok Tambahan')
-                                ->required()
-                                ->numeric()
-                                ->minValue(1)
-                                ->default(1),
-                        ])
-                        ->modalHeading('Tambah Stok Barang')
-                        ->modalSubmitActionLabel('Tambah Stok')
-                        ->tooltip('Tambah Stok Barang')
-                        ->successNotificationTitle('Stok barang berhasil ditambahkan'),
-
-                    Action::make('kurangi_stok')
-                        ->label('- Stok')
-                        ->color('warning')
-                        ->action(function (Barang $record, array $data): void {
-                            $jumlahBaru = max(0, $record->jumlah_barang - $data['jumlah']);
-                            $record->update([
-                                'jumlah_barang' => $jumlahBaru,
-                            ]);
-                        })
-                        ->form([
-                            Forms\Components\TextInput::make('jumlah')
-                                ->label('Jumlah Pengurangan Stok')
-                                ->required()
-                                ->numeric()
-                                ->minValue(1)
-                                ->default(1)
-                                ->maxValue(fn(Barang $record) => $record->jumlah_barang),
-                        ])
-                        ->modalHeading('Kurangi Stok Barang')
-                        ->modalSubmitActionLabel('Kurangi Stok')
-                        ->tooltip('Kurangi Stok Barang')
-                        ->successNotificationTitle('Stok barang berhasil dikurangi')
-                        ->hidden(fn(Barang $record) => $record->jumlah_barang <= 0),
-
-                    Tables\Actions\DeleteAction::make()
-                        ->tooltip('Hapus Barang')
-                        ->extraAttributes(['class' => 'bg-danger-500/10']),
-
-                    Tables\Actions\RestoreAction::make()
-                        ->tooltip('Pulihkan Barang'),
-                ])
-            ])
-            ->BulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->requiresConfirmation()
-                        ->deselectRecordsAfterCompletion(),
-
-                    Tables\Actions\RestoreBulkAction::make()
-                        ->deselectRecordsAfterCompletion(),
-
-                    Tables\Actions\ForceDeleteBulkAction::make()
-                        ->requiresConfirmation()
-                        ->deselectRecordsAfterCompletion(),
-
-                    Tables\Actions\BulkAction::make('tambah_stok_massal')
-                        ->label('Tambah Stok Massal')
-                        ->icon('heroicon-m-plus')
-                        ->color('success')
-                        ->action(function (Collection $records, array $data): void {
-                            foreach ($records as $record) {
-                                $record->update([
-                                    'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
-                                ]);
-                            }
-                        })
-                        ->form([
-                            Forms\Components\TextInput::make('jumlah')
-                                ->label('Jumlah Stok Tambahan')
-                                ->required()
-                                ->numeric()
-                                ->minValue(1)
-                                ->default(1),
-                        ])
-                        ->deselectRecordsAfterCompletion()
-                        ->successNotificationTitle('Stok barang berhasil ditambahkan'),
-                ]),
-            ])
-            ->defaultSort('nama_barang', 'asc');
-    }
-
     public static function getRelations(): array
     {
         return [
-            // Bisa ditambahkan jika ada relasi yang ingin ditampilkan
+            //
         ];
     }
 

@@ -14,6 +14,7 @@ use Filament\Notifications\Notification;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use DanHarrin\LivewireRateLimiting\WithRateLimiting;
 use Filament\Support\Enums\IconPosition;
+use Filament\Support\Enums\MaxWidth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\View\View as ViewView;
 use Illuminate\View\View as IlluminateViewView;
@@ -151,7 +152,7 @@ class Login extends BaseLogin
                 ->title('Akun Belum Diverifikasi')
                 ->body('Akun Anda belum diverifikasi oleh admin. Silakan tunggu email konfirmasi atau hubungi administrator.')
                 ->danger()
-                ->send();
+                ->send(); 
 
             throw ValidationException::withMessages([
                 'data.email' => 'Akun Anda belum diverifikasi oleh admin.',

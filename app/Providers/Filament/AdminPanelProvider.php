@@ -5,9 +5,14 @@ namespace App\Providers\Filament;
 use App\Filament\Pages\Auth\EmailVerification;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Auth\Register;
+use App\Filament\Widgets\BarangChartWidget;
+use App\Filament\Widgets\BarangKeluarWidget;
+use App\Filament\Widgets\BarangMasukWidget;
+use App\Filament\Widgets\BarangWidget;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspector;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspectorPlugin;
+use Devonab\FilamentEasyFooter\EasyFooterPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -23,7 +28,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Jeffgreco13\FilamentBreezy\BreezyCore;
 use TomatoPHP\FilamentMediaManager\FilamentMediaManagerPlugin;
 
 class AdminPanelProvider extends PanelProvider
@@ -39,7 +43,6 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->registration(Register::class)
             ->passwordReset()
-            ->sidebarCollapsibleOnDesktop()
             ->emailVerification()
             ->breadcrumbs(false)
             ->profile(isSimple: false)
@@ -64,6 +67,11 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
+                BarangWidget::class,
+                BarangChartWidget::class,
+                BarangMasukWidget::class,
+                BarangKeluarWidget::class,
+            
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -80,8 +88,16 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
                 // FilamentThemeInspectorPlugin::make()
                 //     ->disabled(fn()=> ! app()->hasDebugModeEnabled()),
-                
-                
+                EasyFooterPlugin::make()
+                ->withFooterPosition('footer')
+                ->withLoadTime()
+                ->withBorder()
+                ->withLogo(
+                    asset('images/Logo.png'),
+                    'https://avsimulator.com/',
+                )
+                ->hiddenFromPagesEnabled()
+                ->hiddenFromPages(['admin/login', 'admin/register']),     
             ])
             ->authMiddleware([
                 Authenticate::class,

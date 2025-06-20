@@ -12,5 +12,5 @@ class Project extends Cluster
 
     protected static ?string $navigationLabel = 'Project';
 
-    protected static ?string $slug = 'project/project';
+   
 }

@@ -56,7 +56,7 @@ class KategoriResource extends Resource
                         Forms\Components\TextInput::make('nama_kategori')
                             ->required()
                             ->maxLength(255)
-                            ->autofocus()
+                            ->autofocus() 
                             ->placeholder('Masukkan nama kategori')
                             ->label('Nama Kategori')
                             ->columnSpanFull(),
@@ -68,7 +68,15 @@ class KategoriResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-        ->recordUrl(null)
+         ->recordUrl(
+            fn ($record): string => route('filament.admin.resources.inventory.barang.index', [
+                'tableFilters' => [
+                    'kategori' => [
+                        'value' => $record->id
+                    ]
+                ]
+            ])
+        )
             ->columns([
                Tables\Columns\TextColumn::make('id')
                     ->label('No')
@@ -84,6 +92,7 @@ class KategoriResource extends Resource
                 Tables\Columns\TextColumn::make('nama_kategori')
                     ->label('Nama Kategori')
                     ->searchable()
+                    ->toggleable()
                     ->alignCenter()
                     ->sortable(),
                     
