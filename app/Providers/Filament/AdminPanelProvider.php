@@ -5,10 +5,14 @@ namespace App\Providers\Filament;
 use App\Filament\Pages\Auth\EmailVerification;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Auth\Register;
+use App\Filament\Pages\Auth\ResetPassword;
 use App\Filament\Widgets\BarangChartWidget;
+use App\Filament\Widgets\BarangKeluarChartWidget;
 use App\Filament\Widgets\BarangKeluarWidget;
+use App\Filament\Widgets\BarangMasukChartWidget;
 use App\Filament\Widgets\BarangMasukWidget;
 use App\Filament\Widgets\BarangWidget;
+use App\Filament\Widgets\StatsOverviewWidget;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspector;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspectorPlugin;
@@ -22,6 +26,8 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
+use Hasnayeen\Themes\Http\Middleware\SetTheme;
+use Hasnayeen\Themes\ThemesPlugin;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -39,11 +45,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('web')
-            // ->topNavigation()
+            ->topNavigation()
             ->login(Login::class)
             ->registration(Register::class)
-            ->passwordReset()
-            ->emailVerification()
             ->breadcrumbs(false)
             ->profile(isSimple: false)
             ->loginRouteSlug('login')
@@ -51,7 +55,7 @@ class AdminPanelProvider extends PanelProvider
             ->passwordResetRouteSlug('reset-password')
             ->emailVerificationRouteSlug('verifikasi-email')
             ->databaseNotifications()
-            ->databaseNotificationsPolling('30s')
+            ->databaseNotificationsPolling('10s')
             ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
             ->favicon(asset('images/Logo(1).webp'))
@@ -67,11 +71,9 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                BarangWidget::class,
-                BarangChartWidget::class,
-                BarangMasukWidget::class,
-                BarangKeluarWidget::class,
-            
+                StatsOverviewWidget::class,
+                BarangMasukChartWidget::class,
+                BarangKeluarChartWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -97,7 +99,7 @@ class AdminPanelProvider extends PanelProvider
                     'https://avsimulator.com/',
                 )
                 ->hiddenFromPagesEnabled()
-                ->hiddenFromPages(['admin/login', 'admin/register']),     
+                ->hiddenFromPages(['admin/login', 'admin/registrasi']),     
             ])
             ->authMiddleware([
                 Authenticate::class,

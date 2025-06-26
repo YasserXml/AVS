@@ -27,10 +27,9 @@ class Login extends BaseLogin
     {
         return $form
             ->schema([
-                $this->getEmailFormComponent(),
+                $this->getEmailFormComponent(), // Sekarang mendukung email atau username
                 $this->getPasswordFormComponent(),
                 $this->getRememberFormComponent(),
-                // Add a custom view component to display the social login options// Make it full width for responsive design
             ])
             ->columns([
                 'default' => 1,
@@ -40,17 +39,16 @@ class Login extends BaseLogin
             ]) // Make form responsive
             ->statePath('data');
     }
-     
-     protected function getEmailFormComponent(): Component
+
+    protected function getEmailFormComponent(): Component
     {
         return TextInput::make('email')
-            ->label('Alamat Email')
-            ->email()
-            ->placeholder('Masukkan email Anda')
+            ->label('Email / Nama Pengguna')
+            ->placeholder('Masukkan email atau Nama pengguna Anda')
             ->required()
             ->autocomplete('email')
             ->autofocus()
-            ->prefixIcon('heroicon-o-envelope')
+            ->prefixIcon('heroicon-o-user') 
             ->extraInputAttributes(['tabindex' => 1]);
     }
 
@@ -66,7 +64,7 @@ class Login extends BaseLogin
             ->autocomplete('current-password')
             ->extraInputAttributes(['tabindex' => 2]);
     }
-    
+
     protected function getRememberFormComponent(): Component
     {
         return Checkbox::make('remember')
@@ -76,10 +74,10 @@ class Login extends BaseLogin
     protected function getFormActions(): array
     {
         $actions = parent::getFormActions();
-        
+
         // Modifikasi tombol login untuk tampilan yang lebih menarik
         if (isset($actions[0])) {
-            $actions[0]->label('Masuk Sekarang')
+            $actions[0]->label('Masuk')
                 ->icon('heroicon-o-arrow-right-circle')
                 ->iconPosition(IconPosition::After)
                 ->color('primary')
@@ -88,10 +86,9 @@ class Login extends BaseLogin
                     'class' => 'w-full md:w-auto',
                 ]);
         }
-        
+
         return $actions;
     }
-
 
     /**
      * @return string|null
@@ -123,10 +120,14 @@ class Login extends BaseLogin
         }
 
         $data = $this->form->getState();
-        
+
+        // Menentukan apakah input adalah email atau username
+        $loginField = filter_var($data['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+
         // Menggunakan Auth facade untuk attempt login dengan guard yang benar
+        // Sekarang mendukung login dengan email atau name (username)
         if (! auth()->guard($this->getGuard())->attempt([
-            'email' => $data['email'],
+            $loginField => $data['email'], // Menggunakan field yang sesuai (email atau name)
             'password' => $data['password'],
         ], $data['remember'] ?? false)) {
             throw ValidationException::withMessages([
@@ -135,7 +136,7 @@ class Login extends BaseLogin
         }
 
         $user = auth()->guard($this->getGuard())->user();
-        
+
         // Add null check to avoid "Attempt to read property on null" error
         if (!$user) {
             throw ValidationException::withMessages([
@@ -152,7 +153,7 @@ class Login extends BaseLogin
                 ->title('Akun Belum Diverifikasi')
                 ->body('Akun Anda belum diverifikasi oleh admin. Silakan tunggu email konfirmasi atau hubungi administrator.')
                 ->danger()
-                ->send(); 
+                ->send();
 
             throw ValidationException::withMessages([
                 'data.email' => 'Akun Anda belum diverifikasi oleh admin.',

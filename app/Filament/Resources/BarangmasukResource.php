@@ -437,6 +437,7 @@ class BarangmasukResource extends Resource
                 TrashedFilter::make()
                 ->searchable()
                 ->preload()
+                ->label('Sampah')
                 ->trueLabel('Data Terhapus')
                 ->falseLabel('Data Akif')
                 ->label('Dihapus'),

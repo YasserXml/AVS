@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('project_name')->nullable();
             $table->enum('status', ['oprasional_kantor', 'project']);
             $table->foreignId('kategori_id')->nullable()->constrained('kategoris');
-             $table->enum('sumber', ['manual', 'pengajuan'])->default('manual');
+            $table->enum('sumber', ['manual', 'pengajuan'])->default('manual');
             $table->timestamps();
             $table->softDeletes();
         });

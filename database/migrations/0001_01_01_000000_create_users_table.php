@@ -19,10 +19,6 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->rememberToken();
             $table->timestamps();
-            $table->string('provider')->nullable()->after('password');
-            $table->string('provider_id')->nullable()->after('provider');
-            $table->string('provider_token')->nullable()->after('provider_id');
-            $table->string('provider_refresh_token')->nullable()->after('provider_token');
             $table->softDeletes();
             $table->boolean('admin_verified')->default(false)->after('email_verified_at');
             $table->boolean('is_admin')->default(false)->after('admin_verified');

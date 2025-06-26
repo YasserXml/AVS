@@ -378,8 +378,13 @@ class BarangkeluarResource extends Resource
                     ->icon('heroicon-o-clock'),
             ])
             ->filters([
-
-                TrashedFilter::make(),
+                TrashedFilter::make()
+                    ->label('Sampah')
+                    ->indicator('Terhapus')
+                    ->trueLabel('Data aktif + terhapus')
+                    ->falseLabel('Terhapus')
+                    ->searchable()
+                    ->preload(),
                 // Filter berdasarkan Status
                 SelectFilter::make('status')
                     ->label('Status Penggunaan')

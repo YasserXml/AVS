@@ -50,12 +50,14 @@ class Register extends FilamentRegister
                                         $this->getEmailFormComponent(),
                                     ]),
 
-                                Section::make('Informasi Divisi')
-                                    ->description('Pilih divisi tempat Anda bekerja.')
+                                Section::make('Informasi Posisi & Divisi')
+                                    ->description('Pilih tingkat posisi dan divisi tempat Anda bekerja.')
                                     ->icon('heroicon-o-building-office-2')
                                     ->collapsible(false)
                                     ->compact()
+                                    ->columns(2)
                                     ->schema([
+                                        $this->getJenjangFormComponent(),
                                         $this->getDivisiFormComponent(),
                                     ]),
 
@@ -85,44 +87,128 @@ class Register extends FilamentRegister
             ]);
     }
 
-    // Metode untuk komponen form divisi dengan UI yang lebih baik
-    protected function getDivisiFormComponent(): Component
+    // Komponen untuk memilih jenjang posisi
+    protected function getJenjangFormComponent(): Component
     {
-        // Definisikan opsi divisi secara hardcoded
-        $divisiOptions = [
-            'divisi_manager_hrd' => 'Manager HRD',
-            'divisi_hrd_ga' => 'HRD & GA',
-            'divisi_keuangan' => 'Keuangan',
-            'divisi_software' => 'Software',
-            'divisi_purchasing' => 'Purchasing',
-            'divisi_elektro' => 'Elektro',
-            'divisi_r&d' => 'R&D',
-            'divisi_3d' => '3D',
-            'divisi_mekanik' => 'Mekanik',
-            'divisi_pmo' => 'PMO',
-        ];
-
-        return Select::make('divisi_role')
-            ->label('Divisi')
-            ->placeholder('Pilih Divisi Anda')
-            ->searchable()
-            ->preload()
-            ->options($divisiOptions)
+        return Select::make('jenjang_posisi')
+            ->label('Jenjang Posisi')
+            ->placeholder('Pilih Jenjang Posisi')
+            ->options([
+                'staff' => 'Staff/Karyawan',
+                'kepala_divisi' => 'Kepala Divisi',
+                'direktur' => 'Direktur',
+            ])
             ->required()
             ->native(false)
-            ->helperText('Pilih divisi sesuai dengan posisi Anda saat ini')
+            ->helperText('Pilih jenjang posisi sesuai dengan jabatan Anda')
+            ->reactive()
+            ->live()
+            ->prefixIcon('heroicon-o-identification')
+            ->afterStateUpdated(function (callable $set, $state) {
+                // Reset divisi selection when jenjang changes
+                $set('divisi_role', null);
+            })
+            ->extraAttributes(['class' => 'w-full']);
+    }
+
+    // Komponen untuk divisi dengan logika berdasarkan jenjang
+    protected function getDivisiFormComponent(): Component
+    {
+        return Select::make('divisi_role')
+            ->label('Divisi')
+            ->placeholder(function (callable $get) {
+                $jenjang = $get('jenjang_posisi');
+                if (!$jenjang) {
+                    return 'Pilih jenjang posisi terlebih dahulu';
+                }
+                return 'Pilih Divisi Anda';
+            })
+            ->searchable()
+            ->preload()
+            ->options(function (callable $get) {
+                $jenjang = $get('jenjang_posisi');
+
+                if (!$jenjang) {
+                    return [];
+                }
+
+                return $this->getDivisiOptionsByJenjang($jenjang);
+            })
+            ->required()
+            ->native(false)
+            ->helperText(function (callable $get) {
+                $jenjang = $get('jenjang_posisi');
+
+                switch ($jenjang) {
+                    case 'staff':
+                        return 'Pilih divisi tempat Anda bekerja sebagai staff/karyawan';
+                    case 'kepala_divisi':
+                        return 'Pilih divisi yang akan Anda pimpin';
+                    case 'direktur':
+                        return 'Pilih bidang direktur yang sesuai';
+                    default:
+                        return 'Pilih divisi sesuai dengan posisi Anda';
+                }
+            })
             ->reactive()
             ->live()
             ->prefixIcon('heroicon-o-building-office-2')
+            ->disabled(fn(callable $get) => !$get('jenjang_posisi'))
             ->extraAttributes(['class' => 'w-full'])
             ->columnSpanFull();
+    }
+
+    // Method untuk mendapatkan opsi divisi berdasarkan jenjang
+    protected function getDivisiOptionsByJenjang(string $jenjang): array
+    {
+        $baseDivisions = [
+            'hrd' => 'HRD & GA',
+            'keuangan' => 'Keuangan',
+            'software' => 'Software',
+            'purchasing' => 'Purchasing',
+            'elektro' => 'Elektro',
+            'r&d' => 'R&D',
+            '3d' => '3D',
+            'mekanik' => 'Mekanik',
+            'pmo' => 'PMO',
+        ];
+
+        switch ($jenjang) {
+            case 'staff':
+                $options = [];
+                foreach ($baseDivisions as $key => $name) {
+                    $options["divisi_{$key}"] = $name;
+                }
+                // Tambahkan Manager HRD sebagai opsi khusus untuk staff
+                $options['divisi_manager_hrd'] = 'Manager HRD';
+                return $options;
+
+            case 'kepala_divisi':
+                $options = [];
+                foreach ($baseDivisions as $key => $name) {
+                    $options["kepala_divisi_{$key}"] = "Kepala Divisi {$name}";
+                }
+                return $options;
+
+            case 'direktur':
+                return [
+                    'direktur_utama' => 'Direktur Utama',
+                    'direktur_teknologi' => 'Direktur Teknologi',
+                    'direktur_produk' => 'Direktur Produk',
+                    'direktur_project' => 'Direktur Project',
+                    'direktur_keuangan' => 'Direktur Keuangan',
+                ];
+
+            default:
+                return [];
+        }
     }
 
     protected function getNameFormComponent(): Component
     {
         return TextInput::make('name')
             ->label('Nama Pengguna')
-            ->placeholder('Masukkan nama lengkap Anda')
+            ->placeholder('Masukkan nama pengguna')
             ->required()
             ->maxLength(255)
             ->autofocus()
@@ -192,13 +278,20 @@ class Register extends FilamentRegister
 
         $data = $this->form->getState();
 
-        // Ambil role divisi dan hapus dari data
+        // Ambil role divisi dan jenjang, kemudian hapus dari data
         $divisiRole = $data['divisi_role'];
-        unset($data['divisi_role']);
+        $jenjangPosisi = $data['jenjang_posisi'];
+
+        unset($data['divisi_role'], $data['jenjang_posisi']);
 
         $data['password'] = Hash::make($data['password']);
         // Set admin_verified ke false secara default
         $data['admin_verified'] = false;
+
+        // Tentukan jabatan dan divisi berdasarkan jenjang dan divisi role
+        $data['jabatan'] = $this->determineJabatan($jenjangPosisi, $divisiRole);
+        $data['jenjang_posisi'] = $jenjangPosisi;
+        $data['divisi'] = $this->extractDivisiName($divisiRole);
 
         $user = User::create($data);
 
@@ -208,16 +301,96 @@ class Register extends FilamentRegister
         // Tetap memicu event Registered untuk listener lain
         event(new Registered($user));
 
-        // Tampilkan pesan ke pengguna
-        Notification::make()
-            ->title('Pendaftaran Berhasil!')
-            ->body('Terima kasih telah mendaftar. Mohon menunggu akun Anda diverifikasi oleh admin. Kami akan mengirimkan notifikasi status via email.')
-            ->success()
-            ->persistent()
-            ->send();
+        // Tampilkan pesan ke pengguna berdasarkan jenjang
+        $this->showRegistrationNotification($jenjangPosisi);
 
         // Redirect ke halaman login
         return app(RegistrationResponse::class);
+    }
+
+    // Method untuk menentukan jabatan berdasarkan jenjang dan divisi
+    protected function determineJabatan(string $jenjang, string $divisiRole): string
+    {
+        // Extract divisi name from role
+        $divisiName = $this->extractDivisiName($divisiRole);
+
+        switch ($jenjang) {
+            case 'staff':
+                return "Staff {$divisiName}";
+            case 'kepala_divisi':
+                return "Kepala Divisi {$divisiName}";
+            case 'direktur':
+                // For direktur, use the full role name
+                return ucwords(str_replace('_', ' ', $divisiRole));
+            default:
+                return $divisiName;
+        }
+    }
+
+    // Method untuk mengekstrak nama divisi dari role
+    protected function extractDivisiName(string $role): string
+    {
+        $roleMap = [
+            // Staff roles
+            'divisi_manager_hrd' => 'Manager HRD',
+            'divisi_hrd' => 'HRD & GA',
+            'divisi_keuangan' => 'Keuangan',
+            'divisi_software' => 'Software',
+            'divisi_purchasing' => 'Purchasing',
+            'divisi_elektro' => 'Elektro',
+            'divisi_r&d' => 'R&D',
+            'divisi_3d' => '3D',
+            'divisi_mekanik' => 'Mekanik',
+            'divisi_pmo' => 'PMO',
+
+            // Kepala divisi roles
+            'kepala_divisi_hrd' => 'HRD & GA',
+            'kepala_divisi_keuangan' => 'Keuangan',
+            'kepala_divisi_software' => 'Software',
+            'kepala_divisi_purchasing' => 'Purchasing',
+            'kepala_divisi_elektro' => 'Elektro',
+            'kepala_divisi_r&d' => 'R&D',
+            'kepala_divisi_3d' => '3D',
+            'kepala_divisi_mekanik' => 'Mekanik',
+            'kepala_divisi_pmo' => 'PMO',
+
+            // Direktur roles
+            'direktur_utama' => 'Direktur Utama',
+            'direktur_teknologi' => 'Direktur Teknologi',
+            'direktur_produk' => 'Direktur Produk',
+            'direktur_project' => 'Direktur Project',
+            'direktur_keuangan' => 'Direktur Keuangan',
+        ];
+
+        return $roleMap[$role] ?? ucwords(str_replace(['_', 'divisi', 'kepala', 'direktur'], [' ', '', '', ''], $role));
+    }
+
+    // Method untuk menampilkan notifikasi berdasarkan jenjang
+    protected function showRegistrationNotification(string $jenjang): void
+    {
+        $messages = [
+            'staff' => [
+                'title' => 'Pendaftaran Staff Berhasil!',
+                'body' => 'Terima kasih telah mendaftar sebagai staff. Mohon menunggu akun Anda diverifikasi oleh admin. Kami akan mengirimkan notifikasi status via email.'
+            ],
+            'kepala_divisi' => [
+                'title' => 'Pendaftaran Kepala Divisi Berhasil!',
+                'body' => 'Terima kasih telah mendaftar sebagai Kepala Divisi. Akun Anda memerlukan verifikasi khusus dari manajemen. Kami akan segera meninjau dan mengirimkan notifikasi via email.'
+            ],
+            'direktur' => [
+                'title' => 'Pendaftaran Direktur Berhasil!',
+                'body' => 'Terima kasih telah mendaftar sebagai Direktur. Akun Anda memerlukan verifikasi tingkat tinggi dari super admin. Tim kami akan segera meninjau pendaftaran Anda.'
+            ]
+        ];
+
+        $message = $messages[$jenjang] ?? $messages['staff'];
+
+        Notification::make()
+            ->title($message['title'])
+            ->body($message['body'])
+            ->success()
+            ->persistent()
+            ->send();
     }
 
     protected function redirectPath(string $redirectRoute): RegistrationResponse
