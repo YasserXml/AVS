@@ -94,7 +94,7 @@ class Register extends FilamentRegister
             ->label('Jenjang Posisi')
             ->placeholder('Pilih Jenjang Posisi')
             ->options([
-                'staff' => 'Staff/Karyawan',
+                'user' => 'User',  // Changed from 'staff' to 'user'
                 'kepala_divisi' => 'Kepala Divisi',
                 'direktur' => 'Direktur',
             ])
@@ -140,8 +140,8 @@ class Register extends FilamentRegister
                 $jenjang = $get('jenjang_posisi');
 
                 switch ($jenjang) {
-                    case 'staff':
-                        return 'Pilih divisi tempat Anda bekerja sebagai staff/karyawan';
+                    case 'user':  // Changed from 'staff' to 'user'
+                        return 'Pilih divisi tempat Anda bekerja sebagai user/karyawan';
                     case 'kepala_divisi':
                         return 'Pilih divisi yang akan Anda pimpin';
                     case 'direktur':
@@ -174,12 +174,12 @@ class Register extends FilamentRegister
         ];
 
         switch ($jenjang) {
-            case 'staff':
+            case 'user':  // Changed from 'staff' to 'user'
                 $options = [];
                 foreach ($baseDivisions as $key => $name) {
                     $options["divisi_{$key}"] = $name;
                 }
-                // Tambahkan Manager HRD sebagai opsi khusus untuk staff
+                // Tambahkan Manager HRD sebagai opsi khusus untuk user
                 $options['divisi_manager_hrd'] = 'Manager HRD';
                 return $options;
 
@@ -197,6 +197,7 @@ class Register extends FilamentRegister
                     'direktur_produk' => 'Direktur Produk',
                     'direktur_project' => 'Direktur Project',
                     'direktur_keuangan' => 'Direktur Keuangan',
+                    'direktur_bisnis_marketing' => 'Direktur Bisnis Marketing',
                 ];
 
             default:
@@ -315,8 +316,8 @@ class Register extends FilamentRegister
         $divisiName = $this->extractDivisiName($divisiRole);
 
         switch ($jenjang) {
-            case 'staff':
-                return "Staff {$divisiName}";
+            case 'user':  // Changed from 'staff' to 'user'
+                return "User {$divisiName}";
             case 'kepala_divisi':
                 return "Kepala Divisi {$divisiName}";
             case 'direktur':
@@ -331,7 +332,7 @@ class Register extends FilamentRegister
     protected function extractDivisiName(string $role): string
     {
         $roleMap = [
-            // Staff roles
+            // User roles (changed from staff)
             'divisi_manager_hrd' => 'Manager HRD',
             'divisi_hrd' => 'HRD & GA',
             'divisi_keuangan' => 'Keuangan',
@@ -360,6 +361,7 @@ class Register extends FilamentRegister
             'direktur_produk' => 'Direktur Produk',
             'direktur_project' => 'Direktur Project',
             'direktur_keuangan' => 'Direktur Keuangan',
+            'direktur_bisnis_marketing' => 'Direktur Bisnis & Marketing',
         ];
 
         return $roleMap[$role] ?? ucwords(str_replace(['_', 'divisi', 'kepala', 'direktur'], [' ', '', '', ''], $role));
@@ -369,9 +371,9 @@ class Register extends FilamentRegister
     protected function showRegistrationNotification(string $jenjang): void
     {
         $messages = [
-            'staff' => [
-                'title' => 'Pendaftaran Staff Berhasil!',
-                'body' => 'Terima kasih telah mendaftar sebagai staff. Mohon menunggu akun Anda diverifikasi oleh admin. Kami akan mengirimkan notifikasi status via email.'
+            'user' => [  // Changed from 'staff' to 'user'
+                'title' => 'Pendaftaran User Berhasil!',
+                'body' => 'Terima kasih telah mendaftar sebagai user. Mohon menunggu akun Anda diverifikasi oleh admin. Kami akan mengirimkan notifikasi status via email.'
             ],
             'kepala_divisi' => [
                 'title' => 'Pendaftaran Kepala Divisi Berhasil!',
@@ -383,7 +385,7 @@ class Register extends FilamentRegister
             ]
         ];
 
-        $message = $messages[$jenjang] ?? $messages['staff'];
+        $message = $messages[$jenjang] ?? $messages['user'];  // Changed fallback from 'staff' to 'user'
 
         Notification::make()
             ->title($message['title'])

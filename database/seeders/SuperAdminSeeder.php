@@ -50,7 +50,7 @@ class SuperAdminSeeder extends Seeder
         $this->command->info('=== SUPER ADMIN BERHASIL DIBUAT ===');
         $this->command->info('Nama: Yasser');
         $this->command->info('Email: yasser@avsimulator.com');
-        $this->command->info('Password: password');
+        $this->command->info('Password: 123');
         $this->command->info('Role: super_admin');
         $this->command->warn('PENTING: Ganti password setelah login pertama kali!');
     }

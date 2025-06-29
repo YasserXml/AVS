@@ -33,6 +33,8 @@ class User extends Authenticatable
         'avatar',
         'admin_verified',
         'jabatan',
+        'divisi',
+        'jenjang_posisi',
     ];
 
     /**
