@@ -10,53 +10,104 @@ use Spatie\Permission\PermissionRegistrar;
 
 class RoleSeeder extends Seeder
 {
+    /**
+     * Jalankan database seeds.
+     */
     public function run(): void
     {
         // Reset cache permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create roles for users
-        $userRoles = [
+        $this->command->info('🚀 Memulai pembuatan roles...');
+        $this->command->info('');
+
+        // Buat roles untuk divisi (berdasarkan gambar)
+        $this->buatRolesDivisi();
+
+        // Buat roles untuk kepala divisi
+        $this->buatRolesKepalaDivisi();
+
+        // Buat roles untuk direktur (direktorat)
+        $this->buatRolesDirektur();
+
+        // Berikan semua permissions kepada role direktur
+        $this->berikanPermissionsKeDirektur();
+
+        $this->command->info('');
+        $this->command->info('✅ Semua roles berhasil dibuat!');
+    }
+
+    /**
+     * Buat roles untuk divisi berdasarkan gambar
+     */
+    private function buatRolesDivisi(): void
+    {
+        $this->command->info('📁 Membuat roles untuk divisi...');
+
+        $divisiRoles = [
             'divisi_manager_hrd',
-            'divisi_hrd',
-            'divisi_keuangan',
-            'divisi_software',
+            'divisi_hrd_ga',
             'divisi_purchasing',
+            'divisi_keuangan',
+            'divisi_rnd',
+            'divisi_pmo',
+            'divisi_software',
             'divisi_elektro',
-            'divisi_r&d',
             'divisi_3d',
             'divisi_mekanik',
-            'divisi_pmo',
         ];
 
-        foreach ($userRoles as $role) {
-            Role::firstOrCreate([
-                'name' => $role,
+        foreach ($divisiRoles as $roleName) {
+            $role = Role::firstOrCreate([
+                'name' => $roleName,
                 'guard_name' => 'web'
             ]);
+
+            $this->command->info("   ✓ Role {$roleName} berhasil dibuat");
         }
 
-        // Create roles for kepala divisi
+        $this->command->info('');
+    }
+
+    /**
+     * Buat roles untuk kepala divisi
+     */
+    private function buatRolesKepalaDivisi(): void
+    {
+        $this->command->info('👨‍💼 Membuat roles untuk kepala divisi...');
+
         $kepalaRoles = [
-            'kepala_divisi_hrd',
-            'kepala_divisi_keuangan',
-            'kepala_divisi_software',
+            'kepala_divisi_manager_hrd',
+            'kepala_divisi_hrd_ga',
             'kepala_divisi_purchasing',
+            'kepala_divisi_keuangan',
+            'kepala_divisi_rnd',
+            'kepala_divisi_pmo',
+            'kepala_divisi_software',
             'kepala_divisi_elektro',
-            'kepala_divisi_r&d',
             'kepala_divisi_3d',
             'kepala_divisi_mekanik',
-            'kepala_divisi_pmo',
         ];
 
-        foreach ($kepalaRoles as $role) {
-            Role::firstOrCreate([
-                'name' => $role,
+        foreach ($kepalaRoles as $roleName) {
+            $role = Role::firstOrCreate([
+                'name' => $roleName,
                 'guard_name' => 'web'
             ]);
+
+            $this->command->info("   ✓ Role {$roleName} berhasil dibuat");
         }
 
-        // Create roles for direktur
+        $this->command->info('');
+    }
+
+    /**
+     * Buat roles untuk direktur (direktorat)
+     */
+    private function buatRolesDirektur(): void
+    {
+        $this->command->info('🏢 Membuat roles untuk direktur...');
+
         $direkturRoles = [
             'direktur_utama',
             'direktur_teknologi',
@@ -71,30 +122,31 @@ class RoleSeeder extends Seeder
                 'name' => $roleName,
                 'guard_name' => 'web'
             ]);
-            
-            $this->command->info("Role {$roleName} berhasil dibuat/diperbarui.");
+
+            $this->command->info("   ✓ Role {$roleName} berhasil dibuat");
         }
 
-        // Berikan semua permissions kepada role direktur
-        $this->assignAllPermissionsToDirectors();
+        $this->command->info('');
     }
 
     /**
      * Berikan semua permissions kepada role direktur
      */
-    private function assignAllPermissionsToDirectors(): void
+    private function berikanPermissionsKeDirektur(): void
     {
+        $this->command->info('🔐 Memberikan permissions kepada direktur...');
+
         // Ambil semua permissions yang tersedia
         $allPermissions = Permission::all();
 
         if ($allPermissions->count() == 0) {
-            $this->command->warn('Belum ada permissions yang tersedia.');
-            $this->command->warn('Jalankan perintah berikut untuk generate permissions:');
-            $this->command->warn('php artisan shield:generate --all');
+            $this->command->warn('⚠️  Belum ada permissions yang tersedia.');
+            $this->command->warn('   Jalankan perintah berikut untuk generate permissions:');
+            $this->command->warn('   php artisan shield:generate --all');
             return;
         }
 
-        // Daftar role direktur
+        // Daftar role direktur yang akan mendapat semua permissions
         $direkturRoles = [
             'direktur_utama',
             'direktur_teknologi',
@@ -112,14 +164,18 @@ class RoleSeeder extends Seeder
                 // Sinkronkan semua permissions ke role direktur
                 $role->syncPermissions($allPermissions);
                 
-                $this->command->info("✅ {$allPermissions->count()} permissions berhasil diberikan ke role {$roleName}");
+                $this->command->info("   ✓ {$allPermissions->count()} permissions diberikan ke {$roleName}");
             }
         }
 
         $this->command->info('');
-        $this->command->info('=== ROLE DIREKTUR BERHASIL DIKONFIGURASI ===');
-        $this->command->info('Semua role direktur sekarang memiliki akses penuh seperti super admin.');
-        $this->command->info('Total permissions yang diberikan: ' . $allPermissions->count());
-        $this->command->warn('CATATAN: Pastikan untuk menjalankan php artisan shield:generate --all jika ada resource baru.');
+        $this->command->info('🎉 KONFIGURASI ROLE DIREKTUR SELESAI');
+        $this->command->info("   Total permissions yang diberikan: {$allPermissions->count()}");
+        $this->command->info('   Semua direktur sekarang memiliki akses penuh seperti super admin');
+        
+        if ($allPermissions->count() > 0) {
+            $this->command->warn('💡 CATATAN: Jika menambah resource baru, jalankan:');
+            $this->command->warn('   php artisan shield:generate --all');
+        }
     }
 }

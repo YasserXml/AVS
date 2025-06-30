@@ -29,7 +29,7 @@ class SuperAdminSeeder extends Seeder
                 'email' => 'yasser@avsimulator.com',
                 'password' => Hash::make('123'),
                 'email_verified_at' => now(),
-                'admin_verified' => true, // Pastikan sudah terverifikasi admin
+                'admin_verified' => true,
             ]
         );
 

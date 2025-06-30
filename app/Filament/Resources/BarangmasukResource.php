@@ -34,7 +34,7 @@ class BarangmasukResource extends Resource
 {
     protected static ?string $model = Barangmasuk::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-left-circle';
+    protected static ?string $navigationIcon = 'heroicon-s-arrow-left-circle';
 
     protected static ?string $navigationGroup = 'Flow Barang';
 
@@ -67,7 +67,6 @@ class BarangmasukResource extends Resource
     {
         return $form
             ->schema([
-                // Informasi Transaksi Section
                 Forms\Components\Section::make()
                     ->heading('Informasi Transaksi')
                     ->description('Detail informasi transaksi barang masuk')
@@ -80,7 +79,6 @@ class BarangmasukResource extends Resource
                         Forms\Components\Grid::make()
                             ->columns(['sm' => 1, 'md' => 2])
                             ->schema([
-                                // Group Date and Status
                                 Forms\Components\Fieldset::make('Detail Waktu & Status')
                                     ->schema([
                                         Forms\Components\DatePicker::make('tanggal_barang_masuk')

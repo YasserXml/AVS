@@ -28,7 +28,7 @@ class BarangkeluarResource extends Resource
 {
     protected static ?string $model = Barangkeluar::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-right-circle';
+    protected static ?string $navigationIcon = 'heroicon-s-arrow-right-circle';
 
     protected static ?string $navigationLabel = 'Barang Keluar';
 

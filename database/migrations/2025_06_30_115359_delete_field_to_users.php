@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('jenjang_posisi')->nullable();
-            $table->string('divisi')->nullable();
+           $table->dropColumn('jenjang_posisi');
         });
     }
 

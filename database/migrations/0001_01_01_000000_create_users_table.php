@@ -24,6 +24,8 @@ return new class extends Migration
             $table->boolean('is_admin')->default(false)->after('admin_verified');
             $table->string('avatar')->nullable()->after('email');
             $table->string('jabatan')->nullable()->after('avatar');
+            $table->string('jenjang_posisi')->nullable();
+            $table->string('divisi')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

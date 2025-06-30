@@ -52,7 +52,7 @@ class PengajuanResource extends Resource
 {
     protected static ?string $model = Pengajuan::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static ?string $navigationIcon = 'heroicon-s-clipboard-document-list';
 
     protected static ?string $navigationGroup = 'Inventory';
 
