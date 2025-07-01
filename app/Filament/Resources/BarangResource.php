@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Exports\BarangExporter;
 use App\Filament\Resources\BarangResource\Pages;
 use App\Filament\Resources\BarangResource\Widgets;
 use App\Models\Barang;
@@ -24,6 +25,7 @@ use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class BarangResource extends Resource
 {
@@ -243,6 +245,9 @@ class BarangResource extends Resource
                     Action::make('tambah_stok')
                         ->label('+ Stok')
                         ->color('success')
+                        ->visible(
+                            fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator'])
+                        )
                         ->action(function (Barang $record, array $data): void {
                             $record->update([
                                 'jumlah_barang' => $record->jumlah_barang + $data['jumlah'],
@@ -270,7 +275,32 @@ class BarangResource extends Resource
                         ->tooltip('Pulihkan Barang'),
                 ])
             ])
+            ->headerActions([
+                // Action untuk export semua data
+                Tables\Actions\Action::make('export_all')
+                    ->label('Export Semua Data')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator'])
+                    )
+                    ->action(function () {
+                        return (new BarangExporter())->export(); // Tanpa parameter = semua data
+                    }),
+            ])
             ->BulkActions([
+                Tables\Actions\BulkAction::make('export_selected')
+                    ->label('Export Terpilih')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator'])
+                    )
+                    ->action(function (Collection $records) {
+                        return (new BarangExporter())->export($records); // Dengan parameter = data terpilih
+                    })
+                    ->deselectRecordsAfterCompletion()
+                    ->successNotificationTitle('Data barang terpilih berhasil diekspor'),
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->requiresConfirmation()
@@ -287,6 +317,9 @@ class BarangResource extends Resource
                         ->label('Tambah Stok Massal')
                         ->icon('heroicon-m-plus')
                         ->color('success')
+                        ->visible(
+                            fn() => Auth::user()->hasAnyRole(['super_admin', 'administrator'])
+                        )
                         ->action(function (Collection $records, array $data): void {
                             foreach ($records as $record) {
                                 $record->update([
@@ -309,7 +342,7 @@ class BarangResource extends Resource
             ->defaultSort('nama_barang', 'asc');
     }
 
-     public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
             ->schema([

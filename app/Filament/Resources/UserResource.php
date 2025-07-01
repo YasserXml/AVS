@@ -90,25 +90,6 @@ class UserResource extends Resource
                                     ->prefixIcon('heroicon-o-envelope'),
                             ]),
 
-                        Grid::make(3)
-                            ->schema([
-                                Forms\Components\TextInput::make('jabatan')
-                                    ->label('Jabatan')
-                                    ->maxLength(255)
-                                    ->prefixIcon('heroicon-o-identification')
-                                    ->reactive()
-                                    ->afterStateUpdated(function (callable $set, $state) {
-                                        // Auto-update jenjang_posisi berdasarkan jabatan
-                                        $jenjang = self::determineJenjangFromJabatan($state ?? '');
-                                        $set('jenjang_posisi', $jenjang);
-                                    }),
-
-                                Forms\Components\TextInput::make('divisi')
-                                    ->label('Divisi')
-                                    ->maxLength(255)
-                                    ->prefixIcon('heroicon-o-building-office-2'),
-                            ]),
-
                         Forms\Components\TextInput::make('password')
                             ->label('Kata Sandi')
                             ->password()
@@ -153,11 +134,6 @@ class UserResource extends Resource
                             ->columnSpanFull()
                             ->helperText('Pilih satu atau lebih peran untuk pengguna ini')
                             ->prefixIcon('heroicon-o-user-group')
-                            ->options(function () {
-                                return Role::all()->pluck('name', 'name')->map(function ($name) {
-                                    return ucwords(str_replace('_', ' ', $name));
-                                });
-                            })
                     ])
             ]);
     }
@@ -193,26 +169,8 @@ class UserResource extends Resource
                     ->description(fn(User $record): string => $record->email)
                     ->copyable(),
 
-                TextColumn::make('jabatan')
-                    ->label('Jabatan')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color('info')
-                    ->icon('heroicon-o-identification')
-                    ->placeholder('Belum diatur'),
-
-                TextColumn::make('divisi')
-                    ->label('Divisi')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color('primary')
-                    ->icon('heroicon-o-building-office-2')
-                    ->placeholder('Belum diatur'),
-
                 TextColumn::make('roles.name')
-                    ->label('Peran')
+                    ->label('Role Pengguna')
                     ->badge()
                     ->color(fn(string $state): string => match (true) {
                         str_contains(strtolower($state), 'super_admin') => 'success',

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Exports\BarangMasukExport;
 use App\Filament\Resources\BarangmasukResource\Pages;
 use App\Models\Barang;
 use App\Models\Barangmasuk;
@@ -28,7 +29,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Notifications\Notification;
+use Filament\Tables\Actions\Action as TablesActionsAction;
 use Filament\Tables\Filters\TrashedFilter;
+use Illuminate\Database\Eloquent\Collection;
 
 class BarangmasukResource extends Resource
 {
@@ -331,7 +334,7 @@ class BarangmasukResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(30)
-                    
+
                     ->wrap()
                     ->icon('heroicon-o-cube')
                     ->toggleable(),
@@ -357,7 +360,6 @@ class BarangmasukResource extends Resource
                     ->date('d M Y')
                     ->sortable()
                     ->icon('heroicon-o-calendar')
-                    ->color('info')
                     ->toggleable(),
 
                 TextColumn::make('dibeli')
@@ -398,8 +400,7 @@ class BarangmasukResource extends Resource
                     ->limit(25)
                     ->tooltip(fn($record) => $record->project_name)
                     ->icon('heroicon-o-document-text')
-                    ->toggleable()
-                    ->visible(fn($livewire) => $livewire->activeTab === 'project'),
+                    ->toggleable(),
 
                 TextColumn::make('user.name')
                     ->label('Diinput Oleh')
@@ -407,7 +408,6 @@ class BarangmasukResource extends Resource
                     ->sortable()
                     ->formatStateUsing(fn($state) => ucwords($state))
                     ->icon('heroicon-o-user-circle')
-                    ->color('info')
                     ->toggleable(),
 
                 TextColumn::make('created_at')
@@ -433,18 +433,18 @@ class BarangmasukResource extends Resource
             ->searchable()
             ->filters([
                 TrashedFilter::make()
-                ->searchable()
-                ->preload()
-                ->label('Sampah')
-                ->trueLabel('Data Terhapus')
-                ->falseLabel('Data Akif')
-                ->label('Dihapus'),
+                    ->searchable()
+                    ->preload()
+                    ->label('Sampah')
+                    ->trueLabel('Data Terhapus')
+                    ->falseLabel('Data Akif')
+                    ->label('Dihapus'),
                 SelectFilter::make('status')
                     ->label('Status Penggunaan')
                     ->options([
                         'oprasional_kantor' => 'Operasional Kantor',
                         'project' => 'Project',
-                    ])  
+                    ])
                     ->searchable()
                     ->preload(),
 
@@ -515,7 +515,24 @@ class BarangmasukResource extends Resource
                     Tables\Actions\ForceDeleteAction::make(),
                 ]),
             ])
+            ->headerActions([
+                TablesActionsAction::make('export')
+                    ->label('Export Semua Data')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function () {
+                        return (new BarangMasukExport())->export();
+                    }),
+            ])
             ->bulkActions([
+                Tables\Actions\BulkAction::make('export_selected')
+                    ->label('Export Data Terpilih')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function (Collection $records) {
+                        // Kirim data yang dipilih ke method export
+                        return (new BarangMasukExport())->export($records);
+                    }),
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Exports\BarangKeluarExport;
 use App\Filament\Resources\BarangkeluarResource\Pages;
 use App\Models\Barang;
 use App\Models\Barangkeluar;
@@ -15,13 +16,16 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class BarangkeluarResource extends Resource
@@ -459,7 +463,30 @@ class BarangkeluarResource extends Resource
                         }),
                 ]),
             ])
+            ->headerActions([
+               Action::make('exportAll')
+                    ->label('Export Semua Data')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function () {
+                        $exporter = new BarangKeluarExport();
+                        return $exporter->export();
+                    }),
+            ])
             ->bulkActions([
+                BulkAction::make('exportSelected')
+                        ->label('Export Data Terpilih')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('info')
+                        ->action(function (Collection $records) {
+                            $exporter = new BarangKeluarExport();
+                            return $exporter->export($records);
+                        })
+                        ->requiresConfirmation()
+                        ->modalHeading('Export Data Barang Keluar Terpilih')
+                        ->modalDescription('Apakah Anda yakin ingin mengexport data barang keluar yang dipilih?')
+                        ->modalSubmitActionLabel('Ya, Export'),
+
                 Tables\Actions\DeleteBulkAction::make()
                     ->modalHeading('Hapus Beberapa Data')
                     ->modalDescription('Apakah Anda yakin ingin menghapus data barang keluar yang dipilih? Stok akan dikembalikan otomatis.')

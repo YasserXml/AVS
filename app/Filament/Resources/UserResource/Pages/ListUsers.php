@@ -29,104 +29,56 @@ class ListUsers extends ListRecords
     public function getTabs(): array
     {
         return [
-            'semua' => Tab::make('Semua Pengguna')
-                ->badge(fn() => User::count())
+            'Semua Pengguna' => Tab::make()
+                ->badge(fn() => $this->getModel()::count())
                 ->badgeColor('info'),
-
-            'administrator' => Tab::make('Administrator')
-                ->badge(fn() => User::role(['super_admin', 'admin'])->count())
-                ->badgeColor('danger')
-                ->modifyQueryUsing(fn(Builder $query) => $query->role(['super_admin', 'admin'])),
-
-            'direktur' => Tab::make('Direktur')
-                ->badge(fn() => User::whereHas('roles', fn($q) => $q->where('name', 'like', 'direktur_%'))->count())
+            'Administrator' => Tab::make()
+                ->badge(fn() => $this->getModel()::role(['super_admin', 'admin'])->count())
+                ->badgeColor('success')
+                ->modifyQueryUsing(fn($query) => $query->role(['super_admin', 'admin'])),
+            'Divisi Manager HRD' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_manager_hrd')->count())
+                ->badgeColor('success')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_manager_hrd')),
+            'Divisi HRD & GA' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_hrd_ga')->count())
+                ->badgeColor('success')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_hrd_ga')),
+            'Divisi Keuangan' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_keuangan')->count())
+                ->badgeColor('success')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_keuangan')),
+            'Divisi Purchasing' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_purchasing')->count())
+                ->badgeColor('success')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_purchasing')),
+            'Divisi Software' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_software')->count())
+                ->badgeColor('info')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_software')),
+            'Divisi Pmo' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_pmo')->count())
+                ->badgeColor('info')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_pmo')),
+            'Divisi Elektro' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_elektro')->count())
+                ->badgeColor('info')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_elektro')),
+            'Divisi R&D' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_r&d')->count())
+                ->badgeColor('info')
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_r&d')),
+            'Divisi 3D' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_3d')->count())
                 ->badgeColor('warning')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->whereHas('roles', fn($q) => $q->where('name', 'like', 'direktur_%'))
-                ),
-
-            'kepala_divisi' => Tab::make('Kepala Divisi')
-                ->badge(fn() => User::whereHas('roles', fn($q) => $q->where('name', 'like', 'kepala_divisi_%'))->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->whereHas('roles', fn($q) => $q->where('name', 'like', 'kepala_divisi_%'))
-                ),
-                
-            'divisi_hrd' => Tab::make('HRD & GA')
-                ->badge(fn() => User::role(['divisi_manager_hrd', 'divisi_hrd_ga', 'kepala_divisi_hrd_ga'])->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_manager_hrd', 'divisi_hrd_ga', 'kepala_divisi_hrd_ga'])
-                ),
-
-            'divisi_keuangan' => Tab::make('Keuangan')
-                ->badge(fn() => User::role(['divisi_keuangan', 'kepala_divisi_keuangan'])->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_keuangan', 'kepala_divisi_keuangan'])
-                ),
-
-            'divisi_software' => Tab::make('Software')
-                ->badge(fn() => User::role(['divisi_software', 'kepala_divisi_software'])->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_software', 'kepala_divisi_software'])
-                ),
-
-            'divisi_elektro' => Tab::make('Elektro')
-                ->badge(fn() => User::role(['divisi_elektro', 'kepala_divisi_elektro'])->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_elektro', 'kepala_divisi_elektro'])
-                ),
-
-            'divisi_rd' => Tab::make('R&D')
-                ->badge(fn() => User::role(['divisi_rnd', 'kepala_divisi_rnd'])->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_rnd', 'kepala_divisi_rnd'])
-                ),
-
-            'divisi_3d' => Tab::make('3D')
-                ->badge(fn() => User::role(['divisi_3d', 'kepala_divisi_3d'])->count())
-                ->badgeColor('warning')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_3d', 'kepala_divisi_3d'])
-                ),
-
-            'divisi_mekanik' => Tab::make('Mekanik')
-                ->badge(fn() => User::role(['divisi_mekanik', 'kepala_divisi_mekanik'])->count())
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_3d')),
+            'Divisi Mekanik' => Tab::make()
+                ->badge(fn() => $this->getModel()::role('user_divisi_mekanik')->count())
                 ->badgeColor('primary')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_mekanik', 'kepala_divisi_mekanik'])
-                ),
-
-            'divisi_purchasing' => Tab::make('Purchasing')
-                ->badge(fn() => User::role(['divisi_purchasing', 'kepala_divisi_purchasing'])->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_purchasing', 'kepala_divisi_purchasing'])
-                ),
-
-            'divisi_pmo' => Tab::make('PMO')
-                ->badge(fn() => User::role(['divisi_pmo', 'kepala_divisi_pmo'])->count())
-                ->badgeColor('primary')
-                ->modifyQueryUsing(
-                    fn(Builder $query) =>
-                    $query->role(['divisi_pmo', 'kepala_divisi_pmo'])
-                ),
+                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_mekanik')),
         ];
-    }
+    } 
+    
 
     public function getTitle(): string|Htmlable
     {

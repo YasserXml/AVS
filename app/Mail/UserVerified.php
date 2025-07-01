@@ -42,15 +42,16 @@ class UserVerified extends Mailable implements ShouldQueue
     {
         // Pemetaan nilai divisi ke nama yang lebih manusiawi
         $divisiMapping = [
-            'divisi_manager_hrd' => 'Manager HRD',
-            'divisi_hrd_ga' => 'HRD & GA',
-            'divisi_keuangan' => 'Keuangan',
-            'divisi_software' => 'Software',
-            'divisi_purchasing' => 'Purchasing',
-            'divisi_elektro' => 'Elektro',
-            'divisi_r&d' => 'R&D',
-            'divisi_3d' => '3D',
-            'divisi_mekanik' => 'Mekanik',
+            'user_divisi_manager_hrd' => 'Manager HRD',
+            'user_divisi_hrd_ga' => 'HRD & GA',
+            'user_divisi_keuangan' => 'Keuangan',
+            'user_divisi_software' => 'Software',
+            'user_divisi_purchasing' => 'Purchasing',
+            'user_divisi_elektro' => 'Elektro',
+            'user_divisi_r&d' => 'R&D',
+            'user_divisi_3d' => '3D',
+            'user_divisi_mekanik' => 'Mekanik',
+            'user_divisi_pmo' => 'PMO', 
         ];
 
         // Dapatkan nama role pengguna

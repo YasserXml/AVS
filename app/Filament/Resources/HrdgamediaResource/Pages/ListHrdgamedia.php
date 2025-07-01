@@ -70,6 +70,22 @@ class ListHrdgamedia extends ListRecords
         $this->subfolders = $this->getSubfoldersQuery()->get();
     }
 
+    
+    protected function getTableQuery(): Builder
+    {
+        return Hrdgamedia::query()
+        ->where('model_type', Hrdgafolder::class)
+        ->where('model_id', $this->folder_id)
+        ->orderBy('created_at', 'desc');
+    }
+    
+    protected function getSubfoldersQuery(): Builder
+    {
+        return Hrdgafolder::query()
+        ->where('parent_id', $this->folder_id)
+        ->orderBy('name');
+    }
+    
     protected function getHeaderActions(): array
     {
         $actions = [
@@ -117,20 +133,6 @@ class ListHrdgamedia extends ListRecords
             ->url(route('filament.admin.resources.arsip.hrdga.index'));
     }
 
-    protected function getTableQuery(): Builder
-    {
-        return Hrdgamedia::query()
-            ->where('model_type', Hrdgafolder::class)
-            ->where('model_id', $this->folder_id)
-            ->orderBy('created_at', 'desc');
-    }
-
-    protected function getSubfoldersQuery(): Builder
-    {
-        return Hrdgafolder::query()
-            ->where('parent_id', $this->folder_id)
-            ->orderBy('name');
-    }
 
     public function folderAction($folder)
     {

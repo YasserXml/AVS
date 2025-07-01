@@ -77,9 +77,7 @@ class RoleSeeder extends Seeder
         $this->command->info('👨‍💼 Membuat roles untuk kepala divisi...');
 
         $kepalaRoles = [
-            'kepala_divisi_manager_hrd',
-            'kepala_divisi_hrd_ga',
-            'kepala_divisi_purchasing',
+            'kepala_divisi_ga',
             'kepala_divisi_keuangan',
             'kepala_divisi_rnd',
             'kepala_divisi_pmo',

@@ -36,7 +36,7 @@ class Login extends BaseLogin
                 'sm' => 1,
                 'md' => 1,
                 'lg' => 1,
-            ]) // Make form responsive
+            ])
             ->statePath('data');
     }
 
