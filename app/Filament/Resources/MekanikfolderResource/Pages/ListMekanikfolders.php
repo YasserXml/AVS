@@ -18,7 +18,12 @@ class ListMekanikfolders extends ListRecords
         return [
             Actions\CreateAction::make()
                 ->label('Buat Folder')
-                ->icon('heroicon-o-folder-plus'),
+                ->icon('heroicon-o-folder-plus')
+                ->mutateFormDataUsing(function (array $data): array {
+                    // Pastikan user_id diset ke user yang sedang login
+                    $data['user_id'] = filament()->auth()->id();
+                    return $data;
+                }),
         ];
     }
 

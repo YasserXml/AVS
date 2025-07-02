@@ -55,25 +55,33 @@ class MekanikmediaResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
+             ->modifyQueryUsing(function (Builder $query) {
                 // Ambil folder berdasarkan slug
                 if (request()->has('folder')) {
                     $folderSlug = request()->get('folder');
                     $folder = Mekanikfolder::where('slug', $folderSlug)->first();
 
-                    if ($folder) {
+                    if ($folder && $folder->canBeAccessedBy()) {
                         $query->where('model_type', Mekanikfolder::class)
-                            ->where('model_id', $folder->id);
+                            ->where('model_id', $folder->id)
+                            ->where('user_id', filament()->auth()->id()); // Pastikan hanya media milik user
                     } else {
-                        // Jika folder tidak ditemukan, kosongkan query
+                        // Jika folder tidak ditemukan atau tidak dapat diakses, kosongkan query
                         $query->whereRaw('1 = 0');
                     }
                 }
                 // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
-                    $query->where('model_type', Mekanikfolder::class)
-                        ->where('model_id', $folderId);
+                    $folder = Mekanikfolder::find($folderId);
+
+                    if ($folder && $folder->canBeAccessedBy()) {
+                        $query->where('model_type', Mekanikfolder::class)
+                            ->where('model_id', $folderId)
+                            ->where('user_id', filament()->auth()->id());
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
                 } else {
                     // Tidak ada parameter folder, kosongkan query
                     $query->whereRaw('1 = 0');

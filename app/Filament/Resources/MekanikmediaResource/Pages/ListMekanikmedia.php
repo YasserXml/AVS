@@ -122,6 +122,7 @@ class ListMekanikmedia extends ListRecords
         return Mekanikmedia::query()
             ->where('model_type', Mekanikfolder::class)
             ->where('model_id', $this->folder_id)
+            ->where('user_id', filament()->auth()->id())
             ->orderBy('created_at', 'desc');
     }
 
@@ -129,6 +130,11 @@ class ListMekanikmedia extends ListRecords
     {
         return Mekanikfolder::query()
             ->where('parent_id', $this->folder_id)
+            ->where(function ($query) {
+                // Tampilkan folder milik user atau folder public
+                $query->where('user_id', filament()->auth()->id())
+                    ->orWhere('is_public', true);
+            })
             ->orderBy('name');
     }
 

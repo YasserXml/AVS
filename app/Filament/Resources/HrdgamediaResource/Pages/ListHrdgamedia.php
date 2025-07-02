@@ -70,22 +70,52 @@ class ListHrdgamedia extends ListRecords
         $this->subfolders = $this->getSubfoldersQuery()->get();
     }
 
-    
+
     protected function getTableQuery(): Builder
     {
         return Hrdgamedia::query()
-        ->where('model_type', Hrdgafolder::class)
-        ->where('model_id', $this->folder_id)
-        ->orderBy('created_at', 'desc');
+            ->where('model_type', Hrdgafolder::class)
+            ->where('model_id', $this->folder_id)
+            ->where('user_id', filament()->auth()->id())
+            ->orderBy('created_at', 'desc');
     }
-    
+
     protected function getSubfoldersQuery(): Builder
     {
         return Hrdgafolder::query()
-        ->where('parent_id', $this->folder_id)
-        ->orderBy('name');
+            ->where('parent_id', $this->folder_id)
+            ->where(function ($query) {
+                // Tampilkan folder milik user atau folder public
+                $query->where('user_id', filament()->auth()->id())
+                    ->orWhere('is_public', true);
+            })
+            ->orderBy('name');
     }
-    
+
+    public function getBreadcrumbs(): array
+    {
+        $breadcrumbs = [];
+
+        // Tambahkan breadcrumb untuk folder parent
+        if ($this->folder) {
+            $folders = [];
+            $currentFolder = $this->folder;
+
+            // Kumpulkan semua parent folder
+            while ($currentFolder) {
+                array_unshift($folders, $currentFolder);
+                $currentFolder = $currentFolder->parent;
+            }
+
+            // Buat breadcrumb untuk setiap folder
+            foreach ($folders as $folder) {
+                $breadcrumbs[$folder->name] = HrdgamediaResource::getUrlFromFolderHrdGa($folder);
+            }
+        }
+
+        return $breadcrumbs;
+    }
+
     protected function getHeaderActions(): array
     {
         $actions = [

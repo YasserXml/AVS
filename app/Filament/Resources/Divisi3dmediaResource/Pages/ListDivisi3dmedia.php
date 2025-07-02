@@ -122,6 +122,8 @@ class ListDivisi3dmedia extends ListRecords
         return Divisi3dmedia::query()
             ->where('model_type', Divisi3dfolder::class)
             ->where('model_id', $this->folder_id)
+            ->where('user_id', filament()->auth()->id())
+
             ->orderBy('created_at', 'desc');
     }
 
@@ -129,8 +131,39 @@ class ListDivisi3dmedia extends ListRecords
     {
         return Divisi3dfolder::query()
             ->where('parent_id', $this->folder_id)
+            ->where(function ($query) {
+                // Tampilkan folder milik user atau folder public
+                $query->where('user_id', filament()->auth()->id())
+                      ->orWhere('is_public', true);
+            })
+
             ->orderBy('name');
     }
+
+    public function getBreadcrumbs(): array
+    {
+        $breadcrumbs = [];
+
+        // Tambahkan breadcrumb untuk folder parent
+        if ($this->folder) {
+            $folders = [];
+            $currentFolder = $this->folder;
+
+            // Kumpulkan semua parent folder
+            while ($currentFolder) {
+                array_unshift($folders, $currentFolder);
+                $currentFolder = $currentFolder->parent;
+            }
+
+            // Buat breadcrumb untuk setiap folder
+            foreach ($folders as $folder) {
+                $breadcrumbs[$folder->name] = Divisi3dmediaResource::getUrlFromFolderHrdGa($folder);
+            }
+        }
+
+        return $breadcrumbs;
+    }
+
 
     public function folderAction($folder)
     {
@@ -214,8 +247,6 @@ class ListDivisi3dmedia extends ListRecords
                 // FIX: Refresh data dan tetap di halaman yang sama
                 $this->loadSubfolders();
                 $this->dispatch('$refresh');
-
-                
             });
     }
 

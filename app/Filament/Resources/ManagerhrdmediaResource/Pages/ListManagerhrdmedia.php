@@ -123,6 +123,7 @@ class ListManagerhrdmedia extends ListRecords
         return Managerhrdmedia::query()
             ->where('model_type', Managerhrdfolder::class)
             ->where('model_id', $this->folder_id)
+            ->where('user_id', filament()->auth()->id())
             ->orderBy('created_at', 'desc');
     }
 
@@ -130,6 +131,11 @@ class ListManagerhrdmedia extends ListRecords
     {
         return Managerhrdfolder::query()
             ->where('parent_id', $this->folder_id)
+             ->where(function ($query) {
+                // Tampilkan folder milik user atau folder public
+                $query->where('user_id', filament()->auth()->id())
+                    ->orWhere('is_public', true);
+            })
             ->orderBy('name');
     }
 

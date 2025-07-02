@@ -63,33 +63,35 @@ class ManagerhrdmediaResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
-                // FIX: Pastikan folder_id ter-set dengan benar
-                $folderId = null;
-                
-                // Cek dari parameter slug terlebih dahulu
+             ->modifyQueryUsing(function (Builder $query) {
+                // Ambil folder berdasarkan slug
                 if (request()->has('folder')) {
                     $folderSlug = request()->get('folder');
-                    $folder = Managerhrdfolder::where('slug', $folderSlug)->first();
-                    if ($folder) {
-                        $folderId = $folder->id;
+                    $folder =Managerhrdfolder::where('slug', $folderSlug)->first();
+
+                    if ($folder && $folder->canBeAccessedBy()) {
+                        $query->where('model_type', Managerhrdfolder::class)
+                            ->where('model_id', $folder->id)
+                            ->where('user_id', filament()->auth()->id()); // Pastikan hanya media milik user
+                    } else {
+                        // Jika folder tidak ditemukan atau tidak dapat diakses, kosongkan query
+                        $query->whereRaw('1 = 0');
                     }
                 }
-                // Fallback ke folder_id
+                // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
-                }
-                // Cek dari session
-                elseif (session()->has('folder_id')) {
-                    $folderId = session()->get('folder_id');
-                }
+                    $folder = Managerhrdfolder::find($folderId);
 
-                if ($folderId) {
-                    $query->where('model_type', Managerhrdfolder::class)
-                        ->where('model_id', $folderId)
-                        ->orderBy('created_at', 'desc');
+                    if ($folder && $folder->canBeAccessedBy()) {
+                        $query->where('model_type', Managerhrdfolder::class)
+                            ->where('model_id', $folderId)
+                            ->where('user_id', filament()->auth()->id());
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
                 } else {
-                    // Jika tidak ada folder, kosongkan query
+                    // Tidak ada parameter folder, kosongkan query
                     $query->whereRaw('1 = 0');
                 }
             })

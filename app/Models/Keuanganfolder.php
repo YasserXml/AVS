@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -131,7 +132,7 @@ class Keuanganfolder extends Model implements HasMedia
 
         return $slug;
     }
-    public function scopePublic($query)
+     public function scopePublic(Builder $query): Builder
     {
         return $query->where('is_public', true);
     }
@@ -144,6 +145,10 @@ class Keuanganfolder extends Model implements HasMedia
             // Generate slug jika belum ada
             if (empty($model->slug) && !empty($model->name)) {
                 $model->slug = $model->generateUniqueSlug($model->name);
+            }
+
+             if (empty($model->user_id) && filament()->auth()->check()) {
+                $model->user_id = filament()->auth()->id();
             }
 
             // Set default values untuk mencegah null constraint error
@@ -198,6 +203,16 @@ class Keuanganfolder extends Model implements HasMedia
                 }
             }
         });
+
+        static::addGlobalScope('userScope', function (Builder $builder) {
+            if (filament()->auth()->check()) {
+                $builder->where(function ($query) {
+                    $query->where('user_id', filament()->auth()->id())
+                        ->orWhere('is_public', true);
+                });
+            }
+        });
+
     }
  
     // Method untuk mendapatkan URL media dengan slug
@@ -226,10 +241,11 @@ class Keuanganfolder extends Model implements HasMedia
         return $query->where('user_id', $userId);
     }
 
-    public function scopeRoot($query)
+     public function scopeRoot(Builder $query): Builder
     {
         return $query->whereNull('parent_id');
     }
+
 
     public function scopeMainFolders($query)
     {
@@ -239,6 +255,12 @@ class Keuanganfolder extends Model implements HasMedia
                     ->orWhere('model_id', null);
             });
     }
+
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
+    }
+
 
     public function scopeSubfoldersOf($query, $parentId)
     {
@@ -281,16 +303,17 @@ class Keuanganfolder extends Model implements HasMedia
 
     public function getFullNamePathAttribute(): string
     {
-        $path = collect();
-        $current = $this;
+        $path = $this->name;
+        $parent = $this->parent;
 
-        while ($current) {
-            $path->prepend($current->name);
-            $current = $current->parent;
+        while ($parent) {
+            $path = $parent->name . ' / ' . $path;
+            $parent = $parent->parent;
         }
 
-        return $path->join(' / ');
+        return $path;
     }
+
 
     public function isProtected(): bool
     {
@@ -347,4 +370,27 @@ class Keuanganfolder extends Model implements HasMedia
 
         return $level;
     }
+
+    public function canBeAccessedBy(?int $userId = null): bool
+    {
+        $userId = $userId ?? filament()->auth()->id();
+
+        // Jika tidak ada user yang login
+        if (!$userId) {
+            return $this->is_public;
+        }
+
+        // Jika user adalah pemilik folder
+        if ($this->user_id === $userId) {
+            return true;
+        }
+
+        // Jika folder adalah public
+        if ($this->is_public) {
+            return true;
+        }
+
+        return false;
+    }
+
 }

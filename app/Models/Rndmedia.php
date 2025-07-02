@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
@@ -38,6 +39,11 @@ class Rndmedia extends Model implements HasMedia
         'generated_conversions' => 'array',
         'responsive_images' => 'array',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function folder()
     {
@@ -227,6 +233,10 @@ class Rndmedia extends Model implements HasMedia
                 $model->uuid = Str::uuid();
             }
 
+            if (empty($model->user_id) && filament()->auth()->check()) {
+                $model->user_id = filament()->auth()->id();
+            }
+
             // Set default values untuk mencegah null constraint error
             if (empty($model->model_type)) {
                 $model->model_type = Rndfolder::class;
@@ -255,6 +265,12 @@ class Rndmedia extends Model implements HasMedia
 
         static::deleting(function ($model) {
             $model->deleteFile();
+        });
+
+        static::addGlobalScope('userScope', function (Builder $builder) {
+            if (filament()->auth()->check()) {
+                $builder->where('user_id', filament()->auth()->id());
+            }
         });
     }
 
@@ -307,6 +323,42 @@ class Rndmedia extends Model implements HasMedia
 
         return array_filter($properties, function ($value, $key) use ($excludeKeys) {
             return !empty($value) && !in_array($key, $excludeKeys);
-        }, ARRAY_FILTER_USE_BOTH); 
+        }, ARRAY_FILTER_USE_BOTH);
+    }
+
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope untuk media dalam folder tertentu
+     */
+    public function scopeInFolder(Builder $query, int $folderId): Builder
+    {
+        return $query->where('model_type', Rndfolder::class)
+            ->where('model_id', $folderId);
+    }
+
+    public function canBeAccessedBy(?int $userId = null): bool
+    {
+        $userId = $userId ?? filament()->auth()->id();
+
+        // Jika tidak ada user yang login
+        if (!$userId) {
+            return false;
+        }
+
+        // Jika user adalah pemilik media
+        if ($this->user_id === $userId) {
+            return true;
+        }
+
+        // Jika media ada dalam folder, cek akses folder
+        if ($this->model_type === Rndfolder::class && $this->folder) {
+            return $this->folder->canBeAccessedBy($userId);
+        }
+
+        return false;
     }
 }

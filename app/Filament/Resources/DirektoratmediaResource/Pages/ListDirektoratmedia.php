@@ -4,6 +4,7 @@ namespace App\Filament\Resources\DirektoratmediaResource\Pages;
 
 use App\Filament\Resources\DirektoratfolderResource;
 use App\Filament\Resources\DirektoratmediaResource;
+use App\Filament\Resources\HrdgamediaResource;
 use App\Models\Direktoratfolder;
 use App\Models\Direktoratmedia;
 use Closure;
@@ -128,6 +129,7 @@ class ListDirektoratmedia extends ListRecords
         return Direktoratmedia::query()
             ->where('model_type', Direktoratfolder::class)
             ->where('model_id', $this->folder_id)
+            ->where('user_id', filament()->auth()->id())
             ->orderBy('created_at', 'desc');
     }
 
@@ -135,8 +137,38 @@ class ListDirektoratmedia extends ListRecords
     {
         return Direktoratfolder::query()
             ->where('parent_id', $this->folder_id)
+            ->where(function ($query) {
+                // Tampilkan folder milik user atau folder public
+                $query->where('user_id', filament()->auth()->id())
+                    ->orWhere('is_public', true);
+            })
             ->orderBy('name');
     }
+
+    public function getBreadcrumbs(): array
+    {
+        $breadcrumbs = [];
+
+        // Tambahkan breadcrumb untuk folder parent
+        if ($this->folder) {
+            $folders = [];
+            $currentFolder = $this->folder;
+
+            // Kumpulkan semua parent folder
+            while ($currentFolder) {
+                array_unshift($folders, $currentFolder);
+                $currentFolder = $currentFolder->parent;
+            }
+
+            // Buat breadcrumb untuk setiap folder
+            foreach ($folders as $folder) {
+                $breadcrumbs[$folder->name] = DirektoratmediaResource::getUrlFromFolderHrdGa($folder);
+            }
+        }
+
+        return $breadcrumbs;
+    }
+
 
     public function folderAction($folder)
     {
@@ -263,9 +295,9 @@ class ListDirektoratmedia extends ListRecords
                         ->success()
                         ->send();
 
-                     return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
-                    'folder' => $this->folder->slug // Gunakan slug, bukan folder_id
-                ]);
+                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                        'folder' => $this->folder->slug // Gunakan slug, bukan folder_id
+                    ]);
                 } catch (\Exception $e) {
                     Notification::make()
                         ->title('Gagal menghapus media')

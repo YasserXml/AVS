@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -39,7 +40,7 @@ class Pmofolder extends Model implements HasMedia
         'has_user_access' => 'boolean',
     ];
 
-    
+
     public function model()
     {
         return $this->morphTo();
@@ -49,23 +50,23 @@ class Pmofolder extends Model implements HasMedia
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function pmomedia()
     {
         return $this->hasMany(Pmomedia::class, 'model_id')
-        ->where('model_type', self::class);
+            ->where('model_type', self::class);
     }
-    
+
     public function pmoomedia()
     {
         return $this->pmomedia();
     }
-    
+
     public function parent()
     {
         return $this->belongsTo(Pmofolder::class, 'parent_id');
     }
-    
+
     public function children()
     {
         return $this->hasMany(Pmofolder::class, 'parent_id');
@@ -80,19 +81,19 @@ class Pmofolder extends Model implements HasMedia
     {
         return $this->parent();
     }
-    
+
     public function getAllMedia()
     {
         // Gunakan direktoratmedia(), bukan media
         $media = collect($this->pmomedia);
-        
+
         foreach ($this->subfolders as $subfolder) {
             $media = $media->merge($subfolder->getAllMedia());
         }
 
         return $media;
     }
-    
+
     public function deleteRecursively()
     {
         // Hapus semua media dalam folder ini
@@ -102,16 +103,16 @@ class Pmofolder extends Model implements HasMedia
             }
             $mediaItem->delete();
         }
-        
+
         // Hapus subfolder secara rekursif
         foreach ($this->subfolders as $subfolder) {
             $subfolder->deleteRecursively();
         }
-        
+
         // Hapus folder ini
         $this->delete();
     }
-    
+
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -122,7 +123,7 @@ class Pmofolder extends Model implements HasMedia
         $baseSlug = Str::slug($name);
         $slug = $baseSlug;
         $counter = 1;
-        
+
         // Cek apakah slug sudah ada (kecuali untuk record ini sendiri)
         while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
             $slug = $baseSlug . '-' . $counter;
@@ -131,7 +132,7 @@ class Pmofolder extends Model implements HasMedia
 
         return $slug;
     }
-    public function scopePublic($query)
+    public function scopePublic(Builder $query): Builder
     {
         return $query->where('is_public', true);
     }
@@ -144,6 +145,10 @@ class Pmofolder extends Model implements HasMedia
             // Generate slug jika belum ada
             if (empty($model->slug) && !empty($model->name)) {
                 $model->slug = $model->generateUniqueSlug($model->name);
+            }
+
+            if (empty($model->user_id) && filament()->auth()->check()) {
+                $model->user_id = filament()->auth()->id();
             }
 
             // Set default values untuk mencegah null constraint error
@@ -191,15 +196,24 @@ class Pmofolder extends Model implements HasMedia
             if ($model->isDirty('name')) {
                 $newSlug = Str::slug($model->name);
                 $oldSlug = Str::slug($model->getOriginal('name'));
-                
+
                 // Update slug jika kosong atau slug lama sama dengan nama lama
                 if (empty($model->slug) || $model->slug === $oldSlug) {
                     $model->slug = $model->generateUniqueSlug($model->name);
                 }
             }
         });
+
+        static::addGlobalScope('userScope', function (Builder $builder) {
+            if (filament()->auth()->check()) {
+                $builder->where(function ($query) {
+                    $query->where('user_id', filament()->auth()->id())
+                        ->orWhere('is_public', true);
+                });
+            }
+        });
     }
- 
+
     // Method untuk mendapatkan URL media dengan slug
     public function getMediaUrl(): string
     {
@@ -221,15 +235,21 @@ class Pmofolder extends Model implements HasMedia
         return $query->where('is_hidden', false);
     }
 
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
+    }
+
     public function scopeByUser($query, $userId)
     {
         return $query->where('user_id', $userId);
     }
 
-    public function scopeRoot($query)
+    public function scopeRoot(Builder $query): Builder
     {
         return $query->whereNull('parent_id');
     }
+
 
     public function scopeMainFolders($query)
     {
@@ -281,16 +301,17 @@ class Pmofolder extends Model implements HasMedia
 
     public function getFullNamePathAttribute(): string
     {
-        $path = collect();
-        $current = $this;
+        $path = $this->name;
+        $parent = $this->parent;
 
-        while ($current) {
-            $path->prepend($current->name);
-            $current = $current->parent;
+        while ($parent) {
+            $path = $parent->name . ' / ' . $path;
+            $parent = $parent->parent;
         }
 
-        return $path->join(' / ');
+        return $path;
     }
+
 
     public function isProtected(): bool
     {
@@ -346,5 +367,27 @@ class Pmofolder extends Model implements HasMedia
         }
 
         return $level;
+    }
+
+    public function canBeAccessedBy(?int $userId = null): bool
+    {
+        $userId = $userId ?? filament()->auth()->id();
+
+        // Jika tidak ada user yang login
+        if (!$userId) {
+            return $this->is_public;
+        }
+
+        // Jika user adalah pemilik folder
+        if ($this->user_id === $userId) {
+            return true;
+        }
+
+        // Jika folder adalah public
+        if ($this->is_public) {
+            return true;
+        }
+
+        return false;
     }
 }

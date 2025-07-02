@@ -60,19 +60,27 @@ class ElektromediaResource extends Resource
                     $folderSlug = request()->get('folder');
                     $folder = Elektrofolder::where('slug', $folderSlug)->first();
 
-                    if ($folder) {
+                    if ($folder && $folder->canBeAccessedBy()) {
                         $query->where('model_type', Elektrofolder::class)
-                            ->where('model_id', $folder->id);
+                            ->where('model_id', $folder->id)
+                            ->where('user_id', filament()->auth()->id()); // Pastikan hanya media milik user
                     } else {
-                        // Jika folder tidak ditemukan, kosongkan query
+                        // Jika folder tidak ditemukan atau tidak dapat diakses, kosongkan query
                         $query->whereRaw('1 = 0');
                     }
                 }
                 // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
-                    $query->where('model_type', Elektrofolder::class)
-                        ->where('model_id', $folderId);
+                    $folder = Elektrofolder::find($folderId);
+
+                    if ($folder && $folder->canBeAccessedBy()) {
+                        $query->where('model_type', Elektrofolder::class)
+                            ->where('model_id', $folderId)
+                            ->where('user_id', filament()->auth()->id());
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
                 } else {
                     // Tidak ada parameter folder, kosongkan query
                     $query->whereRaw('1 = 0');

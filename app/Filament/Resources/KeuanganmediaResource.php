@@ -60,19 +60,27 @@ class KeuanganmediaResource extends Resource
                     $folderSlug = request()->get('folder');
                     $folder = Keuanganfolder::where('slug', $folderSlug)->first();
 
-                    if ($folder) {
+                    if ($folder && $folder->canBeAccessedBy()) {
                         $query->where('model_type', Keuanganfolder::class)
-                            ->where('model_id', $folder->id);
+                            ->where('model_id', $folder->id)
+                            ->where('user_id', filament()->auth()->id()); // Pastikan hanya media milik user
                     } else {
-                        // Jika folder tidak ditemukan, kosongkan query
+                        // Jika folder tidak ditemukan atau tidak dapat diakses, kosongkan query
                         $query->whereRaw('1 = 0');
                     }
                 }
                 // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
-                    $query->where('model_type', Keuanganfolder::class)
-                        ->where('model_id', $folderId);
+                    $folder = Keuanganfolder::find($folderId);
+
+                    if ($folder && $folder->canBeAccessedBy()) {
+                        $query->where('model_type', Keuanganfolder::class)
+                            ->where('model_id', $folderId)
+                            ->where('user_id', filament()->auth()->id());
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
                 } else {
                     // Tidak ada parameter folder, kosongkan query
                     $query->whereRaw('1 = 0');
@@ -170,7 +178,7 @@ class KeuanganmediaResource extends Resource
 
         return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
     }
-    
+
     public static function getRelations(): array
     {
         return [

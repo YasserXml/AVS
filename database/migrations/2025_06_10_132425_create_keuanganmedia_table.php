@@ -29,6 +29,8 @@ return new class extends Migration
             $table->json('generated_conversions');
             $table->json('responsive_images');
             $table->unsignedInteger('order_column')->nullable()->index();
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade')->after('id');
+
 
             $table->nullableTimestamps();
             $table->softDeletes();

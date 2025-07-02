@@ -122,6 +122,7 @@ class ListPmomedia extends ListRecords
         return Pmomedia::query()
             ->where('model_type', Pmofolder::class)
             ->where('model_id', $this->folder_id)
+            ->where('user_id', filament()->auth()->id()) // Pastikan hanya media milik user yang ditampilkan
             ->orderBy('created_at', 'desc');
     }
 
@@ -129,6 +130,11 @@ class ListPmomedia extends ListRecords
     {
         return Pmofolder::query()
             ->where('parent_id', $this->folder_id)
+            ->where(function ($query) {
+                // Tampilkan folder milik user atau folder public
+                $query->where('user_id', filament()->auth()->id())
+                    ->orWhere('is_public', true);
+            })
             ->orderBy('name');
     }
 
