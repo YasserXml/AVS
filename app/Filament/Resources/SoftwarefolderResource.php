@@ -32,7 +32,7 @@ class SoftwarefolderResource extends Resource
 
     protected static ?string $navigationGroup = 'Arsip';
 
-    protected static ?string $navigationLabel = 'Divisi Software';
+    protected static ?string $navigationLabel = 'Divisi Game Programming';
 
     public static function getPluralLabel(): ?string
     {
@@ -41,13 +41,13 @@ class SoftwarefolderResource extends Resource
         } else if (request()->has('model_type') && request()->has('collection')) {
             return str(request()->get('collection'))->title();
         } else {
-            return ('Divisi Software');
+            return ('Divisi Game Programming');
         }
     }
 
     public static function getSlug(): string
     {
-        return 'arsip/software';
+        return 'arsip/game';
     }
 
     public static function getNavigationSort(): ?int

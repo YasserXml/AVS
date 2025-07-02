@@ -99,12 +99,12 @@ class ListSoftwaremedia extends ListRecords
                 if ($this->folder->parent_id) {
                     $parentFolder = Softwarefolder::find($this->folder->parent_id);
                     if ($parentFolder) {
-                        return route('filament.admin.resources.arsip.software.folder.index', [
+                        return route('filament.admin.resources.arsip.game.folder.index', [
                             'folder' => $parentFolder->slug // Gunakan slug, bukan folder_id
                         ]);
                     }
                 }
-                return route('filament.admin.resources.arsip.software.index');
+                return route('filament.admin.resources.arsip.game.index');
             });
     }
 
@@ -114,7 +114,7 @@ class ListSoftwaremedia extends ListRecords
             ->label('Kembali ke Halaman Utama')
             ->icon('heroicon-o-arrow-left')
             ->color('gray')
-            ->url(route('filament.admin.resources.arsip.software.index'));
+            ->url(route('filament.admin.resources.arsip.game.index'));
     }
 
     protected function getTableQuery(): Builder
@@ -155,7 +155,7 @@ class ListSoftwaremedia extends ListRecords
                 }
 
                 // Redirect menggunakan slug
-                return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                     'folder' => $folder->slug // Gunakan slug, bukan folder_id
                 ]);
             })
@@ -257,7 +257,7 @@ class ListSoftwaremedia extends ListRecords
                         ->success()
                         ->send();
 
-                    return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                         'folder' => $this->folder->slug
                     ]);
                 } catch (\Exception $e) {
@@ -315,7 +315,7 @@ class ListSoftwaremedia extends ListRecords
                     $this->loadSubfolders();
 
                     // Redirect menggunakan slug parent
-                    return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                         'folder' => $this->folder->slug
                     ]);
                 } catch (\Exception $e) {
@@ -364,11 +364,11 @@ class ListSoftwaremedia extends ListRecords
 
                     // Redirect ke parent atau halaman utama
                     if ($parentFolder) {
-                        return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                        return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                             'folder' => $parentFolder->slug
                         ]);
                     } else {
-                        return redirect()->route('filament.admin.resources.arsip.software.index');
+                        return redirect()->route('filament.admin.resources.arsip.game.index');
                     }
                 } catch (\Exception $e) {
                     Notification::make()
@@ -412,7 +412,7 @@ class ListSoftwaremedia extends ListRecords
                 $this->folder = $this->folder->fresh();
 
                 // Jika nama berubah, slug mungkin berubah, redirect ke slug baru
-                return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                     'folder' => $this->folder->slug
                 ]);
             });

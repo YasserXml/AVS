@@ -16,6 +16,20 @@ class BarangMasukChartWidget extends ChartWidget
         'lg' => 1,
     ];
 
+    public static function canView(): bool
+    {
+        $user = filament()->auth()->user();
+        
+        // Jika user tidak login, tidak bisa melihat
+        if (!$user) {
+            return false;
+        }
+
+        // Cek apakah user memiliki role super admin atau admin
+        return $user->hasRole(['super_admin', 'admin']);
+    }
+
+
     protected function getData(): array
     {
         $data = $this->getBarangMasukPerBulan();

@@ -89,23 +89,23 @@ class ListSoftwarefolders extends ListRecords
                 // Redirect berdasarkan jenis folder
                 if (!$record['model_type']) {
                     // Folder standalone, redirect dengan slug
-                    return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }
 
                 // Logic untuk folder dengan model_type (jika ada)
                 if (!$record['model_id'] && !$record['collection']) {
-                    return redirect()->route('filament.admin.resources.arsip.software.index', [
+                    return redirect()->route('filament.admin.resources.arsip.game.index', [
                         'model_type' => $record['model_type']
                     ]);
                 } elseif (!$record['model_id']) {
-                    return redirect()->route('filament.admin.resources.arsip.software.index', [
+                    return redirect()->route('filament.admin.resources.arsip.game.index', [
                         'model_type' => $record['model_type'],
                         'collection' => $record['collection']
                     ]);
                 } else {
-                    return redirect()->route('filament.admin.resources.arsip.software.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.game.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }

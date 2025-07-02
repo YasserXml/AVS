@@ -218,7 +218,7 @@ class Softwarefolder extends Model implements HasMedia
     // Method untuk mendapatkan URL media dengan slug
     public function getMediaUrl(): string
     {
-        return route('filament.admin.resources.arsip.software.folder.index', [
+        return route('filament.admin.resources.arsip.game.folder.index', [
             'folder' => $this->slug
         ]);
     }
@@ -226,7 +226,7 @@ class Softwarefolder extends Model implements HasMedia
     // Method untuk mendapatkan URL lengkap dengan nested path
     public function getFullUrl(): string
     {
-        return route('filament.admin.resources.arsip.software.folder.index', [
+        return route('filament.admin.resources.arsip.game.folder.index', [
             'folder' => $this->full_slug_path
         ]);
     }

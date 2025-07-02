@@ -31,9 +31,9 @@ class SoftwaremediaResource extends Resource
         self::$breadcrumb = $breadcrumb;
     }
 
-    public static function getSlug(): string
+    public static function getSlug(): string 
     {
-        return 'arsip/software/folder';
+        return 'arsip/game/folder';
     }
 
     public static function getNavigationSort(): ?int
