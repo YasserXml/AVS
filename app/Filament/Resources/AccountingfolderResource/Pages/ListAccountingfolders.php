@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Filament\Resources\ManagerhrdfolderResource\Pages;
+namespace App\Filament\Resources\AccountingfolderResource\Pages;
 
-use App\Filament\Resources\ManagerhrdfolderResource;
-use App\Models\Managerhrdfolder;
+use App\Filament\Resources\AccountingfolderResource;
+use App\Models\Accountingfolder;
 use Filament\Actions;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 
-class ListManagerhrdfolders extends ListRecords
+class ListAccountingfolders extends ListRecords
 {
-    protected static string $resource = ManagerhrdfolderResource::class;
+    protected static string $resource = AccountingfolderResource::class;
 
-    protected function getHeaderActions(): array
+   protected function getHeaderActions(): array
     {
         return [
             Actions\CreateAction::make()
@@ -34,7 +34,7 @@ class ListManagerhrdfolders extends ListRecords
         session()->forget('folder_password');
     }
 
-    public function folderAction(?Managerhrdfolder $item = null)
+    public function folderAction(?Accountingfolder $item = null)
     {
         return Actions\Action::make('folderAction')
             ->requiresConfirmation(function (array $arguments) {
@@ -76,8 +76,8 @@ class ListManagerhrdfolders extends ListRecords
                     session()->put('folder_password_' . $record['id'], $data['password']);
                 }
 
-                // Redirect ke media menggunakan SLUG, bukan ID
-                $folder = Managerhrdfolder::find($record['id']);
+                // Redirect ke media menggunakan slug, bukan ID
+                $folder = Accountingfolder::find($record['id']);
                 if (!$folder) {
                     Notification::make()
                         ->title('Folder tidak ditemukan')
@@ -89,23 +89,23 @@ class ListManagerhrdfolders extends ListRecords
                 // Redirect berdasarkan jenis folder
                 if (!$record['model_type']) {
                     // Folder standalone, redirect dengan slug
-                    return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }
 
                 // Logic untuk folder dengan model_type (jika ada)
                 if (!$record['model_id'] && !$record['collection']) {
-                    return redirect()->route('filament.admin.resources.arsip.managerhrd.index', [
+                    return redirect()->route('filament.admin.resources.arsip.akuntansi.index', [
                         'model_type' => $record['model_type']
                     ]);
                 } elseif (!$record['model_id']) {
-                    return redirect()->route('filament.admin.resources.arsip.managerhrd.index', [
+                    return redirect()->route('filament.admin.resources.arsip.akuntansi.index', [
                         'model_type' => $record['model_type'],
                         'collection' => $record['collection']
                     ]);
                 } else {
-                    return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }

@@ -28,7 +28,7 @@ class ListElektromedia extends ListRecords
 
     public function getTitle(): string|Htmlable
     {
-        return $this->folder?->full_name_path ?? 'Media Elektro';
+        return $this->folder?->full_name_path ?? 'Media System Engineering';
     }
 
     public function mount(): void
@@ -99,12 +99,12 @@ class ListElektromedia extends ListRecords
                 if ($this->folder->parent_id) {
                     $parentFolder = Elektrofolder::find($this->folder->parent_id);
                     if ($parentFolder) {
-                        return route('filament.admin.resources.arsip.elektro.folder.index', [
+                        return route('filament.admin.resources.arsip.engineering.folder.index', [
                             'folder' => $parentFolder->slug // Gunakan slug, bukan folder_id
                         ]);
                     }
                 }
-                return route('filament.admin.resources.arsip.elektro.index');
+                return route('filament.admin.resources.arsip.engineering.index');
             });
     }
 
@@ -114,10 +114,10 @@ class ListElektromedia extends ListRecords
             ->label('Kembali ke Halaman Utama')
             ->icon('heroicon-o-arrow-left')
             ->color('gray')
-            ->url(route('filament.admin.resources.arsip.elektro.index'));
+            ->url(route('filament.admin.resources.arsip.engineering.index'));
     }
 
-    protected function getTableQuery(): Builder
+    protected function getTableQuery(): Builder 
     {
         return Elektromedia::query()
             ->where('model_type', Elektrofolder::class)
@@ -156,7 +156,7 @@ class ListElektromedia extends ListRecords
                 }
 
                 // Redirect menggunakan slug
-                return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                     'folder' => $folder->slug // Gunakan slug, bukan folder_id
                 ]);
             })
@@ -261,7 +261,7 @@ class ListElektromedia extends ListRecords
                         ->success()
                         ->send();
 
-                    return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                         'folder' => $this->folder->slug
                     ]);
                 } catch (\Exception $e) {
@@ -320,7 +320,7 @@ class ListElektromedia extends ListRecords
                     $this->loadSubfolders();
 
                     // Redirect menggunakan slug parent
-                    return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                         'folder' => $this->folder->slug
                     ]);
                 } catch (\Exception $e) {
@@ -369,11 +369,11 @@ class ListElektromedia extends ListRecords
 
                     // Redirect ke parent atau halaman utama
                     if ($parentFolder) {
-                        return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                        return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                             'folder' => $parentFolder->slug
                         ]);
                     } else {
-                        return redirect()->route('filament.admin.resources.arsip.elektro.index');
+                        return redirect()->route('filament.admin.resources.arsip.engineering.index');
                     }
                 } catch (\Exception $e) {
                     Notification::make()
@@ -416,7 +416,7 @@ class ListElektromedia extends ListRecords
                 $this->folder = $this->folder->fresh();
 
                 // Jika nama berubah, slug mungkin berubah, redirect ke slug baru
-                return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                     'folder' => $this->folder->slug
                 ]);
             });

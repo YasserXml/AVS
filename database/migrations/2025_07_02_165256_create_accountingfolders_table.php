@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('managerhrdfolder', function (Blueprint $table) {
+        Schema::create('accountingfolders', function (Blueprint $table) {
             $table->id();
- 
+
             //Morph
             $table->string('model_type')->nullable();
             $table->unsignedBigInteger('model_id')->nullable();
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->boolean('has_user_access')->default(false)->nullable();
             $table->string('user_type')->nullable();
             $table->index(['parent_id']);
-            $table->foreignId('parent_id')->nullable()->constrained('managerhrdfolder')->onDelete('cascade');
+            $table->foreignId('parent_id')->nullable()->constrained('accountingfolders')->onDelete('cascade');
             $table->index(['model_type', 'model_id']);
             $table->timestamps();
             $table->softDeletes();
@@ -49,6 +49,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('managerhrdfolders');
+        Schema::dropIfExists('accountingfolders');
     }
 };

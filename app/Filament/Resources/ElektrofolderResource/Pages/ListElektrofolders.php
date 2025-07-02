@@ -14,7 +14,7 @@ class ListElektrofolders extends ListRecords
     protected static string $resource = ElektrofolderResource::class;
 
     protected function getHeaderActions(): array
-    {
+    { 
         return [
             Actions\CreateAction::make()
                 ->label('Buat Folder')
@@ -89,23 +89,23 @@ class ListElektrofolders extends ListRecords
                 // Redirect berdasarkan jenis folder
                 if (!$record['model_type']) {
                     // Folder standalone, redirect dengan slug
-                    return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }
 
                 // Logic untuk folder dengan model_type (jika ada)
                 if (!$record['model_id'] && !$record['collection']) {
-                    return redirect()->route('filament.admin.resources.arsip.elektro.index', [
+                    return redirect()->route('filament.admin.resources.arsip.engineering.index', [
                         'model_type' => $record['model_type']
                     ]);
                 } elseif (!$record['model_id']) {
-                    return redirect()->route('filament.admin.resources.arsip.elektro.index', [
+                    return redirect()->route('filament.admin.resources.arsip.engineering.index', [
                         'model_type' => $record['model_type'],
                         'collection' => $record['collection']
                     ]);
                 } else {
-                    return redirect()->route('filament.admin.resources.arsip.elektro.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.engineering.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }

@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ElektromediaResource\Pages;
-use App\Filament\Resources\ElektromediaResource\RelationManagers;
-use App\Models\Elektrofolder;
-use App\Models\Elektromedia;
+use App\Filament\Resources\BisnismediaResource\Pages;
+use App\Filament\Resources\BisnismediaResource\RelationManagers;
+use App\Models\Bisnisfolder;
+use App\Models\Bisnismedia;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -17,9 +17,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class ElektromediaResource extends Resource
+class BisnismediaResource extends Resource
 {
-    protected static ?string $model = Elektromedia::class;
+    protected static ?string $model = Bisnismedia::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -32,15 +32,15 @@ class ElektromediaResource extends Resource
 
     public static function getSlug(): string
     {
-        return 'arsip/engineering/folder';
+        return 'arsip/bisnis/folder';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return 24;
+        return 8;
     }
 
-    public static function getUrlFromFolderElektro(Elektrofolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderBisnis(Bisnisfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -58,12 +58,12 @@ class ElektromediaResource extends Resource
                 // Ambil folder berdasarkan slug
                 if (request()->has('folder')) {
                     $folderSlug = request()->get('folder');
-                    $folder = Elektrofolder::where('slug', $folderSlug)->first();
+                    $folder = Bisnisfolder::where('slug', $folderSlug)->first();
 
                     if ($folder && $folder->canBeAccessedBy()) {
-                        $query->where('model_type', Elektrofolder::class)
+                        $query->where('model_type', Bisnisfolder::class)
                             ->where('model_id', $folder->id)
-                            ->where('user_id', filament()->auth()->id()); // Pas tikan hanya media milik user
+                            ->where('user_id', filament()->auth()->id()); // Pastikan hanya media milik user
                     } else {
                         // Jika folder tidak ditemukan atau tidak dapat diakses, kosongkan query
                         $query->whereRaw('1 = 0');
@@ -72,10 +72,10 @@ class ElektromediaResource extends Resource
                 // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
-                    $folder = Elektrofolder::find($folderId);
+                    $folder = Bisnisfolder::find($folderId);
 
                     if ($folder && $folder->canBeAccessedBy()) {
-                        $query->where('model_type', Elektrofolder::class)
+                        $query->where('model_type', Bisnisfolder::class)
                             ->where('model_id', $folderId)
                             ->where('user_id', filament()->auth()->id());
                     } else {
@@ -86,9 +86,9 @@ class ElektromediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.elektromedia'))
+            ->emptyState(fn() => view('folders.bisnismedia'))
             ->content(function () {
-                return view('folders.elektromedia');
+                return view('folders.bisnismedia');
             })
             ->columns([
                 Stack::make([
@@ -97,7 +97,7 @@ class ElektromediaResource extends Resource
                         ->height('250px')
                         ->square()
                         ->label('Gambar')
-                        ->getStateUsing(function (Elektromedia $record) {
+                        ->getStateUsing(function (Bisnismedia $record) {
                             return $record->getUrl();
                         }),
                 ]),
@@ -157,12 +157,12 @@ class ElektromediaResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
-            ->defaultPaginationPageOption(12)
+            ->defaultPaginationPageOption(10)
             ->paginationPageOptions([
-                "12",
-                "24",
-                "48",
-                "96",
+                "10",
+                "20",
+                "40",
+                "90",
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -189,7 +189,9 @@ class ElektromediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListElektromedia::route('/'),
+            'index' => Pages\ListBisnismedia::route('/'),
+            // 'create' => Pages\CreateBisnismedia::route('/create'),
+            // 'edit' => Pages\EditBisnismedia::route('/{record}/edit'),
         ];
     }
 }

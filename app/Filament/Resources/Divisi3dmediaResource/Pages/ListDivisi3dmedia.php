@@ -157,7 +157,7 @@ class ListDivisi3dmedia extends ListRecords
 
             // Buat breadcrumb untuk setiap folder
             foreach ($folders as $folder) {
-                $breadcrumbs[$folder->name] = Divisi3dmediaResource::getUrlFromFolderHrdGa($folder);
+                $breadcrumbs[$folder->name] = Divisi3dmediaResource::getUrlFromFolder3D($folder);
             }
         }
 

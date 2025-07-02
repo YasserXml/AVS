@@ -4,14 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Support\Str;
 
-class Elektrofolder extends Model implements HasMedia
+class Bisnisfolder extends Model implements HasMedia
 {
-    use InteractsWithMedia, SoftDeletes;
+    use InteractsWithMedia;
 
     protected $fillable = [
         'parent_id',
@@ -51,25 +50,25 @@ class Elektrofolder extends Model implements HasMedia
         return $this->belongsTo(User::class);
     }
     
-    public function elektromedia()
+    public function bisnismedia()
     {
-        return $this->hasMany(Elektromedia::class, 'model_id')
+        return $this->hasMany(Bisnismedia::class, 'model_id')
         ->where('model_type', self::class);
     }
     
-    public function elektroomedia()
+    public function businesmedia()
     {
-        return $this->elektromedia();
+        return $this->businessmedia();
     }
     
     public function parent()
     {
-        return $this->belongsTo(Elektrofolder::class, 'parent_id');
+        return $this->belongsTo(Bisnisfolder::class, 'parent_id');
     }
     
     public function children()
     {
-        return $this->hasMany(Elektrofolder::class, 'parent_id');
+        return $this->hasMany(Bisnisfolder::class, 'parent_id');
     }
 
     public function subfolders()
@@ -85,7 +84,7 @@ class Elektrofolder extends Model implements HasMedia
     public function getAllMedia()
     {
         // Gunakan direktoratmedia(), bukan media
-        $media = collect($this->elektromedia);
+        $media = collect($this->bisnissmedia);
         
         foreach ($this->subfolders as $subfolder) {
             $media = $media->merge($subfolder->getAllMedia());
@@ -97,7 +96,7 @@ class Elektrofolder extends Model implements HasMedia
     public function deleteRecursively()
     {
         // Hapus semua media dalam folder ini
-        foreach ($this->elektromedia as $mediaItem) {
+        foreach ($this->bisnismedia as $mediaItem) {
             if (method_exists($mediaItem, 'deleteFile')) {
                 $mediaItem->deleteFile();
             }
@@ -131,10 +130,6 @@ class Elektrofolder extends Model implements HasMedia
         }
 
         return $slug;
-    }
-     public function scopePublic(Builder $query): Builder
-    {
-        return $query->where('is_public', true);
     }
 
     protected static function boot()
@@ -204,7 +199,7 @@ class Elektrofolder extends Model implements HasMedia
             }
         });
 
-         static::addGlobalScope('userScope', function (Builder $builder) {
+        static::addGlobalScope('userScope', function (Builder $builder) {
             if (filament()->auth()->check()) {
                 $builder->where(function ($query) {
                     $query->where('user_id', filament()->auth()->id())
@@ -212,12 +207,13 @@ class Elektrofolder extends Model implements HasMedia
                 });
             }
         });
+
     }
- 
+
     // Method untuk mendapatkan URL media dengan slug
     public function getMediaUrl(): string
     {
-        return route('filament.admin.resources.arsip.engineering.folder.index', [
+        return route('filament.admin.resources.arsip.bisnis.folder.index', [
             'folder' => $this->slug
         ]);
     }
@@ -225,7 +221,7 @@ class Elektrofolder extends Model implements HasMedia
     // Method untuk mendapatkan URL lengkap dengan nested path
     public function getFullUrl(): string
     {
-        return route('filament.admin.resources.arsip.engineering.folder.index', [
+        return route('filament.admin.resources.arsip.bisnis.folder.index', [
             'folder' => $this->full_slug_path
         ]);
     }
@@ -235,16 +231,27 @@ class Elektrofolder extends Model implements HasMedia
         return $query->where('is_hidden', false);
     }
 
-    public function scopeOwnedBy(Builder $query, int $userId): Builder
-    {
-        return $query->where('user_id', $userId);
-    }
-
     public function scopeByUser($query, $userId)
     {
         return $query->where('user_id', $userId);
     }
 
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope untuk folder public
+     */
+    public function scopePublic(Builder $query): Builder
+    {
+        return $query->where('is_public', true);
+    }
+
+    /**
+     * Scope untuk folder root (tanpa parent)
+     */
     public function scopeRoot(Builder $query): Builder
     {
         return $query->whereNull('parent_id');
@@ -283,7 +290,7 @@ class Elektrofolder extends Model implements HasMedia
 
     public function getTotalItemsAttribute()
     {
-        return $this->elektromedia()->count() + $this->subfolders()->count();
+        return $this->sekretariatmedia()->count() + $this->subfolders()->count();
     }
 
     public function getFullSlugPathAttribute(): string
@@ -312,6 +319,7 @@ class Elektrofolder extends Model implements HasMedia
         return $path;
     }
 
+
     public function isProtected(): bool
     {
         return $this->is_protected && !empty($this->password);
@@ -328,7 +336,7 @@ class Elektrofolder extends Model implements HasMedia
             return $this->icon;
         }
 
-        $mediaCount = $this->elektroomedia()->count();
+        $mediaCount = $this->bisnismedia()->count();
         $folderCount = $this->subfolders()->count();
 
         if ($mediaCount > 0 && $folderCount === 0) {
@@ -368,7 +376,7 @@ class Elektrofolder extends Model implements HasMedia
         return $level;
     }
 
-    public function canBeAccessedBy(?int $userId = null): bool 
+    public function canBeAccessedBy(?int $userId = null): bool
     {
         $userId = $userId ?? filament()->auth()->id();
 

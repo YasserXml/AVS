@@ -3,18 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Support\Str;
 
-class Elektromedia extends Model implements HasMedia
+class Bisnismedia extends Model implements HasMedia
 {
-    use InteractsWithMedia, SoftDeletes;
+    use InteractsWithMedia;
 
-    protected $table = 'elektromedia';
+    protected $table = 'bisnismedia';
 
     protected $fillable = [
         'uuid',
@@ -47,8 +46,8 @@ class Elektromedia extends Model implements HasMedia
 
     public function folder()
     {
-        return $this->belongsTo(Elektrofolder::class, 'model_id')
-            ->where('model_type', Elektrofolder::class);
+        return $this->belongsTo(Bisnisfolder::class, 'model_id')
+            ->where('model_type', Bisnisfolder::class);
     }
 
     public function model()
@@ -184,7 +183,7 @@ class Elektromedia extends Model implements HasMedia
         }
 
         if ($folderId) {
-            $query->where('model_type', Elektrofolder::class)
+            $query->where('model_type', Bisnisfolder::class)
                 ->where('model_id', $folderId);
         }
 
@@ -237,9 +236,10 @@ class Elektromedia extends Model implements HasMedia
                 $model->user_id = filament()->auth()->id();
             }
 
+
             // Set default values untuk mencegah null constraint error
             if (empty($model->model_type)) {
-                $model->model_type = Elektrofolder::class;
+                $model->model_type = Bisnisfolder::class;
             }
 
             if (empty($model->collection_name)) {
@@ -336,7 +336,7 @@ class Elektromedia extends Model implements HasMedia
      */
     public function scopeInFolder(Builder $query, int $folderId): Builder
     {
-        return $query->where('model_type', Elektrofolder::class)
+        return $query->where('model_type', Bisnisfolder::class)
             ->where('model_id', $folderId);
     }
 
@@ -346,7 +346,7 @@ class Elektromedia extends Model implements HasMedia
 
         // Jika tidak ada user yang login
         if (!$userId) {
-            return false; 
+            return false;
         }
 
         // Jika user adalah pemilik media
@@ -355,10 +355,10 @@ class Elektromedia extends Model implements HasMedia
         }
 
         // Jika media ada dalam folder, cek akses folder
-        if ($this->model_type === Elektrofolder::class && $this->folder) {
+        if ($this->model_type === Bisnisfolder::class && $this->folder) {
             return $this->folder->canBeAccessedBy($userId);
         }
 
         return false;
-    }
+    } 
 }

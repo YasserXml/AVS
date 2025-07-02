@@ -1,23 +1,26 @@
 <?php
 
-namespace App\Filament\Resources\DirektoratfolderResource\Pages;
+namespace App\Filament\Resources\SekretariatfolderResource\Pages;
 
-use App\Filament\Resources\DirektoratfolderResource;
-use App\Filament\Resources\DirektoratmediaResource;
-use App\Models\Direktoratfolder;
+use App\Filament\Resources\SekretariatfolderResource;
+use App\Filament\Resources\SekretariatmediaResource;
+use App\Models\Sekretariatfolder;
+use App\Models\Sekretariatmedia;
 use Filament\Actions;
+use Illuminate\Support\Str;
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\Select;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
-class ListDirektoratfolders extends ListRecords
+class ListSekretariatfolders extends ListRecords
 {
-    protected static string $resource = DirektoratfolderResource::class;
+    protected static string $resource = SekretariatfolderResource::class;
 
     protected function getHeaderActions(): array
     {
@@ -40,7 +43,7 @@ class ListDirektoratfolders extends ListRecords
         session()->forget('folder_password');
     }
 
-    public function folderAction(?Direktoratfolder $item = null)
+    public function folderAction(?Sekretariatfolder $item = null)
     {
         return Actions\Action::make('folderAction')
             ->requiresConfirmation(function (array $arguments) {
@@ -83,7 +86,7 @@ class ListDirektoratfolders extends ListRecords
                 }
 
                 // Redirect ke media menggunakan slug, bukan ID
-                $folder = Direktoratfolder::find($record['id']);
+                $folder = Sekretariatfolder::find($record['id']);
                 if (!$folder) {
                     Notification::make()
                         ->title('Folder tidak ditemukan')
@@ -95,23 +98,23 @@ class ListDirektoratfolders extends ListRecords
                 // Redirect berdasarkan jenis folder
                 if (!$record['model_type']) {
                     // Folder standalone, redirect dengan slug
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }
 
                 // Logic untuk folder dengan model_type (jika ada)
                 if (!$record['model_id'] && !$record['collection']) {
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.index', [
+                    return redirect()->route('filament.admin.resources.arsip.sekretariat.index', [
                         'model_type' => $record['model_type']
                     ]);
                 } elseif (!$record['model_id']) {
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.index', [
+                    return redirect()->route('filament.admin.resources.arsip.sekretariat.index', [
                         'model_type' => $record['model_type'],
                         'collection' => $record['collection']
                     ]);
                 } else {
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
                         'folder' => $folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 }

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ManagerhrdfolderResource\Pages;
-use App\Filament\Resources\ManagerhrdfolderResource\RelationManagers;
-use App\Models\Managerhrdfolder;
+use App\Filament\Resources\BisnisfolderResource\Pages;
+use App\Filament\Resources\BisnisfolderResource\RelationManagers;
+use App\Models\Bisnisfolder;
 use Filament\Forms;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
@@ -20,19 +20,19 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use illuminate\Support\Str;
 
-class ManagerhrdfolderResource extends Resource
+class BisnisfolderResource extends Resource
 {
-    protected static ?string $model = Managerhrdfolder::class;
+    protected static ?string $model = Bisnisfolder::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
     protected static ?string $navigationGroup = 'Arsip';
 
-    protected static ?string $navigationLabel = 'Divisi Manager HRD';
+    protected static ?string $navigationLabel = 'Divisi Bisnis & Marketing';
 
     public static function getPluralLabel(): ?string
     {
@@ -41,19 +41,21 @@ class ManagerhrdfolderResource extends Resource
         } else if (request()->has('model_type') && request()->has('collection')) {
             return str(request()->get('collection'))->title();
         } else {
-            return ('Divisi Manager HRD');
+            return ('Bisnis');
         }
     }
 
     public static function getSlug(): string
     {
-        return 'arsip/managerhrd';
+        return 'arsip/bisnis';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return 9;
+        return 7;
     }
+
+    protected static ?string $slug = 'bisnis';
 
     public static function form(Form $form): Form
     {
@@ -109,7 +111,7 @@ class ManagerhrdfolderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
+             ->modifyQueryUsing(function (Builder $query) {
                 if (request()->has('model_type') && !request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->where('model_id', null)
@@ -119,15 +121,15 @@ class ManagerhrdfolderResource extends Resource
                         ->whereNotNull('model_id')
                         ->where('collection', request()->get('collection'));
                 } else {
-                    //  Hanya tampilkan folder root (tanpa parent_id)
+                    // Hanya tampilkan folder root (tanpa parent_id)
                     // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
-                            ->where('collection', null)
-                            ->orWhere('model_type', null);
+                          ->where('collection', null)
+                          ->orWhere('model_type', null);
                     })
-                        // Hanya tampilkan folder yang tidak memiliki parent
-                        ->whereNull('parent_id');
+                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
+                    ->whereNull('parent_id');
                 }
             })
             ->content(function () {
@@ -185,6 +187,7 @@ class ManagerhrdfolderResource extends Resource
             ]);
     }
 
+
     public static function getRelations(): array
     {
         return [
@@ -192,10 +195,13 @@ class ManagerhrdfolderResource extends Resource
         ];
     }
 
+
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListManagerhrdfolders::route('/'),
+            'index' => Pages\ListBisnisfolders::route('/'),
+            // 'create' => Pages\CreateBisnisfolder::route('/create'),
+            // 'edit' => Pages\EditBisnisfolder::route('/{record}/edit'),
         ];
     }
 }

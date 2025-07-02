@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ElektrofolderResource\Pages;
-use App\Filament\Resources\ElektrofolderResource\RelationManagers;
-use App\Models\Elektrofolder;
+use App\Filament\Resources\AccountingfolderResource\Pages;
+use App\Filament\Resources\AccountingfolderResource\RelationManagers;
+use App\Models\Accountingfolder;
 use Filament\Forms;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
@@ -14,25 +14,25 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use illuminate\Support\Str;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use illuminate\Support\Str;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Layout\Stack;
-use Filament\Tables\Columns\TextColumn; 
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class ElektrofolderResource extends Resource
+class AccountingfolderResource extends Resource
 {
-    protected static ?string $model = Elektrofolder::class;
+    protected static ?string $model = Accountingfolder::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
     protected static ?string $navigationGroup = 'Arsip';
 
-    protected static ?string $navigationLabel = 'Divisi System Engineering';
+    protected static ?string $navigationLabel = 'Divisi Akuntansi';
 
     public static function getPluralLabel(): ?string
     {
@@ -41,19 +41,21 @@ class ElektrofolderResource extends Resource
         } else if (request()->has('model_type') && request()->has('collection')) {
             return str(request()->get('collection'))->title();
         } else {
-            return ('Divisi System Engineering');
+            return ('Akuntansi');
         }
     }
 
     public static function getSlug(): string
     {
-        return 'arsip/engineering';
+        return 'arsip/akuntansi';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return 23;
+        return 7;
     }
+
+    protected static ?string $slug = 'bisnis';
 
     public static function form(Form $form): Form
     {
@@ -109,7 +111,7 @@ class ElektrofolderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
+             ->modifyQueryUsing(function (Builder $query) {
                 if (request()->has('model_type') && !request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->where('model_id', null)
@@ -119,15 +121,15 @@ class ElektrofolderResource extends Resource
                         ->whereNotNull('model_id')
                         ->where('collection', request()->get('collection'));
                 } else {
-                    //  Hanya tampilkan folder root (tanpa parent_id)
+                    // Hanya tampilkan folder root (tanpa parent_id)
                     // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
-                            ->where('collection', null)
-                            ->orWhere('model_type', null);
+                          ->where('collection', null)
+                          ->orWhere('model_type', null);
                     })
-                        // Hanya tampilkan folder yang tidak memiliki parent
-                        ->whereNull('parent_id');
+                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
+                    ->whereNull('parent_id');
                 }
             })
             ->content(function () {
@@ -185,17 +187,12 @@ class ElektrofolderResource extends Resource
             ]);
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListElektrofolders::route('/'),
+            'index' => Pages\ListAccountingfolders::route('/'),
+            // 'create' => Pages\CreateAccountingfolder::route('/create'),
+            // 'edit' => Pages\EditAccountingfolder::route('/{record}/edit'),
         ];
     }
 }

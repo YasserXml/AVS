@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('managerhrdmedia', function (Blueprint $table) {
+        Schema::create('sekretariatmedia', function (Blueprint $table) {
             $table->id();
 
             $table->string('model_type');
             $table->unsignedBigInteger('model_id');
-            $table->uuid()->nullable()->unique(); 
-            $table->string('collection_name'); 
-            $table->string('name'); 
+            $table->uuid()->nullable()->unique();
+            $table->string('collection_name');
+            $table->string('name');
             $table->string('file_name');
             $table->string('mime_type')->nullable();
             $table->string('disk');
@@ -41,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('managerhrdmedia');
+        Schema::dropIfExists('sekretariatmedia');
     }
 };

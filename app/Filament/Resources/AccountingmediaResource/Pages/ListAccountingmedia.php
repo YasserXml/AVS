@@ -1,41 +1,34 @@
 <?php
 
-namespace App\Filament\Resources\DirektoratmediaResource\Pages;
+namespace App\Filament\Resources\AccountingmediaResource\Pages;
 
-use App\Filament\Resources\DirektoratfolderResource;
-use App\Filament\Resources\DirektoratmediaResource;
-use App\Filament\Resources\HrdgamediaResource;
-use App\Models\Direktoratfolder;
-use App\Models\Direktoratmedia;
-use Closure;
+use App\Filament\Resources\AccountingmediaResource;
+use App\Models\Accountingfolder;
+use App\Models\Accountingmedia;
 use Filament\Actions;
 use Filament\Forms\Components\ColorPicker;
-use Illuminate\Support\Str;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Log;
-use Illuminate\View\View;
 
-class ListDirektoratmedia extends ListRecords
+class ListAccountingmedia extends ListRecords
 {
-    protected static string $resource = DirektoratmediaResource::class;
+    protected static string $resource = AccountingmediaResource::class;
 
     public ?string $folderSlug = null;
     public ?int $folder_id = null;
-    public ?Direktoratfolder $folder = null;
+    public ?Accountingfolder $folder = null;
     public $subfolders = null;
 
     public function getTitle(): string|Htmlable
     {
-        return $this->folder?->full_name_path ?? 'Media Direktorat';
+        return $this->folder?->full_name_path ?? 'Media Bisnis & Marketing';
     }
 
     public function mount(): void
@@ -49,7 +42,7 @@ class ListDirektoratmedia extends ListRecords
             abort(404, 'Slug folder diperlukan');
         }
 
-        $folder = Direktoratfolder::where('slug', $folderSlug)->first();
+        $folder = Accountingfolder::where('slug', $folderSlug)->first();
 
         if (!$folder) {
             abort(404, 'Folder tidak ditemukan');
@@ -104,14 +97,14 @@ class ListDirektoratmedia extends ListRecords
             ->color('gray')
             ->url(function () {
                 if ($this->folder->parent_id) {
-                    $parentFolder = Direktoratfolder::find($this->folder->parent_id);
+                    $parentFolder = Accountingfolder::find($this->folder->parent_id);
                     if ($parentFolder) {
-                        return route('filament.admin.resources.arsip.direktorat.folder.index', [
+                        return route('filament.admin.resources.arsip.akuntansi.folder.index', [
                             'folder' => $parentFolder->slug // Gunakan slug, bukan folder_id
                         ]);
                     }
                 }
-                return route('filament.admin.resources.arsip.direktorat.index');
+                return route('filament.admin.resources.arsip.akuntansi.index');
             });
     }
 
@@ -121,13 +114,13 @@ class ListDirektoratmedia extends ListRecords
             ->label('Kembali ke Halaman Utama')
             ->icon('heroicon-o-arrow-left')
             ->color('gray')
-            ->url(route('filament.admin.resources.arsip.direktorat.index'));
+            ->url(route('filament.admin.resources.arsip.akuntansi.index'));
     }
 
     protected function getTableQuery(): Builder
     {
-        return Direktoratmedia::query()
-            ->where('model_type', Direktoratfolder::class)
+        return Accountingmedia::query()
+            ->where('model_type', Accountingfolder::class)
             ->where('model_id', $this->folder_id)
             ->where('user_id', filament()->auth()->id())
             ->orderBy('created_at', 'desc');
@@ -135,7 +128,7 @@ class ListDirektoratmedia extends ListRecords
 
     protected function getSubfoldersQuery(): Builder
     {
-        return Direktoratfolder::query()
+        return Accountingfolder::query()
             ->where('parent_id', $this->folder_id)
             ->where(function ($query) {
                 // Tampilkan folder milik user atau folder public
@@ -162,7 +155,7 @@ class ListDirektoratmedia extends ListRecords
 
             // Buat breadcrumb untuk setiap folder
             foreach ($folders as $folder) {
-                $breadcrumbs[$folder->name] = DirektoratmediaResource::getUrlFromFolderDirektorat($folder);
+                $breadcrumbs[$folder->name] = AccountingmediaResource::getUrlFromFolderDirektorat($folder);
             }
         }
 
@@ -187,7 +180,7 @@ class ListDirektoratmedia extends ListRecords
                 }
 
                 // Redirect menggunakan slug
-                return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                     'folder' => $folder->slug // Gunakan slug, bukan folder_id
                 ]);
             })
@@ -219,11 +212,11 @@ class ListDirektoratmedia extends ListRecords
             ])
             ->action(function (array $data) {
                 $folder_id = $this->folder_id;
-                $folder = Direktoratfolder::find($folder_id);
+                $folder = Accountingfolder::find($folder_id);
 
                 foreach ($data['files'] as $file) {
-                    $media = new Direktoratmedia();
-                    $media->model_type = Direktoratfolder::class;
+                    $media = new Accountingmedia();
+                    $media->model_type = Accountingfolder::class;
                     $media->model_id = $folder_id;
                     $media->uuid = Str::uuid();
                     $media->collection_name = $folder->collection ?? 'default';
@@ -276,7 +269,7 @@ class ListDirektoratmedia extends ListRecords
                         throw new \Exception('Record tidak ditemukan');
                     }
 
-                    $media = Direktoratmedia::find($arguments['record']['id']);
+                    $media = Accountingmedia::find($arguments['record']['id']);
 
                     if (!$media) {
                         throw new \Exception('Media tidak ditemukan');
@@ -295,7 +288,7 @@ class ListDirektoratmedia extends ListRecords
                         ->success()
                         ->send();
 
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                         'folder' => $this->folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 } catch (\Exception $e) {
@@ -328,7 +321,7 @@ class ListDirektoratmedia extends ListRecords
             ])
             ->action(function (array $data) {
                 try {
-                    $folder = new Direktoratfolder();
+                    $folder = new Accountingfolder();
                     $folder->name = $data['name'];
                     $folder->description = $data['description'] ?? null;
                     $folder->color = $data['color'] ?? '#ffab09';
@@ -354,7 +347,7 @@ class ListDirektoratmedia extends ListRecords
                     $this->loadSubfolders();
 
                     // Redirect menggunakan slug parent
-                    return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                    return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                         'folder' => $this->folder->slug
                     ]);
                 } catch (\Exception $e) {
@@ -382,7 +375,7 @@ class ListDirektoratmedia extends ListRecords
                     $parentFolder = $folder->parent;
 
                     // Hapus semua media dalam folder terlebih dahulu
-                    $medias = Direktoratmedia::where('model_type', Direktoratfolder::class)
+                    $medias = Accountingmedia::where('model_type', Accountingfolder::class)
                         ->where('model_id', $folder->id)
                         ->get();
 
@@ -403,11 +396,11 @@ class ListDirektoratmedia extends ListRecords
 
                     // Redirect ke parent atau halaman utama
                     if ($parentFolder) {
-                        return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                        return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                             'folder' => $parentFolder->slug
                         ]);
                     } else {
-                        return redirect()->route('filament.admin.resources.arsip.direktorat.index');
+                        return redirect()->route('filament.admin.resources.arsip.akuntansi.index');
                     }
                 } catch (\Exception $e) {
                     Notification::make()
@@ -451,7 +444,7 @@ class ListDirektoratmedia extends ListRecords
                 $this->folder = $this->folder->fresh();
 
                 // Jika nama berubah, slug mungkin berubah, redirect ke slug baru
-                return redirect()->route('filament.admin.resources.arsip.direktorat.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.akuntansi.folder.index', [
                     'folder' => $this->folder->slug
                 ]);
             });
@@ -463,7 +456,7 @@ class ListDirektoratmedia extends ListRecords
         $this->dispatch('$refresh');
     }
 
-    // FIX: Override method getTableRecords untuk memastikan data ter-load
+    //Override method getTableRecords untuk memastikan data ter-load
     public function getTableRecords(): Collection
     {
         $query = $this->getTableQuery();

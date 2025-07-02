@@ -4,18 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Log;
-use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Support\Str;
 
-class Managerhrdmedia extends Model implements HasMedia
+class Accountingmedia extends Model implements HasMedia
 {
-    use InteractsWithMedia, SoftDeletes;
-
-    protected $table = 'managerhrdmedia';
+    use InteractsWithMedia;
 
     protected $fillable = [
         'uuid',
@@ -41,17 +37,16 @@ class Managerhrdmedia extends Model implements HasMedia
         'responsive_images' => 'array',
     ];
 
-    public function folder()
-    {
-        return $this->belongsTo(Managerhrdfolder::class, 'model_id')
-            ->where('model_type', Managerhrdfolder::class);
-    }
-
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function folder()
+    {
+        return $this->belongsTo(Accountingfolder::class, 'model_id')
+            ->where('model_type', Accountingfolder::class);
+    }
 
     public function model()
     {
@@ -60,22 +55,15 @@ class Managerhrdmedia extends Model implements HasMedia
 
     public function getUrlAttribute(): string
     {
-        // FIX: Pastikan URL file benar
-        try {
-            if ($this->disk === 'public') {
-                $url = asset('storage/' . $this->file_name);
-
-                // Cek apakah file benar-benar ada
-                if (Storage::disk('public')->exists($this->file_name)) {
-                    return $url;
-                }
-            }
-
-            // Fallback jika file tidak ada
-            return '#';
-        } catch (\Exception $e) {
-            return '#';
+        // Langsung return URL berdasarkan disk
+        if ($this->disk === 'public') {
+            return asset('storage/' . $this->file_name);
         }
+
+        // Untuk disk lainnya, gunakan URL helper
+        return Storage::disk($this->disk)->exists($this->file_name)
+            ? asset(Storage::url($this->file_name))
+            : url('storage/' . $this->file_name);
     }
 
     public function getPublicUrl(): string
@@ -193,7 +181,7 @@ class Managerhrdmedia extends Model implements HasMedia
         }
 
         if ($folderId) {
-            $query->where('model_type', Managerhrdfolder::class)
+            $query->where('model_type', Accountingfolder::class)
                 ->where('model_id', $folderId);
         }
 
@@ -202,24 +190,16 @@ class Managerhrdmedia extends Model implements HasMedia
 
     public function exists(): bool
     {
-        try {
-            return Storage::disk($this->disk)->exists($this->file_name);
-        } catch (\Exception $e) {
-            return false;
-        }
+        return Storage::disk($this->disk)->exists($this->file_name);
     }
 
     public function deleteFile(): bool
     {
-        try {
-            if ($this->exists()) {
-                return Storage::disk($this->disk)->delete($this->file_name);
-            }
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Error deleting file: ' . $e->getMessage());
-            return false;
+        if ($this->exists()) {
+            return Storage::disk($this->disk)->delete($this->file_name);
         }
+
+        return true;
     }
 
     public function duplicate(): self
@@ -254,9 +234,10 @@ class Managerhrdmedia extends Model implements HasMedia
                 $model->user_id = filament()->auth()->id();
             }
 
+
             // Set default values untuk mencegah null constraint error
             if (empty($model->model_type)) {
-                $model->model_type = Managerhrdfolder::class;
+                $model->model_type = Accountingfolder::class;
             }
 
             if (empty($model->collection_name)) {
@@ -353,7 +334,7 @@ class Managerhrdmedia extends Model implements HasMedia
      */
     public function scopeInFolder(Builder $query, int $folderId): Builder
     {
-        return $query->where('model_type', Managerhrdfolder::class)
+        return $query->where('model_type', Accountingfolder::class)
             ->where('model_id', $folderId);
     }
 
@@ -372,10 +353,10 @@ class Managerhrdmedia extends Model implements HasMedia
         }
 
         // Jika media ada dalam folder, cek akses folder
-        if ($this->model_type === Managerhrdfolder::class && $this->folder) {
+        if ($this->model_type === Accountingfolder::class && $this->folder) {
             return $this->folder->canBeAccessedBy($userId);
         }
 
         return false;
-    }
+    } 
 }

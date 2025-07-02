@@ -3,16 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Illuminate\Support\Str;
 
-class Managerhrdfolder extends Model implements HasMedia
+class Sekretariatfolder extends Model implements HasMedia
 {
-    use InteractsWithMedia, SoftDeletes;
+    use InteractsWithMedia;
 
     protected $fillable = [
         'parent_id',
@@ -41,7 +39,7 @@ class Managerhrdfolder extends Model implements HasMedia
         'has_user_access' => 'boolean',
     ];
 
-
+    
     public function model()
     {
         return $this->morphTo();
@@ -51,26 +49,26 @@ class Managerhrdfolder extends Model implements HasMedia
     {
         return $this->belongsTo(User::class);
     }
-
-    public function managermedia()
+    
+    public function sekretariatmedia()
     {
-        return $this->hasMany(Managerhrdmedia::class, 'model_id')
-            ->where('model_type', self::class);
+        return $this->hasMany(Sekretariatmedia::class, 'model_id')
+        ->where('model_type', self::class);
     }
-
-    public function managerhrdmedia()
+    
+    public function sekremedia()
     {
-        return $this->managermedia();
+        return $this->sekretariatmedia();
     }
-
+    
     public function parent()
     {
-        return $this->belongsTo(Managerhrdfolder::class, 'parent_id');
+        return $this->belongsTo(Sekretariatfolder::class, 'parent_id');
     }
-
+    
     public function children()
     {
-        return $this->hasMany(Managerhrdfolder::class, 'parent_id');
+        return $this->hasMany(Sekretariatfolder::class, 'parent_id');
     }
 
     public function subfolders()
@@ -82,38 +80,38 @@ class Managerhrdfolder extends Model implements HasMedia
     {
         return $this->parent();
     }
-
+    
     public function getAllMedia()
     {
         // Gunakan direktoratmedia(), bukan media
-        $media = collect($this->managermedia);
-
+        $media = collect($this->sekretariatmedia);
+        
         foreach ($this->subfolders as $subfolder) {
             $media = $media->merge($subfolder->getAllMedia());
         }
 
         return $media;
     }
-
+    
     public function deleteRecursively()
     {
         // Hapus semua media dalam folder ini
-        foreach ($this->managermedia as $mediaItem) {
+        foreach ($this->sekretariatmedia as $mediaItem) {
             if (method_exists($mediaItem, 'deleteFile')) {
                 $mediaItem->deleteFile();
             }
             $mediaItem->delete();
         }
-
+        
         // Hapus subfolder secara rekursif
         foreach ($this->subfolders as $subfolder) {
             $subfolder->deleteRecursively();
         }
-
+        
         // Hapus folder ini
         $this->delete();
     }
-
+    
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -124,7 +122,7 @@ class Managerhrdfolder extends Model implements HasMedia
         $baseSlug = Str::slug($name);
         $slug = $baseSlug;
         $counter = 1;
-
+        
         // Cek apakah slug sudah ada (kecuali untuk record ini sendiri)
         while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
             $slug = $baseSlug . '-' . $counter;
@@ -132,10 +130,6 @@ class Managerhrdfolder extends Model implements HasMedia
         }
 
         return $slug;
-    }
-    public function scopePublic(Builder $query): Builder
-    {
-        return $query->where('is_public', true);
     }
 
     protected static function boot()
@@ -151,7 +145,6 @@ class Managerhrdfolder extends Model implements HasMedia
             if (empty($model->user_id) && filament()->auth()->check()) {
                 $model->user_id = filament()->auth()->id();
             }
-
 
             // Set default values untuk mencegah null constraint error
             if (empty($model->icon)) {
@@ -198,7 +191,7 @@ class Managerhrdfolder extends Model implements HasMedia
             if ($model->isDirty('name')) {
                 $newSlug = Str::slug($model->name);
                 $oldSlug = Str::slug($model->getOriginal('name'));
-
+                
                 // Update slug jika kosong atau slug lama sama dengan nama lama
                 if (empty($model->slug) || $model->slug === $oldSlug) {
                     $model->slug = $model->generateUniqueSlug($model->name);
@@ -214,12 +207,13 @@ class Managerhrdfolder extends Model implements HasMedia
                 });
             }
         });
+
     }
 
     // Method untuk mendapatkan URL media dengan slug
     public function getMediaUrl(): string
     {
-        return route('filament.admin.resources.arsip.managerhrd.folder.index', [
+        return route('filament.admin.resources.arsip.sekre.folder.index', [
             'folder' => $this->slug
         ]);
     }
@@ -227,14 +221,9 @@ class Managerhrdfolder extends Model implements HasMedia
     // Method untuk mendapatkan URL lengkap dengan nested path
     public function getFullUrl(): string
     {
-        return route('filament.admin.resources.arsip.managerhrd.folder.index', [
+        return route('filament.admin.resources.arsip.sekre.folder.index', [
             'folder' => $this->full_slug_path
         ]);
-    }
-
-    public function scopeOwnedBy(Builder $query, int $userId): Builder
-    {
-        return $query->where('user_id', $userId);
     }
 
     public function scopeVisible($query)
@@ -247,7 +236,23 @@ class Managerhrdfolder extends Model implements HasMedia
         return $query->where('user_id', $userId);
     }
 
-   public function scopeRoot(Builder $query): Builder
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope untuk folder public
+     */
+    public function scopePublic(Builder $query): Builder
+    {
+        return $query->where('is_public', true);
+    }
+
+    /**
+     * Scope untuk folder root (tanpa parent)
+     */
+    public function scopeRoot(Builder $query): Builder
     {
         return $query->whereNull('parent_id');
     }
@@ -331,7 +336,7 @@ class Managerhrdfolder extends Model implements HasMedia
             return $this->icon;
         }
 
-        $mediaCount = $this->managerhrdmedia()->count();
+        $mediaCount = $this->sekretariatmedia()->count();
         $folderCount = $this->subfolders()->count();
 
         if ($mediaCount > 0 && $folderCount === 0) {

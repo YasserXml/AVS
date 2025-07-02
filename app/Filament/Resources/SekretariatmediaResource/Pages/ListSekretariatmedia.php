@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Resources\ManagerhrdmediaResource\Pages;
+namespace App\Filament\Resources\SekretariatmediaResource\Pages;
 
-use App\Filament\Resources\ManagerhrdmediaResource;
-use App\Models\Managerhrdfolder;
-use App\Models\Managerhrdmedia;
+use App\Filament\Resources\SekretariatmediaResource;
+use App\Models\Sekretariatfolder;
+use App\Models\Sekretariatmedia;
 use Filament\Actions;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
@@ -15,20 +15,19 @@ use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use illuminate\Support\Str;
 
-class ListManagerhrdmedia extends ListRecords
+class ListSekretariatmedia extends ListRecords
 {
-    protected static string $resource = ManagerhrdmediaResource::class;
+    protected static string $resource = SekretariatmediaResource::class;
 
     public ?string $folderSlug = null;
     public ?int $folder_id = null;
-    public ?Managerhrdfolder $folder = null;
+    public ?Sekretariatfolder $folder = null;
     public $subfolders = null;
 
     public function getTitle(): string|Htmlable
     {
-        return $this->folder?->full_name_path ?? 'Media Manager';
+        return $this->folder?->full_name_path ?? 'Media Sekretariat';
     }
 
     public function mount(): void
@@ -42,7 +41,7 @@ class ListManagerhrdmedia extends ListRecords
             abort(404, 'Slug folder diperlukan');
         }
 
-        $folder = Managerhrdfolder::where('slug', $folderSlug)->first();
+        $folder = Sekretariatfolder::where('slug', $folderSlug)->first();
 
         if (!$folder) {
             abort(404, 'Folder tidak ditemukan');
@@ -77,7 +76,6 @@ class ListManagerhrdmedia extends ListRecords
             $this->createSubFolderAction(),
             $this->editCurrentFolderAction(),
             $this->deleteFolderAction(),
-
         ];
 
         // Tombol kembali
@@ -98,14 +96,14 @@ class ListManagerhrdmedia extends ListRecords
             ->color('gray')
             ->url(function () {
                 if ($this->folder->parent_id) {
-                    $parentFolder = Managerhrdfolder::find($this->folder->parent_id);
+                    $parentFolder = Sekretariatfolder::find($this->folder->parent_id);
                     if ($parentFolder) {
-                        return route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                        return route('filament.admin.resources.arsip.sekretariat.folder.index', [
                             'folder' => $parentFolder->slug // Gunakan slug, bukan folder_id
                         ]);
                     }
                 }
-                return route('filament.admin.resources.arsip.managerhrd.index');
+                return route('filament.admin.resources.arsip.sekretariat.index');
             });
     }
 
@@ -115,13 +113,13 @@ class ListManagerhrdmedia extends ListRecords
             ->label('Kembali ke Halaman Utama')
             ->icon('heroicon-o-arrow-left')
             ->color('gray')
-            ->url(route('filament.admin.resources.arsip.managerhrd.index'));
+            ->url(route('filament.admin.resources.arsip.sekretariat.index'));
     }
 
     protected function getTableQuery(): Builder
     {
-        return Managerhrdmedia::query()
-            ->where('model_type', Managerhrdfolder::class)
+        return Sekretariatmedia::query()
+            ->where('model_type', Sekretariatfolder::class)
             ->where('model_id', $this->folder_id)
             ->where('user_id', filament()->auth()->id())
             ->orderBy('created_at', 'desc');
@@ -129,15 +127,40 @@ class ListManagerhrdmedia extends ListRecords
 
     protected function getSubfoldersQuery(): Builder
     {
-        return Managerhrdfolder::query()
+        return Sekretariatfolder::query()
             ->where('parent_id', $this->folder_id)
-             ->where(function ($query) {
+            ->where(function ($query) {
                 // Tampilkan folder milik user atau folder public
                 $query->where('user_id', filament()->auth()->id())
                     ->orWhere('is_public', true);
             })
             ->orderBy('name');
     }
+
+    public function getBreadcrumbs(): array
+    {
+        $breadcrumbs = [];
+
+        // Tambahkan breadcrumb untuk folder parent
+        if ($this->folder) {
+            $folders = [];
+            $currentFolder = $this->folder;
+
+            // Kumpulkan semua parent folder
+            while ($currentFolder) {
+                array_unshift($folders, $currentFolder);
+                $currentFolder = $currentFolder->parent;
+            }
+
+            // Buat breadcrumb untuk setiap folder
+            foreach ($folders as $folder) {
+                $breadcrumbs[$folder->name] = SekretariatmediaResource::getUrlFromFolderSekretariat($folder);
+            }
+        }
+
+        return $breadcrumbs;
+    }
+
 
     public function folderAction($folder)
     {
@@ -156,7 +179,7 @@ class ListManagerhrdmedia extends ListRecords
                 }
 
                 // Redirect menggunakan slug
-                return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
                     'folder' => $folder->slug // Gunakan slug, bukan folder_id
                 ]);
             })
@@ -188,11 +211,11 @@ class ListManagerhrdmedia extends ListRecords
             ])
             ->action(function (array $data) {
                 $folder_id = $this->folder_id;
-                $folder = Managerhrdfolder::find($folder_id);
+                $folder = Sekretariatfolder::find($folder_id);
 
                 foreach ($data['files'] as $file) {
-                    $media = new Managerhrdmedia();
-                    $media->model_type = Managerhrdfolder::class;
+                    $media = new Sekretariatmedia();
+                    $media->model_type = Sekretariatfolder::class;
                     $media->model_id = $folder_id;
                     $media->uuid = Str::uuid();
                     $media->collection_name = $folder->collection ?? 'default';
@@ -245,7 +268,7 @@ class ListManagerhrdmedia extends ListRecords
                         throw new \Exception('Record tidak ditemukan');
                     }
 
-                    $media = Managerhrdmedia::find($arguments['record']['id']);
+                    $media = Sekretariatmedia::find($arguments['record']['id']);
 
                     if (!$media) {
                         throw new \Exception('Media tidak ditemukan');
@@ -264,8 +287,8 @@ class ListManagerhrdmedia extends ListRecords
                         ->success()
                         ->send();
 
-                    return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
-                        'folder' => $this->folder->slug
+                    return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
+                        'folder' => $this->folder->slug // Gunakan slug, bukan folder_id
                     ]);
                 } catch (\Exception $e) {
                     Notification::make()
@@ -297,7 +320,7 @@ class ListManagerhrdmedia extends ListRecords
             ])
             ->action(function (array $data) {
                 try {
-                    $folder = new Managerhrdfolder();
+                    $folder = new Sekretariatfolder();
                     $folder->name = $data['name'];
                     $folder->description = $data['description'] ?? null;
                     $folder->color = $data['color'] ?? '#ffab09';
@@ -320,9 +343,12 @@ class ListManagerhrdmedia extends ListRecords
                         ->success()
                         ->send();
 
-                    // FIX: Refresh data tanpa redirect
                     $this->loadSubfolders();
-                    $this->dispatch('$refresh');
+
+                    // Redirect menggunakan slug parent
+                    return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
+                        'folder' => $this->folder->slug
+                    ]);
                 } catch (\Exception $e) {
                     Notification::make()
                         ->title('Gagal membuat subfolder')
@@ -348,7 +374,7 @@ class ListManagerhrdmedia extends ListRecords
                     $parentFolder = $folder->parent;
 
                     // Hapus semua media dalam folder terlebih dahulu
-                    $medias = Managerhrdmedia::where('model_type', Managerhrdfolder::class)
+                    $medias = Sekretariatmedia::where('model_type', Sekretariatfolder::class)
                         ->where('model_id', $folder->id)
                         ->get();
 
@@ -369,11 +395,11 @@ class ListManagerhrdmedia extends ListRecords
 
                     // Redirect ke parent atau halaman utama
                     if ($parentFolder) {
-                        return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                        return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
                             'folder' => $parentFolder->slug
                         ]);
                     } else {
-                        return redirect()->route('filament.admin.resources.arsip.managerhrd.index');
+                        return redirect()->route('filament.admin.resources.arsip.sekretariat.index');
                     }
                 } catch (\Exception $e) {
                     Notification::make()
@@ -417,7 +443,7 @@ class ListManagerhrdmedia extends ListRecords
                 $this->folder = $this->folder->fresh();
 
                 // Jika nama berubah, slug mungkin berubah, redirect ke slug baru
-                return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
+                return redirect()->route('filament.admin.resources.arsip.sekretariat.folder.index', [
                     'folder' => $this->folder->slug
                 ]);
             });
@@ -436,3 +462,4 @@ class ListManagerhrdmedia extends ListRecords
         return $query->get();
     }
 }
+ 

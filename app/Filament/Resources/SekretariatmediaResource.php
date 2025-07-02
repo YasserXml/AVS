@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ManagerhrdmediaResource\Pages;
-use App\Filament\Resources\ManagerhrdmediaResource\RelationManagers;
-use App\Models\Managerhrdfolder;
-use App\Models\Managerhrdmedia;
+use App\Filament\Resources\SekretariatmediaResource\Pages;
+use App\Filament\Resources\SekretariatmediaResource\RelationManagers;
+use App\Models\Sekretariatfolder;
+use App\Models\Sekretariatmedia;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,14 +13,13 @@ use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class ManagerhrdmediaResource extends Resource
+class SekretariatmediaResource extends Resource
 {
-    protected static ?string $model = Managerhrdmedia::class;
+    protected static ?string $model = Sekretariatmedia::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -33,23 +32,15 @@ class ManagerhrdmediaResource extends Resource
 
     public static function getSlug(): string
     {
-        return 'arsip/managerhrd/folder';
+        return 'arsip/sekretariat/folder';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return 10;
+        return 8;
     }
 
-    private function formatBytes($size, $precision = 2)
-    {
-        $base = log($size, 1024);
-        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
-
-        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
-    }
-
-    public static function getUrlFromFolderManager(Managerhrdfolder $folder, string $name = 'index'): string
+    public static function getUrlFromFolderSekretariat(Sekretariatfolder $folder, string $name = 'index'): string
     {
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
@@ -63,14 +54,14 @@ class ManagerhrdmediaResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-             ->modifyQueryUsing(function (Builder $query) {
+            ->modifyQueryUsing(function (Builder $query) {
                 // Ambil folder berdasarkan slug
                 if (request()->has('folder')) {
                     $folderSlug = request()->get('folder');
-                    $folder =Managerhrdfolder::where('slug', $folderSlug)->first();
+                    $folder = Sekretariatfolder::where('slug', $folderSlug)->first();
 
                     if ($folder && $folder->canBeAccessedBy()) {
-                        $query->where('model_type', Managerhrdfolder::class)
+                        $query->where('model_type', Sekretariatfolder::class)
                             ->where('model_id', $folder->id)
                             ->where('user_id', filament()->auth()->id()); // Pastikan hanya media milik user
                     } else {
@@ -81,10 +72,10 @@ class ManagerhrdmediaResource extends Resource
                 // Fallback untuk folder_id (backward compatibility)
                 elseif (request()->has('folder_id')) {
                     $folderId = request()->get('folder_id');
-                    $folder = Managerhrdfolder::find($folderId);
+                    $folder = Sekretariatfolder::find($folderId);
 
                     if ($folder && $folder->canBeAccessedBy()) {
-                        $query->where('model_type', Managerhrdfolder::class)
+                        $query->where('model_type', Sekretariatfolder::class)
                             ->where('model_id', $folderId)
                             ->where('user_id', filament()->auth()->id());
                     } else {
@@ -95,9 +86,9 @@ class ManagerhrdmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.managerhrdmedia'))
+            ->emptyState(fn() => view('folders.sekretariat'))
             ->content(function () {
-                return view('folders.managerhrdmedia');
+                return view('folders.sekretariat');
             })
             ->columns([
                 Stack::make([
@@ -106,7 +97,7 @@ class ManagerhrdmediaResource extends Resource
                         ->height('250px')
                         ->square()
                         ->label('Gambar')
-                        ->getStateUsing(function (Managerhrdmedia $record) {
+                        ->getStateUsing(function (Sekretariatmedia $record) {
                             return $record->getUrl();
                         }),
                 ]),
@@ -163,18 +154,15 @@ class ManagerhrdmediaResource extends Resource
                 'md' => 2,
                 'xl' => 3,
             ])
-            ->filters([
-                TrashedFilter::make(),
-            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
-            ->defaultPaginationPageOption(12)
+            ->defaultPaginationPageOption(10)
             ->paginationPageOptions([
-                "12",
-                "24",
-                "48",
-                "96",
+                "10",
+                "20",
+                "40",
+                "90",
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -183,6 +171,13 @@ class ManagerhrdmediaResource extends Resource
             ]);
     }
 
+    private function formatBytes($size, $precision = 2)
+    {
+        $base = log($size, 1024);
+        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
+
+        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
+    }
     public static function getRelations(): array
     {
         return [
@@ -193,7 +188,9 @@ class ManagerhrdmediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListManagerhrdmedia::route('/'),
+            'index' => Pages\ListSekretariatmedia::route('/'),
+            'create' => Pages\CreateSekretariatmedia::route('/create'),
+            'edit' => Pages\EditSekretariatmedia::route('/{record}/edit'),
         ];
     }
 }
