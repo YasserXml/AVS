@@ -189,8 +189,8 @@ class SekretariatmediaResource extends Resource
     {
         return [
             'index' => Pages\ListSekretariatmedia::route('/'),
-            'create' => Pages\CreateSekretariatmedia::route('/create'),
-            'edit' => Pages\EditSekretariatmedia::route('/{record}/edit'),
+            // 'create' => Pages\CreateSekretariatmedia::route('/create'),
+            // 'edit' => Pages\EditSekretariatmedia::route('/{record}/edit'),
         ];
     }
 }

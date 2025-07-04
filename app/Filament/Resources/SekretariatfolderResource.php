@@ -196,8 +196,8 @@ class SekretariatfolderResource extends Resource
     {
         return [
             'index' => Pages\ListSekretariatfolders::route('/'),
-            'create' => Pages\CreateSekretariatfolder::route('/create'),
-            'edit' => Pages\EditSekretariatfolder::route('/{record}/edit'),
+            // 'create' => Pages\CreateSekretariatfolder::route('/create'),
+            // 'edit' => Pages\EditSekretariatfolder::route('/{record}/edit'),
         ];
     }
 }

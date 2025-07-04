@@ -26,7 +26,9 @@ class AsetptResource extends Resource
 {
     protected static ?string $model = Asetpt::class;
 
-    protected static ?string $navigationIcon = 'heroicon-s-building-library';
+    protected static ?string $navigationIcon = 'heroicon-o-building-library';
+
+    protected static ?string $activeNavigationIcon = 'heroicon-s-building-library';
 
     protected static ?string $navigationGroup = 'Inventory';
 

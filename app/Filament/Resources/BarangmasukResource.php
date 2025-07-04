@@ -37,7 +37,9 @@ class BarangmasukResource extends Resource
 {
     protected static ?string $model = Barangmasuk::class;
 
-    protected static ?string $navigationIcon = 'heroicon-s-arrow-left-circle';
+    protected static ?string $navigationIcon = 'heroicon-o-arrow-left-circle';
+
+    protected static ?string $activeNavigationIcon = 'heroicon-s-arrow-left-circle';
 
     protected static ?string $navigationGroup = 'Flow Barang';
 

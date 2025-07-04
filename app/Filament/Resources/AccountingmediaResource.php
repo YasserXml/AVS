@@ -45,12 +45,6 @@ class AccountingmediaResource extends Resource
         return static::getUrl($name, ['folder' => $folder->slug]);
     }
 
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([]);
-    }
-
     public static function table(Table $table): Table
     {
         return $table
@@ -190,8 +184,8 @@ class AccountingmediaResource extends Resource
     {
         return [
             'index' => Pages\ListAccountingmedia::route('/'),
-            'create' => Pages\CreateAccountingmedia::route('/create'),
-            'edit' => Pages\EditAccountingmedia::route('/{record}/edit'),
+            // 'create' => Pages\CreateAccountingmedia::route('/create'),
+            // 'edit' => Pages\EditAccountingmedia::route('/{record}/edit'),
         ];
     }
 }

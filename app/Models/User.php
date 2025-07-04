@@ -76,11 +76,6 @@ class User extends Authenticatable
         return $this->hasMany(Barangkeluar::class);
     }
 
-    public function pengajuan()
-    {
-        return $this->hasMany(Pengajuan::class);
-    }
-
     public function canAccessPanel(Panel $panel): bool
     {
         //kondisi admin_verified

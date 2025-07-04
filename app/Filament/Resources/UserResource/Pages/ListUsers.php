@@ -26,58 +26,58 @@ class ListUsers extends ListRecords
         ];
     }
 
-    public function getTabs(): array
-    {
-        return [
-            'Semua Pengguna' => Tab::make()
-                ->badge(fn() => $this->getModel()::count())
-                ->badgeColor('info'),
-            'Administrator' => Tab::make()
-                ->badge(fn() => $this->getModel()::role(['super_admin', 'admin'])->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(fn($query) => $query->role(['super_admin', 'admin'])),
-            'Divisi Manager HRD' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_manager_hrd')->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_manager_hrd')),
-            'Divisi HRD & GA' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_hrd_ga')->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_hrd_ga')),
-            'Divisi Keuangan' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_keuangan')->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_keuangan')),
-            'Divisi Purchasing' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_purchasing')->count())
-                ->badgeColor('success')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_purchasing')),
-            'Divisi Software' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_software')->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_software')),
-            'Divisi Pmo' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_pmo')->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_pmo')),
-            'Divisi Elektro' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_elektro')->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_elektro')),
-            'Divisi R&D' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_r&d')->count())
-                ->badgeColor('info')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_r&d')),
-            'Divisi 3D' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_3d')->count())
-                ->badgeColor('warning')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_3d')),
-            'Divisi Mekanik' => Tab::make()
-                ->badge(fn() => $this->getModel()::role('user_divisi_mekanik')->count())
-                ->badgeColor('primary')
-                ->modifyQueryUsing(fn($query) => $query->role('user_divisi_mekanik')),
-        ];
-    } 
+    // public function getTabs(): array
+    // {
+    //     return [
+    //         'Semua Pengguna' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::count())
+    //             ->badgeColor('info'),
+    //         'Administrator' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role(['super_admin', 'admin'])->count())
+    //             ->badgeColor('success')
+    //             ->modifyQueryUsing(fn($query) => $query->role(['super_admin', 'admin'])),
+    //         'Divisi Manager HRD' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_manager_hrd')->count())
+    //             ->badgeColor('success')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_manager_hrd')),
+    //         'Divisi HRD & GA' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_hrd_ga')->count())
+    //             ->badgeColor('success')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_hrd_ga')),
+    //         'Divisi Keuangan' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_keuangan')->count())
+    //             ->badgeColor('success')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_keuangan')),
+    //         'Divisi Purchasing' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_purchasing')->count())
+    //             ->badgeColor('success')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_purchasing')),
+    //         'Divisi Software' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_software')->count())
+    //             ->badgeColor('info')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_software')),
+    //         'Divisi Pmo' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_pmo')->count())
+    //             ->badgeColor('info')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_pmo')),
+    //         'Divisi Elektro' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_elektro')->count())
+    //             ->badgeColor('info')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_elektro')),
+    //         'Divisi R&D' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_r&d')->count())
+    //             ->badgeColor('info')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_r&d')),
+    //         'Divisi 3D' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_3d')->count())
+    //             ->badgeColor('warning')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_3d')),
+    //         'Divisi Mekanik' => Tab::make()
+    //             ->badge(fn() => $this->getModel()::role('user_divisi_mekanik')->count())
+    //             ->badgeColor('primary')
+    //             ->modifyQueryUsing(fn($query) => $query->role('user_divisi_mekanik')),
+    //     ];
+    // } 
     
 
     public function getTitle(): string|Htmlable
