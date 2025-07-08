@@ -14,7 +14,7 @@ use Illuminate\Testing\Fluent\Concerns\Has;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable 
+class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles, HasDatabaseNotifications;
@@ -75,7 +75,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(Barangkeluar::class);
     }
-
+    
     public function canAccessPanel(Panel $panel): bool
     {
         //kondisi admin_verified

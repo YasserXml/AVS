@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\DirektoratmediaResource;
 use App\Filament\Resources\DirektoratmediaResource\Pages\ListDirektoratmedia;
+use App\Filament\Resources\PengajuanoprasionalResource;
 use App\Http\Controllers\Admin\AdminUserVerificationController;
 use App\Http\Controllers\Admin\AdminVerificationController as AdminAdminVerificationController;
 use App\Http\Controllers\Admin\UserVerificationController;
@@ -29,4 +30,3 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
 Route::get('/verify-user/{id}/{hash}', [ControllersUserVerificationController::class, 'verify'])
     ->name('user.verify')
     ->middleware('signed');
-

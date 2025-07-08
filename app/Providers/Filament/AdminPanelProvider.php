@@ -45,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('web')
+            ->sidebarWidth('15rem')
             ->topNavigation()
             ->login(Login::class)
             ->registration(Register::class)
@@ -55,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->passwordResetRouteSlug('reset-password')
             ->emailVerificationRouteSlug('verifikasi-email')
             ->databaseNotifications()
-            ->databaseNotificationsPolling('10s')
+            ->databaseNotificationsPolling('30s')
             ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
             ->favicon(asset('images/Logo(1).webp'))
@@ -91,15 +92,15 @@ class AdminPanelProvider extends PanelProvider
                 // FilamentThemeInspectorPlugin::make()
                 //     ->disabled(fn()=> ! app()->hasDebugModeEnabled()),
                 EasyFooterPlugin::make()
-                ->withFooterPosition('footer')
-                ->withLoadTime()
-                ->withBorder()
-                ->withLogo(
-                    asset('images/Logo.png'),
-                    'https://avsimulator.com/',
-                )
-                ->hiddenFromPagesEnabled()
-                ->hiddenFromPages(['admin/login', 'admin/registrasi']),     
+                    ->withFooterPosition('footer')
+                    ->withLoadTime()
+                    ->withBorder()
+                    ->withLogo(
+                        asset('images/Logo.png'),
+                        'https://avsimulator.com/',
+                    )
+                    ->hiddenFromPagesEnabled()
+                    ->hiddenFromPages(['admin/login', 'admin/registrasi']),
             ])
             ->authMiddleware([
                 Authenticate::class,

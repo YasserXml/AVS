@@ -20,7 +20,19 @@ return new class extends Migration
             $table->date('tanggal_dibutuhkan')->nullable();
             $table->json('detail_barang')->nullable();
             $table->json('uploaded_files')->nullable();
-            $table->enum('status', ['pengajuan_terkirim','diajukan_ke_superadmin','superadmin_approved','superadmin_rejected','pengajuan_dikirim_ke_admin','admin_approved','rejected','processing','ready_pickup','completed','cancelled'])->default('pengajuan_terkirim');
+            $table->enum('status', [
+                'pengajuan_terkirim',
+                'pending_admin_review',
+                'diajukan_ke_superadmin',
+                'superadmin_approved',
+                'superadmin_rejected',
+                'pengajuan_dikirim_ke_admin',
+                'processing',
+                'ready_pickup',
+                'completed',
+                'cancelled'
+            ])
+                ->default('pengajuan_terkirim');
             $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->dateTime('approved_at')->nullable();
             $table->foreignId('rejected_by')->nullable()->constrained('users');

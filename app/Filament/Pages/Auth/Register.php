@@ -205,7 +205,6 @@ class Register extends FilamentRegister
             ->title('Pendaftaran Berhasil!')
             ->body('Terima kasih telah mendaftar. Mohon menunggu akun Anda diverifikasi oleh admin. Kami akan mengirimkan notifikasi status via email.')
             ->success()
-            ->persistent()
             ->send();
 
         // Redirect ke halaman login
