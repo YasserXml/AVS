@@ -10,6 +10,7 @@ use App\Models\User;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Tables;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class PengajuanActions
@@ -76,7 +77,7 @@ class PengajuanActions
                 );
 
                 // Kirim notifikasi database dan email
-                self::sendNotificationWithEmail($record, 'sent_to_superadmin');
+                self::sendEmailToSuperAdmin($record, 'sent_to_superadmin');
 
                 Notification::make()
                     ->title('Berhasil')
@@ -266,7 +267,7 @@ class PengajuanActions
             ->action(function ($record, array $data) {
                 $record->update([
                     'status' => 'completed',
-                    'received_by' => $data['received_by'],
+                    'received_by_name' => $data['received_by'],
                 ]);
 
                 $record->addStatusHistory(
@@ -294,24 +295,14 @@ class PengajuanActions
         // Ambil user yang mengajukan
         $pengaju = $record->user;
 
-        // Ambil semua admin dan super admin untuk notifikasi database
-        $adminUsers = User::whereHas(
-            'roles',
-            fn($query) =>
-            $query->whereIn('name', ['super_admin', 'admin'])
-        )->get();
-
         // Kirim email berdasarkan status
         if ($pengaju && $pengaju->email) {
             switch ($status) {
-                case 'sent_to_superadmin':
-                    Mail::to($pengaju->email)->queue(new PengajuanSentToSuperAdminMail($record));
-                    break;
-                case 'approved':
+                case 'superadmin_approved':
                     Mail::to($pengaju->email)->queue(new PengajuanApprovedMail($record, 'Tim Pengadaan', $additionalData));
                     break;
-                case 'rejected':
-                    Mail::to($pengaju->email)->queue(new PengajuanRejectedMail($record, 'Tim Pengadaan', $additionalData));
+                case 'superadmin_rejected':
+                    Mail::to($pengaju->email)->queue(new PengajuanRejectMail($record, 'Tim Pengadaan', $additionalData));
                     break;
                 case 'ready_pickup':
                     Mail::to($pengaju->email)->queue(new PengajuanReadyPickupMail($record));
@@ -323,114 +314,231 @@ class PengajuanActions
         self::sendDatabaseNotification($record, $status, $additionalData);
     }
 
+   private static function sendEmailToSuperAdmin($record)
+    {
+        try {
+            // Pastikan model User dan Mail sudah di-import
+            if (!class_exists('App\Models\User')) {
+                throw new \Exception('Model User tidak ditemukan');
+            }
+
+            if (!class_exists('App\Mail\PengajuanSentToSuperAdminMail')) {
+                throw new \Exception('Mail class PengajuanSentToSuperAdminMail tidak ditemukan');
+            }
+
+            // Ambil semua user dengan role superadmin atau super_admin
+            $superadmins = User::whereHas('roles', function ($query) {
+                $query->where('name', 'super_admin'); // Pastikan nama role sesuai
+            })->get();
+
+            // Debug: Log jumlah superadmin yang ditemukan
+            Log::info('Jumlah superadmin ditemukan: ' . $superadmins->count());
+
+            if ($superadmins->isEmpty()) {
+                Log::warning('Tidak ada user dengan role super_admin yang ditemukan');
+                return;
+            }
+
+            // Kirim email ke semua superadmin
+            foreach ($superadmins as $superadmin) {
+                if ($superadmin->email) {
+                    Log::info('Mengirim email ke: ' . $superadmin->email);
+                    
+                    // Gunakan dispatch untuk debugging yang lebih baik
+                    Mail::to($superadmin->email)->queue(new PengajuanSentToSuperAdminMail($record));
+                } else {
+                    Log::warning('Superadmin ' . $superadmin->name . ' tidak memiliki email');
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error dalam sendEmailToSuperAdmin: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            throw $e;
+        }
+    }
+
     /**
-     * Kirim notifikasi database saja
+     * Kirim notifikasi database dengan pembatasan
      */
     private static function sendDatabaseNotification($record, $status, $additionalData = null)
     {
         // Ambil user yang mengajukan
         $pengaju = $record->user;
+        $currentUserId = filament()->auth()->id();
 
-        // Ambil semua admin dan super admin untuk notifikasi database
+        // Ambil admin dan super admin (kecuali yang mengajukan)
         $adminUsers = User::whereHas(
             'roles',
-            fn($query) =>
-            $query->whereIn('name', ['super_admin', 'admin'])
-        )->get();
+            fn($query) => $query->whereIn('name', ['super_admin', 'admin'])
+        )
+            ->where('id', '!=', $pengaju->id) // Kecualikan pengaju dari notifikasi admin
+            ->get();
 
-        // Konfigurasi notifikasi berdasarkan status
-        $notificationConfig = self::getNotificationConfig($status, $record, $additionalData);
+        // Konfigurasi notifikasi
+        $notificationConfigs = self::getNotificationConfigs($status, $record, $additionalData);
 
-        // Kirim notifikasi database ke pengaju
-        if ($pengaju) {
+        // Kirim notifikasi ke pengaju (jika bukan dia yang melakukan aksi)
+        if ($pengaju && $pengaju->id != $currentUserId) {
+            $userConfig = $notificationConfigs['user'];
             Notification::make()
-                ->title($notificationConfig['title'])
-                ->icon($notificationConfig['icon'])
-                ->iconColor($notificationConfig['iconColor'])
-                ->body($notificationConfig['body'])
+                ->title($userConfig['title'])
+                ->icon($userConfig['icon'])
+                ->iconColor($userConfig['iconColor'])
+                ->body($userConfig['body'])
                 ->sendToDatabase($pengaju);
         }
 
-        // Kirim notifikasi database ke semua admin
+        // Kirim notifikasi ke admin/super admin (kecuali yang melakukan aksi)
         foreach ($adminUsers as $admin) {
-            Notification::make()
-                ->title($notificationConfig['title'])
-                ->icon($notificationConfig['icon'])
-                ->iconColor($notificationConfig['iconColor'])
-                ->body($notificationConfig['body'])
-                ->sendToDatabase($admin);
+            if ($admin->id != $currentUserId) {
+                $adminConfig = $notificationConfigs['admin'];
+                Notification::make()
+                    ->title($adminConfig['title'])
+                    ->icon($adminConfig['icon'])
+                    ->iconColor($adminConfig['iconColor'])
+                    ->body($adminConfig['body'])
+                    ->sendToDatabase($admin);
+            }
         }
     }
 
     /**
-     * Dapatkan konfigurasi notifikasi berdasarkan status
+     * Dapatkan konfigurasi notifikasi untuk user dan admin
      */
-    private static function getNotificationConfig($status, $record, $additionalData = null)
+    private static function getNotificationConfigs($status, $record, $additionalData = null)
     {
+        $pengajuName = $record->user->name ?? 'Pengguna';
+
         switch ($status) {
             case 'pending_admin_review':
                 return [
-                    'title' => 'Review Dimulai',
-                    'icon' => 'heroicon-o-play',
-                    'iconColor' => 'primary',
-                    'body' => "🔍 Review pengajuan #{$record->id} telah dimulai oleh admin."
+                    'user' => [
+                        'title' => 'Review Dimulai',
+                        'icon' => 'heroicon-o-play',
+                        'iconColor' => 'primary',
+                        'body' => "🔍 Review pengajuan Anda telah dimulai oleh admin."
+                    ],
+                    'admin' => [
+                        'title' => 'Review Dimulai',
+                        'icon' => 'heroicon-o-play',
+                        'iconColor' => 'primary',
+                        'body' => "🔍 Review pengajuan dari {$pengajuName} telah dimulai."
+                    ]
                 ];
 
             case 'diajukan_ke_superadmin':
                 return [
-                    'title' => 'Dikirim ke Tim Pengadaan',
-                    'icon' => 'heroicon-o-arrow-up-tray',
-                    'iconColor' => 'warning',
-                    'body' => "📤 Pengajuan #{$record->id} telah dikirim ke tim pengadaan untuk persetujuan."
+                    'user' => [
+                        'title' => 'Dikirim ke Tim Pengadaan',
+                        'icon' => 'heroicon-o-arrow-up-tray',
+                        'iconColor' => 'warning',
+                        'body' => "📤 Pengajuan Anda telah dikirim ke tim pengadaan untuk persetujuan."
+                    ],
+                    'admin' => [
+                        'title' => 'Dikirim ke Tim Pengadaan',
+                        'icon' => 'heroicon-o-arrow-up-tray',
+                        'iconColor' => 'warning',
+                        'body' => "📤 Pengajuan dari {$pengajuName} telah dikirim ke tim pengadaan."
+                    ]
                 ];
 
             case 'superadmin_approved':
                 return [
-                    'title' => 'Pengajuan Disetujui',
-                    'icon' => 'heroicon-o-check-circle',
-                    'iconColor' => 'success',
-                    'body' => "✅ Pengajuan #{$record->id} telah disetujui oleh Tim Pengadaan." .
-                        ($additionalData ? " Catatan: {$additionalData}" : '')
+                    'user' => [
+                        'title' => 'Pengajuan Disetujui',
+                        'icon' => 'heroicon-o-check-circle',
+                        'iconColor' => 'success',
+                        'body' => "✅ Pengajuan Anda telah disetujui oleh Tim Pengadaan." .
+                            ($additionalData ? " Catatan: {$additionalData}" : '')
+                    ],
+                    'admin' => [
+                        'title' => 'Pengajuan Disetujui',
+                        'icon' => 'heroicon-o-check-circle',
+                        'iconColor' => 'success',
+                        'body' => "✅ Pengajuan dari {$pengajuName} telah disetujui oleh Tim Pengadaan." .
+                            ($additionalData ? " Catatan: {$additionalData}" : '')
+                    ]
                 ];
 
-            case 'superadmin_rejected':  
+            case 'superadmin_rejected':
                 return [
-                    'title' => 'Pengajuan Ditolak',
-                    'icon' => 'heroicon-o-x-circle',
-                    'iconColor' => 'danger',
-                    'body' => "❌ Pengajuan #{$record->id} ditolak oleh Tim Pengadaan. Alasan: {$additionalData}"
+                    'user' => [
+                        'title' => 'Pengajuan Ditolak',
+                        'icon' => 'heroicon-o-x-circle',
+                        'iconColor' => 'danger',
+                        'body' => "❌ Pengajuan Anda ditolak oleh Tim Pengadaan. Alasan: {$additionalData}"
+                    ],
+                    'admin' => [
+                        'title' => 'Pengajuan Ditolak',
+                        'icon' => 'heroicon-o-x-circle',
+                        'iconColor' => 'danger',
+                        'body' => "❌ Pengajuan dari {$pengajuName} ditolak oleh Tim Pengadaan. Alasan: {$additionalData}"
+                    ]
                 ];
 
             case 'processing_started':
                 return [
-                    'title' => 'Proses Dimulai',
-                    'icon' => 'heroicon-o-play',
-                    'iconColor' => 'warning',
-                    'body' => "⚙️ Proses pengajuan #{$record->id} telah dimulai."
+                    'user' => [
+                        'title' => 'Proses Dimulai',
+                        'icon' => 'heroicon-o-play',
+                        'iconColor' => 'warning',
+                        'body' => "⚙️ Proses pengajuan Anda telah dimulai."
+                    ],
+                    'admin' => [
+                        'title' => 'Proses Dimulai',
+                        'icon' => 'heroicon-o-play',
+                        'iconColor' => 'warning',
+                        'body' => "⚙️ Proses pengajuan dari {$pengajuName} telah dimulai."
+                    ]
                 ];
 
             case 'ready_pickup':
                 return [
-                    'title' => 'Siap Diambil',
-                    'icon' => 'heroicon-o-inbox-arrow-down',
-                    'iconColor' => 'info',
-                    'body' => "📦 Pengajuan #{$record->id} sudah siap diambil."
+                    'user' => [
+                        'title' => 'Siap Diambil',
+                        'icon' => 'heroicon-o-inbox-arrow-down',
+                        'iconColor' => 'info',
+                        'body' => "📦 Pengajuan Anda sudah siap diambil."
+                    ],
+                    'admin' => [
+                        'title' => 'Siap Diambil',
+                        'icon' => 'heroicon-o-inbox-arrow-down',
+                        'iconColor' => 'info',
+                        'body' => "📦 Pengajuan dari {$pengajuName} sudah siap diambil."
+                    ]
                 ];
 
             case 'completed':
                 return [
-                    'title' => 'Pengajuan Selesai',
-                    'icon' => 'heroicon-o-check-badge',
-                    'iconColor' => 'success',
-                    'body' => "🎉 Pengajuan #{$record->id} telah selesai dan diterima oleh {$additionalData}."
+                    'user' => [
+                        'title' => 'Pengajuan Selesai',
+                        'icon' => 'heroicon-o-check-badge',
+                        'iconColor' => 'success',
+                        'body' => "🎉 Pengajuan Anda telah selesai dan diterima oleh {$additionalData}."
+                    ],
+                    'admin' => [
+                        'title' => 'Pengajuan Selesai',
+                        'icon' => 'heroicon-o-check-badge',
+                        'iconColor' => 'success',
+                        'body' => "🎉 Pengajuan dari {$pengajuName} telah selesai dan diterima oleh {$additionalData}."
+                    ]
                 ];
 
             default:
                 return [
-                    'title' => 'Update Status',
-                    'icon' => 'heroicon-o-bell',
-                    'iconColor' => 'primary',
-                    'body' => "📢 Status pengajuan #{$record->id} telah diperbarui."
+                    'user' => [
+                        'title' => 'Update Status',
+                        'icon' => 'heroicon-o-bell',
+                        'iconColor' => 'primary',
+                        'body' => "📢 Status pengajuan Anda telah diperbarui."
+                    ],
+                    'admin' => [
+                        'title' => 'Update Status',
+                        'icon' => 'heroicon-o-bell',
+                        'iconColor' => 'primary',
+                        'body' => "📢 Status pengajuan dari {$pengajuName} telah diperbarui."
+                    ]
                 ];
         }
     }

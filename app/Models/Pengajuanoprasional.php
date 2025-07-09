@@ -33,6 +33,7 @@ class Pengajuanoprasional extends Model
         'reject_reason',
         'rejected_by_role',
         'received_by',
+        'received_by_name',
         'status_history',
     ];
 

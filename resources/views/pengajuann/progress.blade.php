@@ -33,13 +33,13 @@
             'label' => 'Sedang Diproses',
             'icon' => '⚙️',
             'description' => 'Dalam tahap pengerjaan',
-            'percentage' => 60, // ubah dari 80 ke 60
+            'percentage' => 60,
         ],
         'ready_pickup' => [
             'label' => 'Siap Diambil',
             'icon' => '📦',
             'description' => 'Siap untuk diambil',
-            'percentage' => 80, // ubah dari 90 ke 80
+            'percentage' => 80,
         ],
         'completed' => [
             'label' => 'Selesai',
@@ -56,6 +56,9 @@
     // Tentukan status yang sudah selesai
     $currentStatusIndex = array_search($status, array_keys($statusFlow));
     $currentPercentage = $statusFlow[$status]['percentage'] ?? 0;
+    
+    // Cek apakah sudah completed (selesai)
+    $isCompleted = $status === 'completed';
 
     // Untuk status yang ditolak, tampilkan persentase berdasarkan di mana penolakan terjadi
     if ($isRejected) {
@@ -312,12 +315,9 @@
     }
 
     @keyframes pulse {
-
-        0%,
-        100% {
+        0%, 100% {
             opacity: 1;
         }
-
         50% {
             opacity: 0.8;
         }
@@ -381,20 +381,22 @@
             @foreach ($statusFlow as $statusKey => $statusInfo)
                 @php
                     $itemIndex = array_search($statusKey, array_keys($statusFlow));
-                    $isCompleted = $itemIndex < $currentStatusIndex;
-                    $isActive = $statusKey === $status;
-                    $isPending = $itemIndex > $currentStatusIndex;
+                    
+                    // Logika baru: jika status completed, semua step dianggap completed
+                    $stepCompleted = $isCompleted || $itemIndex < $currentStatusIndex;
+                    $stepActive = !$isCompleted && $statusKey === $status;
+                    $stepPending = !$isCompleted && $itemIndex > $currentStatusIndex;
                     $isLast = $statusKey === array_key_last($statusFlow);
                 @endphp
 
                 <div class="tracking-step">
                     @if (!$isLast)
-                        <div class="step-connector {{ $isCompleted ? 'completed' : ($isActive ? 'active' : '') }}">
+                        <div class="step-connector {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
                         </div>
                     @endif
 
-                    <div class="step-icon {{ $isCompleted ? 'completed' : ($isActive ? 'active' : '') }}">
-                        @if ($isCompleted)
+                    <div class="step-icon {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
+                        @if ($stepCompleted)
                             ✓
                         @else
                             {{ $statusInfo['icon'] }}
@@ -402,16 +404,16 @@
                     </div>
 
                     <div class="step-content">
-                        <div class="step-label {{ $isCompleted ? 'completed' : ($isActive ? 'active' : '') }}">
+                        <div class="step-label {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
                             {{ $statusInfo['label'] }}
                         </div>
                         <div class="step-description">
                             {{ $statusInfo['description'] }}
                         </div>
-                        <div class="step-status {{ $isCompleted ? 'completed' : ($isActive ? 'active' : 'pending') }}">
-                            @if ($isCompleted)
+                        <div class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : 'pending') }}">
+                            @if ($stepCompleted)
                                 ✓ Selesai
-                            @elseif($isActive)
+                            @elseif($stepActive)
                                 ⏳ Sedang Berlangsung
                             @else
                                 ⏸️ Menunggu

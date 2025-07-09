@@ -72,6 +72,21 @@ class PengajuanoprasionalResource extends Resource
         abort(404, 'File tidak ditemukan');
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        // Jika user adalah super admin, tampilkan data yang dikirim ke super admin
+        if (filament()->auth()->user()->hasRole('super_admin')) {
+            return $query->where('status', 'diajukan_ke_superadmin')
+                ->orWhere('status', 'superadmin_approved')
+                ->orWhere('status', 'superadmin_rejected')
+                ->orWhere('status', 'cancelled');  // tambahkan ini
+        }
+
+        return $query;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -190,21 +205,6 @@ class PengajuanoprasionalResource extends Resource
                             ->panelLayout('compact'),
                     ]),
             ]);
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-
-        // Jika user adalah super admin, tampilkan data yang dikirim ke super admin
-        if (filament()->auth()->user()->hasRole('super_admin')) {
-            return $query->where('status', 'diajukan_ke_superadmin')
-                ->orWhere('status', 'superadmin_approved')
-                ->orWhere('status', 'superadmin_rejected')
-                ->orWhere('status', 'cancelled');  // tambahkan ini
-        }
-
-        return $query;
     }
 
     public static function table(Table $table): Table
@@ -348,28 +348,27 @@ class PengajuanoprasionalResource extends Resource
 
                 // Action untuk lihat history
                 Tables\Actions\Action::make('lihat_history')
-                    ->label('Lihat History')
+                    ->label('Lihat Riwayat')
                     ->icon('heroicon-o-clock')
                     ->color('gray')
-                    ->modalHeading('History Status Pengajuan')
+                    ->modalHeading('Riwayat Status Pengajuan')
+                    ->modalWidth('2xl')
                     ->modalContent(function ($record) {
                         $history = $record->status_history ?? [];
 
-                        $content = '<div class="space-y-4">';
                         if (empty($history)) {
-                            $content .= '<p class="text-gray-500">Tidak ada history status.</p>';
-                        } else {
-                            foreach ($history as $item) {
-                                $content .= '<div class="border-l-4 border-blue-500 pl-4 py-2">';
-                                $content .= '<div class="font-semibold">' . $item['status'] . '</div>';
-                                $content .= '<div class="text-sm text-gray-600">' . $item['note'] . '</div>';
-                                $content .= '<div class="text-xs text-gray-500">' . $item['created_at'] . '</div>';
-                                $content .= '</div>';
-                            }
+                            return view('pengajuann.history.empty-status');
                         }
-                        $content .= '</div>';
 
-                        return new HtmlString($content);
+                        // Sort history by created_at descending (newest first)
+                        usort($history, function ($a, $b) {
+                            return strtotime($b['created_at']) - strtotime($a['created_at']);
+                        });
+
+                        return view('pengajuann.history.status-history', [
+                            'history' => $history,
+                            'record' => $record
+                        ]);
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup'),

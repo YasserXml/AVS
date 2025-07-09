@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Pengajuanoprasional;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -13,39 +14,34 @@ class PengajuanSentToSuperAdminMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct()
+    public $pengajuan;
+
+    public function __construct(Pengajuanoprasional $pengajuan)
     {
-        //
+        $this->pengajuan = $pengajuan;
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pengajuan Sent To Super Admin Mail',
+            subject: 'Pengajuan Barang Dikirim ke Tim Pengadaan ',
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'pengajuann.oprasionalmail.sent-to-superadmin',
+            with: [
+                'pengajuan' => $this->pengajuan,
+                'namaPengaju' => $this->pengajuan->user->name,
+                'tanggalPengajuan' => $this->pengajuan->tanggal_pengajuan->format('d F Y'),
+                'tanggalDibutuhkan' => $this->pengajuan->tanggal_dibutuhkan ? $this->pengajuan->tanggal_dibutuhkan->format('d F Y') : 'Tidak ditentukan',
+                'totalItem' => $this->pengajuan->total_item,
+            ]
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
     public function attachments(): array
     {
         return [];

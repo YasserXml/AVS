@@ -40,6 +40,7 @@ return new class extends Migration
             $table->text('reject_reason')->nullable();
             $table->enum('rejected_by_role', ['admin', 'superadmin'])->nullable();
             $table->foreignId('received_by')->nullable()->constrained('users');
+            $table->string('received_by_name')->nullable();
             $table->json('status_history')->nullable();
             $table->timestamps();
             $table->softDeletes();
