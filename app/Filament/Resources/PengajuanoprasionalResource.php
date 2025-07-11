@@ -40,11 +40,11 @@ class PengajuanoprasionalResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document';
 
-    protected static ?string $activeNavigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static ?string $activeNavigationIcon = 'heroicon-s-clipboard-document-list';
 
     protected static ?string $navigationGroup = 'Permintaan Barang';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $navigationLabel = 'Pengajuan Oprasional';
 
@@ -77,7 +77,7 @@ class PengajuanoprasionalResource extends Resource
         $query = parent::getEloquentQuery();
 
         // Jika user adalah super admin, tampilkan data yang dikirim ke super admin
-        if (filament()->auth()->user()->hasRole('super_admin')) {
+        if (filament()->auth()->user()->hasRole('purchasing')) {
             return $query->where('status', 'diajukan_ke_superadmin')
                 ->orWhere('status', 'superadmin_approved')
                 ->orWhere('status', 'superadmin_rejected')
@@ -212,7 +212,6 @@ class PengajuanoprasionalResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\Layout\Stack::make([
-                    // Header Card - Informasi Utama
                     Tables\Columns\Layout\Split::make([
                         Tables\Columns\Layout\Stack::make([
                             Tables\Columns\TextColumn::make('user.name')
@@ -230,28 +229,14 @@ class PengajuanoprasionalResource extends Resource
                         ])->space(1)->alignEnd(),
                     ]),
 
-                    // Progress Bar
                     Tables\Columns\Layout\Panel::make([
                         Tables\Columns\ViewColumn::make('progress')
                             ->view('pengajuann.progress')
-                            ->state(function ($record) {
-                                $percentage = match ($record->status) {
-                                    'pengajuan_terkirim' => 10,
-                                    'pending_admin_review' => 20,
-                                    'diajukan_ke_superadmin' => 40,
-                                    'superadmin_approved' => 60,
-                                    'processing' => 60,
-                                    'ready_pickup' => 80,
-                                    'completed' => 100,
-                                    'rejected', 'superadmin_rejected', 'cancelled' => 0,
-                                    default => 0,
-                                };
-                                return [
-                                    'percentage' => $percentage,
-                                    'color' => $percentage >= 100 ? 'success' : ($percentage >= 70 ? 'warning' : ($percentage > 0 ? 'info' : 'danger')),
-                                    'status' => $record->status
-                                ];
-                            }),
+                            ->state(fn($record) => [
+                                'status' => $record->status,
+                                'percentage' => $record->getProgressPercentage(),
+                                'color' => 'blue'
+                            ]),
                     ])->collapsible(),
                     // Informasi Tanggal & Timeline
                     Tables\Columns\Layout\Panel::make([
@@ -342,6 +327,15 @@ class PengajuanoprasionalResource extends Resource
                 PengajuanActions::kirimKeSuperAdmin(),
                 PengajuanActions::approveSuperAdmin(),
                 PengajuanActions::rejectSuperAdmin(),
+                PengajuanActions::kirimKeDireksi(),
+                PengajuanActions::approveDireksi(),
+                PengajuanActions::rejectDireksi(),
+                PengajuanActions::kirimKeKeuangan(),
+                PengajuanActions::reviewKeuangan(),
+                PengajuanActions::prosesKeuangan(),
+                PengajuanActions::executeKeuangan(),
+                PengajuanActions::kirimKePengadaan(),
+                PengajuanActions::kirimKeAdmin(),
                 PengajuanActions::mulaiProses(),
                 PengajuanActions::siapDiambil(),
                 PengajuanActions::selesai(),

@@ -37,7 +37,7 @@ class Divisi3dmediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 26;
+        return 30;
     }
 
     public static function getUrlFromFolder3D(Divisi3dfolder $folder, string $name = 'index'): string

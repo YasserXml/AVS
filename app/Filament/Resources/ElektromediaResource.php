@@ -37,7 +37,7 @@ class ElektromediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 24;
+        return 22;
     }
 
     public static function getUrlFromFolderElektro(Elektrofolder $folder, string $name = 'index'): string

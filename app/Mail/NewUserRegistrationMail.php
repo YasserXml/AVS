@@ -56,16 +56,18 @@ class NewUserRegistrationMail extends Mailable implements ShouldQueue
     {
         // Pemetaan nilai divisi ke nama yang lebih manusiawi
         $divisiMapping = [
-           'user_divisi_manager_hrd' => 'Manager HRD',
-            'user_divisi_hrd_ga' => 'HRD & GA',
-            'user_divisi_keuangan' => 'Keuangan',
-            'user_divisi_software' => 'Software',
-            'user_divisi_purchasing' => 'Purchasing',
-            'user_divisi_elektro' => 'Elektro',
-            'user_divisi_r&d' => 'R&D',
-            'user_divisi_3d' => '3D',
-            'user_divisi_mekanik' => 'Mekanik',
-            'user_divisi_pmo' => 'PMO', 
+           'user_sekretariat' => 'Sekretariat',
+            'user_hrd_ga' => 'HRD & GA',
+            'purchasing' => 'Purchasing',
+            'keuangan' => 'Keuangan',
+            'user_akuntansi' => 'Akuntansi',
+            'user_bisnis_marketing' => 'Bisnis & Marketing',
+            'user_system_engineer' => 'System Engineer',
+            'user_rnd' => 'RnD',
+            'user_game_programming' => 'Game Programming',
+            'user_pmo' => 'PMO',
+            'user_3d' => '3D',
+            'user_mekanik' => 'Mekanik',
         ];
 
         // Dapatkan nama role pengguna

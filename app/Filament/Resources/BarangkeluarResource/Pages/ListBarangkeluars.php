@@ -47,13 +47,7 @@ class ListBarangkeluars extends ListRecords
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('sumber', 'manual'))
                 ->badge(BarangKeluar::where('sumber', 'manual')->count())
                 ->badgeColor('primary'),
-
-            'pengajuan' => Tab::make('Dari Pengajuan')
-                ->icon('heroicon-o-clipboard-document-check')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('sumber', 'pengajuan'))
-                ->badge(BarangKeluar::where('sumber', 'pengajuan')->count())
-                ->badgeColor('success'),
-
+                
             'operasional' => Tab::make('Operasional Kantor')
                 ->icon('heroicon-o-building-office')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'oprasional_kantor'))

@@ -37,7 +37,7 @@ class HrdgamediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 24;
+        return 12;
     }
 
     public static function getUrlFromFolderHrdGa(Hrdgafolder $folder, string $name = 'index'): string

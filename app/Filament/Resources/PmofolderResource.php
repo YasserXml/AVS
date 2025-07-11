@@ -52,7 +52,7 @@ class PmofolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 19;
+        return 27;
     }
 
     public static function form(Form $form): Form

@@ -155,7 +155,7 @@ class ListBisnismedia extends ListRecords
 
             // Buat breadcrumb untuk setiap folder
             foreach ($folders as $folder) {
-                $breadcrumbs[$folder->name] = BisnismediaResource::getUrlFromFolderDirektorat($folder);
+                $breadcrumbs[$folder->name] = BisnismediaResource::getUrlFromFolderBisnis($folder);
             }
         }
 

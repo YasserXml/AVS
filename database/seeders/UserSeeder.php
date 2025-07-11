@@ -12,16 +12,18 @@ class UserSeeder extends Seeder
     {
         // Definisikan daftar divisi dan nama role yang sesuai
         $divisiRoles = [
-            'user_divisi_manager_hrd' => 'User Divisi Manager HRD',
-            'user_divisi_hrd_ga' => 'User Divisi HRD & GA',
-            'user_divisi_keuangan' => 'User Divisi Keuangan',
-            'user_divisi_software' => 'User Divisi Software',
-            'user_divisi_purchasing' => 'User Divisi Purchasing',
-            'user_divisi_elektro' => 'User Divisi Elektro',
-            'user_divisi_r&d' => 'User Divisi R&D',
-            'user_divisi_3d' => 'User Divisi 3D',
-            'user_divisi_mekanik' => 'User Divisi Mekanik',
-            'user_divisi_pmo' => 'User Divisi PMO',
+            'user_sekretariat' => 'User Sekretariat',
+            'user_hrd_ga' => 'User HRD & GA',
+            'user_purchasing' => 'User Purchasing',
+            'user_keuangan' => 'User Keuangan',
+            'user_akuntansi' => 'User Akuntansi',
+            'user_bisnis_marketing' => 'User Bisnis & Marketing',
+            'user_system_engineer' => 'User System Engineer',
+            'user_rnd' => 'User RnD',
+            'user_game_programming' => 'User Game Programming',
+            'user_pmo' => 'User PMO',
+            'user_3d' => 'User 3D',
+            'user_mekanik' => 'User Mekanik',
         ];
 
         // Buat role untuk setiap divisi

@@ -52,7 +52,7 @@ class AccountingfolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 7;
+        return 17;
     }
 
     protected static ?string $slug = 'bisnis';

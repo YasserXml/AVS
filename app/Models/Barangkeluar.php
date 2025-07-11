@@ -40,26 +40,10 @@ class Barangkeluar extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Pengajuan sekarang bisa null
-    public function pengajuan()
-    {
-        return $this->belongsTo(Pengajuan::class);
-    }
 
     public function kategori()
     {
         return $this->belongsTo(Kategori::class);
     }
 
-    // Accessor untuk mendapatkan sumber pengajuan
-    public function getSumberPengajuanAttribute(): string
-    {
-        return $this->pengajuan_id ? 'Dari Pengajuan' : 'Input Manual';
-    }
-
-    // Accessor untuk nama pengajuan
-    public function getNamaPengajuanAttribute(): ?string
-    {
-        return $this->pengajuan ? $this->pengajuan->nama : 'Manual Entry';
-    }
 }

@@ -39,7 +39,7 @@ class PengajuanReadyPickupMail extends Mailable
      */
     public function content(): Content
     {
-        return new Content(
+        return new Content( 
             view:  'pengajuann.oprasionalmail.pickup',
             with: [
                 'pengajuan' => $this->pengajuan,

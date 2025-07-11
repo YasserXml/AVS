@@ -7,6 +7,8 @@ use App\Mail\PengajuanReadyPickupMail;
 use App\Mail\PengajuanRejectMail;
 use App\Mail\PengajuanSentToSuperAdminMail;
 use App\Models\User;
+use App\Services\PengajuanEmailService;
+use App\Services\PengajuanNotificationService;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Tables;
@@ -40,8 +42,7 @@ class PengajuanActions
                     'Review pengajuan dimulai oleh admin'
                 );
 
-                // Kirim notifikasi database saja
-                self::sendDatabaseNotification($record, 'review_started');
+                PengajuanNotificationService::sendDatabaseNotification($record, 'pending_admin_review');
 
                 Notification::make()
                     ->title('Berhasil')
@@ -76,8 +77,8 @@ class PengajuanActions
                     'Pengajuan dikirim ke tim pengadaan'
                 );
 
-                // Kirim notifikasi database dan email
-                self::sendEmailToSuperAdmin($record, 'sent_to_superadmin');
+                PengajuanEmailService::sendEmailToSuperAdmin($record);
+                PengajuanNotificationService::sendDatabaseNotification($record, 'diajukan_ke_superadmin');
 
                 Notification::make()
                     ->title('Berhasil')
@@ -96,7 +97,7 @@ class PengajuanActions
             ->visible(
                 fn($record) =>
                 $record->status === 'diajukan_ke_superadmin' &&
-                    filament()->auth()->user()->hasRole('super_admin')
+                    filament()->auth()->user()->hasRole('purchasing')
             )
             ->form([
                 Forms\Components\Textarea::make('catatan')
@@ -120,8 +121,7 @@ class PengajuanActions
                     $data['catatan'] ?? 'Pengajuan disetujui oleh tim pengadaan'
                 );
 
-                // Kirim notifikasi database dan email
-                self::sendNotificationWithEmail($record, 'approved', $data['catatan'] ?? null);
+                PengajuanEmailService::sendNotificationWithEmail($record, 'superadmin_approved', $data['catatan'] ?? null);
 
                 Notification::make()
                     ->title('Berhasil')
@@ -140,7 +140,7 @@ class PengajuanActions
             ->visible(
                 fn($record) =>
                 $record->status === 'diajukan_ke_superadmin' &&
-                    filament()->auth()->user()->hasRole('super_admin')
+                    filament()->auth()->user()->hasRole('purchasing')
             )
             ->form([
                 Forms\Components\Textarea::make('alasan')
@@ -167,13 +167,362 @@ class PengajuanActions
                     'Pengajuan ditolak: ' . $data['alasan']
                 );
 
-                // Kirim notifikasi database dan email
-                self::sendNotificationWithEmail($record, 'rejected', $data['alasan']);
+                PengajuanEmailService::sendNotificationWithEmail($record, 'rejected', $data['alasan']);
 
                 Notification::make()
                     ->title('Pengajuan Ditolak')
                     ->body('Pengajuan berhasil ditolak.')
                     ->warning()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Kirim ke Direksi
+    public static function kirimKeDireksi()
+    {
+        return Tables\Actions\Action::make('kirim_ke_direksi')
+            ->label('Kirim ke Direksi')
+            ->icon('heroicon-o-arrow-up-tray')
+            ->color('warning')
+            ->visible(
+                fn($record) =>
+                $record->status === 'superadmin_approved' &&
+                    filament()->auth()->user()->hasRole('purchasing')
+            )
+            ->requiresConfirmation()
+            ->modalHeading('Kirim ke Direksi')
+            ->modalDescription('Apakah Anda yakin ingin mengirim pengajuan ini ke direksi?')
+            ->action(function ($record) {
+                $record->update([
+                    'status' => 'pengajuan_dikirim_ke_direksi',
+                ]);
+
+                $record->addStatusHistory(
+                    'pengajuan_dikirim_ke_direksi',
+                    filament()->auth()->id(),
+                    'Pengajuan dikirim ke direksi'
+                );
+
+                PengajuanEmailService::sendEmailToDireksi($record);
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pengajuan berhasil dikirim ke direksi.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Approve Direksi
+    public static function approveDireksi()
+    {
+        return Tables\Actions\Action::make('approve_direksi')
+            ->label('Setujui')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->visible(
+                fn($record) =>
+                $record->status === 'pengajuan_dikirim_ke_direksi' &&
+                    filament()->auth()->user()->hasRole('direktur_keuangan')
+            )
+            ->form([
+                Forms\Components\Textarea::make('catatan')
+                    ->label('Catatan (Opsional)')
+                    ->rows(3)
+                    ->placeholder('Tambahkan catatan jika diperlukan...'),
+            ])
+            ->requiresConfirmation()
+            ->modalHeading('Setujui Pengajuan')
+            ->modalDescription('Apakah Anda yakin ingin menyetujui pengajuan ini?')
+            ->action(function ($record, array $data) {
+                $record->update([
+                    'status' => 'acc_direksi',
+                    'approved_by_direksi' => filament()->auth()->id(),
+                    'approved_at_direksi' => now(),
+                ]);
+
+                $record->addStatusHistory(
+                    'acc_direksi',
+                    filament()->auth()->id(),
+                    $data['catatan'] ?? 'Pengajuan disetujui oleh direksi'
+                );
+
+                PengajuanEmailService::sendNotificationWithEmail($record, 'approved_direksi', $data['catatan'] ?? null);
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pengajuan berhasil disetujui.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    public static function rejectDireksi()
+    {
+        return Tables\Actions\Action::make('reject_direksi')
+            ->label('Tolak')
+            ->icon('heroicon-o-x-circle')
+            ->color('danger')
+            ->visible(
+                fn($record) =>
+                $record->status === 'pengajuan_dikirim_ke_direksi' &&
+                    filament()->auth()->user()->hasRole('direktur_keuangan')
+            )
+            ->form([
+                Forms\Components\Textarea::make('alasan')
+                    ->label('Alasan Penolakan')
+                    ->required()
+                    ->rows(3)
+                    ->placeholder('Jelaskan alasan penolakan...'),
+            ])
+            ->requiresConfirmation()
+            ->modalHeading('Tolak Pengajuan')
+            ->modalDescription('Apakah Anda yakin ingin menolak pengajuan ini?')
+            ->action(function ($record, array $data) {
+                $record->update([
+                    'status' => 'reject_direksi',
+                    'rejected_by' => filament()->auth()->id(),
+                    'rejected_at' => now(),
+                    'reject_reason' => $data['alasan'],
+                    'rejected_by_role' => 'direksi',
+                ]);
+
+                $record->addStatusHistory(
+                    'reject_direksi',
+                    filament()->auth()->id(),
+                    'Pengajuan ditolak oleh direksi: ' . $data['alasan']
+                );
+
+                PengajuanEmailService::sendNotificationWithEmail($record, 'rejected_direksi', $data['alasan']);
+
+                Notification::make()
+                    ->title('Pengajuan Ditolak')
+                    ->body('Pengajuan berhasil ditolak.')
+                    ->warning()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Kirim ke Keuangan
+    public static function kirimKeKeuangan()
+    {
+        return Tables\Actions\Action::make('kirim_ke_keuangan')
+            ->label('Kirim ke Keuangan')
+            ->icon('heroicon-o-arrow-up-tray')
+            ->color('warning')
+            ->visible(
+                fn($record) =>
+                $record->status === 'acc_direksi' &&
+                    filament()->auth()->user()->hasRole('direktur_keuangan')
+            )
+            ->requiresConfirmation()
+            ->modalHeading('Kirim ke Keuangan')
+            ->modalDescription('Apakah Anda yakin ingin mengirim pengajuan ini ke keuangan?')
+            ->action(function ($record) {
+                $record->update([
+                    'status' => 'pengajuan_dikirim_ke_keuangan',
+                ]);
+
+                $record->addStatusHistory(
+                    'pengajuan_dikirim_ke_keuangan',
+                    filament()->auth()->id(),
+                    'Pengajuan dikirim ke keuangan'
+                );
+
+                PengajuanEmailService::sendEmailToKeuangan($record);
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pengajuan berhasil dikirim ke keuangan.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Review Keuangan
+    public static function reviewKeuangan()
+    {
+        return Tables\Actions\Action::make('review_keuangan')
+            ->label('Mulai Review')
+            ->icon('heroicon-o-play')
+            ->color('primary')
+            ->visible(
+                fn($record) =>
+                $record->status === 'pengajuan_dikirim_ke_keuangan' &&
+                    filament()->auth()->user()->hasRole('keuangan')
+            )
+            ->requiresConfirmation()
+            ->modalHeading('Mulai Review Keuangan')
+            ->modalDescription('Apakah Anda yakin ingin memulai review keuangan?')
+            ->action(function ($record) {
+                $record->update([
+                    'status' => 'pending_keuangan',
+                ]);
+
+                $record->addStatusHistory(
+                    'pending_keuangan',
+                    filament()->auth()->id(),
+                    'Review keuangan dimulai'
+                );
+
+                PengajuanNotificationService::sendDatabaseNotification($record, 'pending_keuangan');
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Review keuangan telah dimulai.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Proses Keuangan
+    public static function prosesKeuangan()
+    {
+        return Tables\Actions\Action::make('proses_keuangan')
+            ->label('Proses Keuangan')
+            ->icon('heroicon-o-cog')
+            ->color('warning')
+            ->visible(
+                fn($record) =>
+                $record->status === 'pending_keuangan' &&
+                    filament()->auth()->user()->hasRole('keuangan')
+            )
+            ->requiresConfirmation()
+            ->modalHeading('Proses Keuangan')
+            ->modalDescription('Apakah Anda yakin ingin memproses pengajuan ini?')
+            ->action(function ($record) {
+                $record->update([
+                    'status' => 'process_keuangan',
+                ]);
+
+                $record->addStatusHistory(
+                    'process_keuangan',
+                    filament()->auth()->id(),
+                    'Pengajuan sedang diproses oleh keuangan'
+                );
+
+                PengajuanNotificationService::sendDatabaseNotification($record, 'process_keuangan');
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pengajuan sedang diproses.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Execute Keuangan
+    public static function executeKeuangan()
+    {
+        return Tables\Actions\Action::make('execute_keuangan')
+            ->label('Selesai Proses')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->visible(
+                fn($record) =>
+                $record->status === 'process_keuangan' &&
+                    filament()->auth()->user()->hasRole('keuangan')
+            )
+            ->form([
+                Forms\Components\Textarea::make('catatan')
+                    ->label('Catatan Keuangan')
+                    ->rows(3)
+                    ->placeholder('Tambahkan catatan proses keuangan...'),
+            ])
+            ->requiresConfirmation()
+            ->modalHeading('Selesai Proses Keuangan')
+            ->modalDescription('Apakah Anda yakin proses keuangan telah selesai?')
+            ->action(function ($record, array $data) {
+                $record->update([
+                    'status' => 'execute_keuangan',
+                    'executed_by_keuangan' => filament()->auth()->id(),
+                    'executed_at_keuangan' => now(),
+                ]);
+
+                $record->addStatusHistory(
+                    'execute_keuangan',
+                    filament()->auth()->id(),
+                    $data['catatan'] ?? 'Proses keuangan selesai'
+                );
+
+                PengajuanEmailService::sendNotificationWithEmail($record, 'execute_keuangan', $data['catatan'] ?? null);
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Proses keuangan telah selesai.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Kirim ke Pengadaan (dari keuangan)
+    public static function kirimKePengadaan()
+    {
+        return Tables\Actions\Action::make('kirim_ke_pengadaan')
+            ->label('Kirim ke Pengadaan')
+            ->icon('heroicon-o-arrow-up-tray')
+            ->color('warning')
+            ->visible(
+                fn($record) =>
+                $record->status === 'execute_keuangan' &&
+                    filament()->auth()->user()->hasRole('keuangan')
+            )
+            ->requiresConfirmation()
+            ->modalHeading('Kirim ke Pengadaan')
+            ->modalDescription('Apakah Anda yakin ingin mengirim pengajuan ini ke pengadaan?')
+            ->action(function ($record) {
+                $record->update([
+                    'status' => 'pengajuan_dikirim_ke_pengadaan',
+                ]);
+
+                $record->addStatusHistory(
+                    'pengajuan_dikirim_ke_pengadaan',
+                    filament()->auth()->id(),
+                    'Pengajuan dikirim ke pengadaan'
+                );
+
+                PengajuanEmailService::sendEmailToPengadaan($record);
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pengajuan berhasil dikirim ke pengadaan.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    // ACTION BARU: Kirim ke Admin (dari pengadaan)
+    public static function kirimKeAdmin()
+    {
+        return Tables\Actions\Action::make('kirim_ke_admin')
+            ->label('Kirim ke Admin')
+            ->icon('heroicon-o-arrow-up-tray')
+            ->color('warning')
+            ->visible(
+                fn($record) =>
+                $record->status === 'pengajuan_dikirim_ke_pengadaan' &&
+                    filament()->auth()->user()->hasRole('purchasing')
+            )
+            ->requiresConfirmation()
+            ->modalHeading('Kirim ke Admin')
+            ->modalDescription('Apakah Anda yakin ingin mengirim pengajuan ini ke admin?')
+            ->action(function ($record) {
+                $record->update([
+                    'status' => 'pengajuan_dikirim_ke_admin',
+                ]);
+
+                $record->addStatusHistory(
+                    'pengajuan_dikirim_ke_admin',
+                    filament()->auth()->id(),
+                    'Pengajuan dikirim ke admin'
+                );
+
+                PengajuanEmailService::sendEmailToAdmin($record);
+
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pengajuan berhasil dikirim ke admin.')
+                    ->success()
                     ->send();
             });
     }
@@ -186,7 +535,7 @@ class PengajuanActions
             ->color('warning')
             ->visible(
                 fn($record) =>
-                $record->status === 'superadmin_approved' &&
+                $record->status === 'pengajuan_dikirim_ke_admin' &&
                     filament()->auth()->user()->hasRole('admin')
             )
             ->requiresConfirmation()
@@ -199,8 +548,7 @@ class PengajuanActions
                     'Proses pengajuan dimulai'
                 );
 
-                // Kirim notifikasi database saja
-                self::sendDatabaseNotification($record, 'processing_started');
+                PengajuanNotificationService::sendDatabaseNotification($record, 'processing_started');
 
                 Notification::make()
                     ->title('Berhasil')
@@ -231,8 +579,7 @@ class PengajuanActions
                     'Barang siap diambil'
                 );
 
-                // Kirim notifikasi database dan email
-                self::sendNotificationWithEmail($record, 'ready_pickup');
+                PengajuanEmailService::sendNotificationWithEmail($record, 'ready_pickup');
 
                 Notification::make()
                     ->title('Berhasil')
@@ -276,8 +623,7 @@ class PengajuanActions
                     $data['catatan'] ?? 'Pengajuan selesai dan barang telah diserahkan'
                 );
 
-                // Kirim notifikasi database saja
-                self::sendDatabaseNotification($record, 'completed', $data['received_by']);
+                PengajuanNotificationService::sendDatabaseNotification($record, 'completed', $data['received_by']);
 
                 Notification::make()
                     ->title('Berhasil')
@@ -287,262 +633,6 @@ class PengajuanActions
             });
     }
 
-    /**
-     * Kirim notifikasi database dan email
-     */
-    private static function sendNotificationWithEmail($record, $status, $additionalData = null)
-    {
-        // Ambil user yang mengajukan
-        $pengaju = $record->user;
-
-        // Kirim email berdasarkan status
-        if ($pengaju && $pengaju->email) {
-            switch ($status) {
-                case 'superadmin_approved':
-                    Mail::to($pengaju->email)->queue(new PengajuanApprovedMail($record, 'Tim Pengadaan', $additionalData));
-                    break;
-                case 'superadmin_rejected':
-                    Mail::to($pengaju->email)->queue(new PengajuanRejectMail($record, 'Tim Pengadaan', $additionalData));
-                    break;
-                case 'ready_pickup':
-                    Mail::to($pengaju->email)->queue(new PengajuanReadyPickupMail($record));
-                    break;
-            }
-        }
-
-        // Kirim notifikasi database
-        self::sendDatabaseNotification($record, $status, $additionalData);
-    }
-
-   private static function sendEmailToSuperAdmin($record)
-    {
-        try {
-            // Pastikan model User dan Mail sudah di-import
-            if (!class_exists('App\Models\User')) {
-                throw new \Exception('Model User tidak ditemukan');
-            }
-
-            if (!class_exists('App\Mail\PengajuanSentToSuperAdminMail')) {
-                throw new \Exception('Mail class PengajuanSentToSuperAdminMail tidak ditemukan');
-            }
-
-            // Ambil semua user dengan role superadmin atau super_admin
-            $superadmins = User::whereHas('roles', function ($query) {
-                $query->where('name', 'super_admin'); // Pastikan nama role sesuai
-            })->get();
-
-            // Debug: Log jumlah superadmin yang ditemukan
-            Log::info('Jumlah superadmin ditemukan: ' . $superadmins->count());
-
-            if ($superadmins->isEmpty()) {
-                Log::warning('Tidak ada user dengan role super_admin yang ditemukan');
-                return;
-            }
-
-            // Kirim email ke semua superadmin
-            foreach ($superadmins as $superadmin) {
-                if ($superadmin->email) {
-                    Log::info('Mengirim email ke: ' . $superadmin->email);
-                    
-                    // Gunakan dispatch untuk debugging yang lebih baik
-                    Mail::to($superadmin->email)->queue(new PengajuanSentToSuperAdminMail($record));
-                } else {
-                    Log::warning('Superadmin ' . $superadmin->name . ' tidak memiliki email');
-                }
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error dalam sendEmailToSuperAdmin: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-            throw $e;
-        }
-    }
-
-    /**
-     * Kirim notifikasi database dengan pembatasan
-     */
-    private static function sendDatabaseNotification($record, $status, $additionalData = null)
-    {
-        // Ambil user yang mengajukan
-        $pengaju = $record->user;
-        $currentUserId = filament()->auth()->id();
-
-        // Ambil admin dan super admin (kecuali yang mengajukan)
-        $adminUsers = User::whereHas(
-            'roles',
-            fn($query) => $query->whereIn('name', ['super_admin', 'admin'])
-        )
-            ->where('id', '!=', $pengaju->id) // Kecualikan pengaju dari notifikasi admin
-            ->get();
-
-        // Konfigurasi notifikasi
-        $notificationConfigs = self::getNotificationConfigs($status, $record, $additionalData);
-
-        // Kirim notifikasi ke pengaju (jika bukan dia yang melakukan aksi)
-        if ($pengaju && $pengaju->id != $currentUserId) {
-            $userConfig = $notificationConfigs['user'];
-            Notification::make()
-                ->title($userConfig['title'])
-                ->icon($userConfig['icon'])
-                ->iconColor($userConfig['iconColor'])
-                ->body($userConfig['body'])
-                ->sendToDatabase($pengaju);
-        }
-
-        // Kirim notifikasi ke admin/super admin (kecuali yang melakukan aksi)
-        foreach ($adminUsers as $admin) {
-            if ($admin->id != $currentUserId) {
-                $adminConfig = $notificationConfigs['admin'];
-                Notification::make()
-                    ->title($adminConfig['title'])
-                    ->icon($adminConfig['icon'])
-                    ->iconColor($adminConfig['iconColor'])
-                    ->body($adminConfig['body'])
-                    ->sendToDatabase($admin);
-            }
-        }
-    }
-
-    /**
-     * Dapatkan konfigurasi notifikasi untuk user dan admin
-     */
-    private static function getNotificationConfigs($status, $record, $additionalData = null)
-    {
-        $pengajuName = $record->user->name ?? 'Pengguna';
-
-        switch ($status) {
-            case 'pending_admin_review':
-                return [
-                    'user' => [
-                        'title' => 'Review Dimulai',
-                        'icon' => 'heroicon-o-play',
-                        'iconColor' => 'primary',
-                        'body' => "🔍 Review pengajuan Anda telah dimulai oleh admin."
-                    ],
-                    'admin' => [
-                        'title' => 'Review Dimulai',
-                        'icon' => 'heroicon-o-play',
-                        'iconColor' => 'primary',
-                        'body' => "🔍 Review pengajuan dari {$pengajuName} telah dimulai."
-                    ]
-                ];
-
-            case 'diajukan_ke_superadmin':
-                return [
-                    'user' => [
-                        'title' => 'Dikirim ke Tim Pengadaan',
-                        'icon' => 'heroicon-o-arrow-up-tray',
-                        'iconColor' => 'warning',
-                        'body' => "📤 Pengajuan Anda telah dikirim ke tim pengadaan untuk persetujuan."
-                    ],
-                    'admin' => [
-                        'title' => 'Dikirim ke Tim Pengadaan',
-                        'icon' => 'heroicon-o-arrow-up-tray',
-                        'iconColor' => 'warning',
-                        'body' => "📤 Pengajuan dari {$pengajuName} telah dikirim ke tim pengadaan."
-                    ]
-                ];
-
-            case 'superadmin_approved':
-                return [
-                    'user' => [
-                        'title' => 'Pengajuan Disetujui',
-                        'icon' => 'heroicon-o-check-circle',
-                        'iconColor' => 'success',
-                        'body' => "✅ Pengajuan Anda telah disetujui oleh Tim Pengadaan." .
-                            ($additionalData ? " Catatan: {$additionalData}" : '')
-                    ],
-                    'admin' => [
-                        'title' => 'Pengajuan Disetujui',
-                        'icon' => 'heroicon-o-check-circle',
-                        'iconColor' => 'success',
-                        'body' => "✅ Pengajuan dari {$pengajuName} telah disetujui oleh Tim Pengadaan." .
-                            ($additionalData ? " Catatan: {$additionalData}" : '')
-                    ]
-                ];
-
-            case 'superadmin_rejected':
-                return [
-                    'user' => [
-                        'title' => 'Pengajuan Ditolak',
-                        'icon' => 'heroicon-o-x-circle',
-                        'iconColor' => 'danger',
-                        'body' => "❌ Pengajuan Anda ditolak oleh Tim Pengadaan. Alasan: {$additionalData}"
-                    ],
-                    'admin' => [
-                        'title' => 'Pengajuan Ditolak',
-                        'icon' => 'heroicon-o-x-circle',
-                        'iconColor' => 'danger',
-                        'body' => "❌ Pengajuan dari {$pengajuName} ditolak oleh Tim Pengadaan. Alasan: {$additionalData}"
-                    ]
-                ];
-
-            case 'processing_started':
-                return [
-                    'user' => [
-                        'title' => 'Proses Dimulai',
-                        'icon' => 'heroicon-o-play',
-                        'iconColor' => 'warning',
-                        'body' => "⚙️ Proses pengajuan Anda telah dimulai."
-                    ],
-                    'admin' => [
-                        'title' => 'Proses Dimulai',
-                        'icon' => 'heroicon-o-play',
-                        'iconColor' => 'warning',
-                        'body' => "⚙️ Proses pengajuan dari {$pengajuName} telah dimulai."
-                    ]
-                ];
-
-            case 'ready_pickup':
-                return [
-                    'user' => [
-                        'title' => 'Siap Diambil',
-                        'icon' => 'heroicon-o-inbox-arrow-down',
-                        'iconColor' => 'info',
-                        'body' => "📦 Pengajuan Anda sudah siap diambil."
-                    ],
-                    'admin' => [
-                        'title' => 'Siap Diambil',
-                        'icon' => 'heroicon-o-inbox-arrow-down',
-                        'iconColor' => 'info',
-                        'body' => "📦 Pengajuan dari {$pengajuName} sudah siap diambil."
-                    ]
-                ];
-
-            case 'completed':
-                return [
-                    'user' => [
-                        'title' => 'Pengajuan Selesai',
-                        'icon' => 'heroicon-o-check-badge',
-                        'iconColor' => 'success',
-                        'body' => "🎉 Pengajuan Anda telah selesai dan diterima oleh {$additionalData}."
-                    ],
-                    'admin' => [
-                        'title' => 'Pengajuan Selesai',
-                        'icon' => 'heroicon-o-check-badge',
-                        'iconColor' => 'success',
-                        'body' => "🎉 Pengajuan dari {$pengajuName} telah selesai dan diterima oleh {$additionalData}."
-                    ]
-                ];
-
-            default:
-                return [
-                    'user' => [
-                        'title' => 'Update Status',
-                        'icon' => 'heroicon-o-bell',
-                        'iconColor' => 'primary',
-                        'body' => "📢 Status pengajuan Anda telah diperbarui."
-                    ],
-                    'admin' => [
-                        'title' => 'Update Status',
-                        'icon' => 'heroicon-o-bell',
-                        'iconColor' => 'primary',
-                        'body' => "📢 Status pengajuan dari {$pengajuName} telah diperbarui."
-                    ]
-                ];
-        }
-    }
-
     public static function getAllActions()
     {
         return [
@@ -550,6 +640,15 @@ class PengajuanActions
             self::kirimKeSuperAdmin(),
             self::approveSuperAdmin(),
             self::rejectSuperAdmin(),
+            self::kirimKeDireksi(),
+            self::approveDireksi(),
+            self::rejectDireksi(),
+            self::kirimKeKeuangan(),
+            self::reviewKeuangan(),
+            self::prosesKeuangan(),
+            self::executeKeuangan(),
+            self::kirimKePengadaan(),
+            self::kirimKeAdmin(),
             self::mulaiProses(),
             self::siapDiambil(),
             self::selesai(),

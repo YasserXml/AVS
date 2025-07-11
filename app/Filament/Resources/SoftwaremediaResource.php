@@ -38,7 +38,7 @@ class SoftwaremediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 22;
+        return 26;
     }
 
     public static function getUrlFromFolderSoftware(Softwarefolder $folder, string $name = 'index'): string

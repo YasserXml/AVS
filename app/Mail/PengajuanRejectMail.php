@@ -15,8 +15,8 @@ class PengajuanRejectMail extends Mailable
     use Queueable, SerializesModels;
 
     public $pengajuan;
-    public $alasan;
-
+    public $alasan; 
+ 
     /**
      * Create a new message instance.
      */

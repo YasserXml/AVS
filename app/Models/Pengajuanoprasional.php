@@ -52,6 +52,17 @@ class Pengajuanoprasional extends Model
     public const STATUS_DIAJUKAN_KE_SUPERADMIN = 'diajukan_ke_superadmin';
     public const STATUS_SUPERADMIN_APPROVED = 'superadmin_approved';
     public const STATUS_SUPERADMIN_REJECTED = 'superadmin_rejected';
+    public const STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI = 'pengajuan_dikirim_ke_direksi';
+    public const STATUS_APPROVED_BY_DIREKSI = 'approved_by_direksi';
+    public const STATUS_APPROVED_AT_DIREKSI = 'approved_at_direksi';
+    public const STATUS_REJECT_DIREKSI = 'reject_direksi';
+    public const STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN = 'pengajuan_dikirim_ke_keuangan';
+    public const STATUS_PENDING_KEUANGAN = 'pending_keuangan';
+    public const STATUS_PROCESS_KEUANGAN = 'process_keuangan';
+    public const STATUS_EXECUTE_KEUANGAN = 'execute_keuangan';
+    public const STATUS_EXECUTED_BY_KEUANGAN = 'executed_by_keuangan';
+    public const STATUS_EXECUTED_AT_KEUANGAN = 'executed_at_keuangan';
+    public const STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN = 'pengajuan_dikirim_ke_pengadaan';
     public const STATUS_PENGAJUAN_DIKIRIM_KE_ADMIN = 'pengajuan_dikirim_ke_admin';
     public const STATUS_PROCESSING = 'processing';
     public const STATUS_READY_PICKUP = 'ready_pickup';
@@ -59,7 +70,7 @@ class Pengajuanoprasional extends Model
     public const STATUS_CANCELLED = 'cancelled';
 
     public const REJECTED_BY_ADMIN = 'admin';
-    public const REJECTED_BY_SUPERADMIN = 'super_admin';
+    public const REJECTED_BY_SUPERADMIN = 'superadmin';
 
     public function user()
     {
@@ -106,105 +117,47 @@ class Pengajuanoprasional extends Model
         $this->update(['status_history' => $history]);
     }
 
-    private function generateNomorPengajuan(): string
+    public function generateNomorPengajuan(): string
     {
-        $maxAttempts = 10;
-        $attempt = 0;
+        return DB::transaction(function () {
+            $prefix = 'PO-';
+            $date = Carbon::now()->format('Ymd');
+            $lockKey = "pengajuan_nomor_lock_{$date}";
 
-        while ($attempt < $maxAttempts) {
-            try {
-                return DB::transaction(function () {
-                    $prefix = 'PO-';
-                    $date = Carbon::now()->format('Ymd');
+            // Gunakan advisory lock untuk mencegah race condition
+            DB::selectOne("SELECT pg_advisory_xact_lock(hashtext(?))", [$lockKey]);
 
-                    // Buat lock key berdasarkan tanggal untuk mencegah race condition
-                    $lockKey = "pengajuan_nomor_lock_{$date}";
+            // Cari nomor terakhir
+            $lastRecord = self::where('nomor_pengajuan', 'like', $prefix . $date . '-%')
+                ->orderByRaw("CAST(SUBSTRING(nomor_pengajuan FROM '-(\\d+)$') AS INTEGER) DESC")
+                ->first();
 
-                    // Gunakan advisory lock PostgreSQL untuk mencegah race condition
-                    DB::selectOne("SELECT pg_advisory_xact_lock(hashtext(?))", [$lockKey]);
+            if ($lastRecord) {
+                preg_match('/(\d+)$/', $lastRecord->nomor_pengajuan, $matches);
+                $lastSequence = isset($matches[1]) ? (int) $matches[1] : 0;
+                $sequence = str_pad($lastSequence + 1, 4, '0', STR_PAD_LEFT);
+            } else {
+                $sequence = '0001';
+            }
 
-                    // Cari nomor terakhir dengan pattern yang lebih spesifik
-                    $lastRecord = self::where('nomor_pengajuan', 'like', $prefix . $date . '-%')
-                        ->orderByRaw("CAST(SUBSTRING(nomor_pengajuan FROM '-(\\d+)$') AS INTEGER) DESC")
-                        ->first();
+            $nomorPengajuan = $prefix . $date . '-' . $sequence;
 
-                    if ($lastRecord) {
-                        // Extract sequence number dari nomor terakhir
-                        preg_match('/(\d+)$/', $lastRecord->nomor_pengajuan, $matches);
-                        $lastSequence = isset($matches[1]) ? (int) $matches[1] : 0;
-                        $sequence = str_pad($lastSequence + 1, 4, '0', STR_PAD_LEFT);
-                    } else {
-                        $sequence = '0001';
-                    }
-
-                    $nomorPengajuan = $prefix . $date . '-' . $sequence;
-
-                    // Double check apakah nomor sudah ada (safety check)
-                    if (self::where('nomor_pengajuan', $nomorPengajuan)->exists()) {
-                        throw new \Exception("Nomor pengajuan {$nomorPengajuan} sudah ada");
-                    }
-
-                    return $nomorPengajuan;
-                });
-            } catch (\Exception $e) {
-                $attempt++;
-
-                // Jika masih ada kesempatan, tunggu sebentar dan coba lagi
-                if ($attempt < $maxAttempts) {
-                    // Random delay untuk menghindari thundering herd
-                    usleep(mt_rand(10000, 100000)); // 10-100ms
-                    continue;
-                }
-
-                // Jika sudah maksimal attempt, gunakan fallback dengan UUID
-                Log::warning("Gagal generate nomor pengajuan setelah {$maxAttempts} percobaan: " . $e->getMessage());
+            // Pastikan nomor belum ada
+            if (self::where('nomor_pengajuan', $nomorPengajuan)->exists()) {
                 return $this->generateFallbackNomorPengajuan();
             }
-        }
 
-        // Fallback jika semua percobaan gagal
-        return $this->generateFallbackNomorPengajuan();
+            return $nomorPengajuan;
+        });
     }
 
-    /**
-     * Generate nomor pengajuan fallback menggunakan UUID
-     */
-    private function generateFallbackNomorPengajuan(): string
+    public function generateFallbackNomorPengajuan(): string
     {
         $prefix = 'PO-';
         $date = Carbon::now()->format('Ymd');
         $uuid = strtoupper(substr(str_replace('-', '', Str::uuid()), 0, 8));
 
         return $prefix . $date . '-' . $uuid;
-    }
-
-    /**
-     * Alternative method: Generate nomor pengajuan dengan database sequence
-     * Lebih robust tapi butuh perubahan database
-     */
-    public static function generateNomorPengajuanWithSequence(): string
-    {
-        $prefix = 'PO-';
-        $date = Carbon::now()->format('Ymd');
-
-        // Buat sequence name berdasarkan tanggal
-        $sequenceName = "pengajuan_seq_{$date}";
-
-        try {
-            // Coba buat sequence jika belum ada
-            DB::statement("CREATE SEQUENCE IF NOT EXISTS {$sequenceName} START 1");
-
-            // Ambil next value dari sequence
-            $nextVal = DB::selectOne("SELECT nextval('{$sequenceName}') as next_val")->next_val;
-            $sequence = str_pad($nextVal, 4, '0', STR_PAD_LEFT);
-
-            return $prefix . $date . '-' . $sequence;
-        } catch (\Exception $e) {
-            Log::error("Error generating nomor pengajuan dengan sequence: " . $e->getMessage());
-
-            // Fallback ke method lama
-            return (new self)->generateNomorPengajuan();
-        }
     }
 
     public function getStatusLabelAttribute(): string
@@ -215,6 +168,17 @@ class Pengajuanoprasional extends Model
             self::STATUS_DIAJUKAN_KE_SUPERADMIN => 'Diajukan ke Pengadaan',
             self::STATUS_SUPERADMIN_APPROVED => 'Disetujui Pengadaan',
             self::STATUS_SUPERADMIN_REJECTED => 'Ditolak Pengadaan',
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'Dikirim ke Direksi',
+            self::STATUS_APPROVED_BY_DIREKSI => 'Disetujui Direksi',
+            self::STATUS_APPROVED_AT_DIREKSI => 'Disetujui pada Direksi',
+            self::STATUS_REJECT_DIREKSI => 'Ditolak Direksi',
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Dikirim ke Keuangan',
+            self::STATUS_PENDING_KEUANGAN => 'Menunggu Keuangan',
+            self::STATUS_PROCESS_KEUANGAN => 'Diproses Keuangan',
+            self::STATUS_EXECUTE_KEUANGAN => 'Eksekusi Keuangan',
+            self::STATUS_EXECUTED_BY_KEUANGAN => 'Dieksekusi Keuangan',
+            self::STATUS_EXECUTED_AT_KEUANGAN => 'Dieksekusi pada Keuangan',
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN => 'Dikirim ke Pengadaan',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_ADMIN => 'Dikirim ke Admin',
             self::STATUS_PROCESSING => 'Sedang Diproses',
             self::STATUS_READY_PICKUP => 'Siap Diambil',
@@ -232,6 +196,17 @@ class Pengajuanoprasional extends Model
             self::STATUS_DIAJUKAN_KE_SUPERADMIN => 'warning',
             self::STATUS_SUPERADMIN_APPROVED => 'success',
             self::STATUS_SUPERADMIN_REJECTED => 'danger',
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'info',
+            self::STATUS_APPROVED_BY_DIREKSI => 'success',
+            self::STATUS_APPROVED_AT_DIREKSI => 'success',
+            self::STATUS_REJECT_DIREKSI => 'danger',
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'info',
+            self::STATUS_PENDING_KEUANGAN => 'warning',
+            self::STATUS_PROCESS_KEUANGAN => 'warning',
+            self::STATUS_EXECUTE_KEUANGAN => 'primary',
+            self::STATUS_EXECUTED_BY_KEUANGAN => 'success',
+            self::STATUS_EXECUTED_AT_KEUANGAN => 'success',
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN => 'info',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_ADMIN => 'info',
             self::STATUS_PROCESSING => 'warning',
             self::STATUS_READY_PICKUP => 'primary',
@@ -280,6 +255,12 @@ class Pengajuanoprasional extends Model
             self::STATUS_PENGAJUAN_TERKIRIM,
             self::STATUS_PENDING_ADMIN_REVIEW,
             self::STATUS_DIAJUKAN_KE_SUPERADMIN,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN,
+            self::STATUS_PENDING_KEUANGAN,
+            self::STATUS_PROCESS_KEUANGAN,
+            self::STATUS_EXECUTE_KEUANGAN,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN,
             self::STATUS_PENGAJUAN_DIKIRIM_KE_ADMIN,
         ]);
     }
@@ -288,6 +269,10 @@ class Pengajuanoprasional extends Model
     {
         return $query->whereIn('status', [
             self::STATUS_SUPERADMIN_APPROVED,
+            self::STATUS_APPROVED_BY_DIREKSI,
+            self::STATUS_APPROVED_AT_DIREKSI,
+            self::STATUS_EXECUTED_BY_KEUANGAN,
+            self::STATUS_EXECUTED_AT_KEUANGAN,
             self::STATUS_PROCESSING,
             self::STATUS_READY_PICKUP,
             self::STATUS_COMPLETED,
@@ -298,6 +283,8 @@ class Pengajuanoprasional extends Model
     {
         return $query->whereIn('status', [
             self::STATUS_SUPERADMIN_REJECTED,
+            self::STATUS_REJECT_DIREKSI,
+            self::STATUS_CANCELLED,
         ]);
     }
 
@@ -315,6 +302,7 @@ class Pengajuanoprasional extends Model
             self::STATUS_PENGAJUAN_TERKIRIM,
             self::STATUS_PENDING_ADMIN_REVIEW,
             self::STATUS_DIAJUKAN_KE_SUPERADMIN,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI,
         ]);
     }
 
@@ -330,10 +318,36 @@ class Pengajuanoprasional extends Model
                 self::STATUS_CANCELLED => 'Tolak',
             ],
             self::STATUS_DIAJUKAN_KE_SUPERADMIN => [
-                self::STATUS_SUPERADMIN_APPROVED => 'Setujui (Pengadaan)',
-                self::STATUS_CANCELLED => 'Tolak (Pengadaan)',
+                self::STATUS_SUPERADMIN_APPROVED => 'Setujui Pengadaan',
+                self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'Kirim ke Direksi',
+                self::STATUS_SUPERADMIN_REJECTED => 'Tolak Pengadaan',
             ],
             self::STATUS_SUPERADMIN_APPROVED => [
+                self::STATUS_PROCESSING => 'Mulai Proses',
+            ],
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => [
+                self::STATUS_APPROVED_BY_DIREKSI => 'Setujui Direksi',
+                self::STATUS_REJECT_DIREKSI => 'Tolak Direksi',
+            ],
+            self::STATUS_APPROVED_BY_DIREKSI => [
+                self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Kirim ke Keuangan',
+            ],
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => [
+                self::STATUS_PENDING_KEUANGAN => 'Pending Keuangan',
+            ],
+            self::STATUS_PENDING_KEUANGAN => [
+                self::STATUS_PROCESS_KEUANGAN => 'Proses Keuangan',
+            ],
+            self::STATUS_PROCESS_KEUANGAN => [
+                self::STATUS_EXECUTE_KEUANGAN => 'Eksekusi Keuangan',
+            ],
+            self::STATUS_EXECUTE_KEUANGAN => [
+                self::STATUS_EXECUTED_BY_KEUANGAN => 'Dieksekusi Keuangan',
+            ],
+            self::STATUS_EXECUTED_BY_KEUANGAN => [
+                self::STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN => 'Kirim ke Pengadaan',
+            ],
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN => [
                 self::STATUS_PROCESSING => 'Mulai Proses',
             ],
             self::STATUS_PROCESSING => [
@@ -349,14 +363,24 @@ class Pengajuanoprasional extends Model
     public function getProgressPercentage(): int
     {
         return match ($this->status) {
-            self::STATUS_PENGAJUAN_TERKIRIM => 10,
-            self::STATUS_PENDING_ADMIN_REVIEW => 15,
-            self::STATUS_DIAJUKAN_KE_SUPERADMIN => 30,
-            self::STATUS_SUPERADMIN_APPROVED => 50,
-            self::STATUS_PROCESSING => 75,
+            self::STATUS_PENGAJUAN_TERKIRIM => 5,
+            self::STATUS_PENDING_ADMIN_REVIEW => 10,
+            self::STATUS_DIAJUKAN_KE_SUPERADMIN => 15,
+            self::STATUS_SUPERADMIN_APPROVED => 20,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 25,
+            self::STATUS_APPROVED_BY_DIREKSI => 35,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 40,
+            self::STATUS_PENDING_KEUANGAN => 45,
+            self::STATUS_PROCESS_KEUANGAN => 50,
+            self::STATUS_EXECUTE_KEUANGAN => 55,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_PENGADAAN => 65,
+            self::STATUS_PENGAJUAN_DIKIRIM_KE_ADMIN => 70,
+            self::STATUS_PROCESSING => 80,
             self::STATUS_READY_PICKUP => 95,
             self::STATUS_COMPLETED => 100,
-            self::STATUS_SUPERADMIN_REJECTED, self::STATUS_CANCELLED => 0,
+            self::STATUS_SUPERADMIN_REJECTED => 15,
+            self::STATUS_REJECT_DIREKSI => 25,
+            self::STATUS_CANCELLED => 0,
             default => 0,
         };
     }

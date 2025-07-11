@@ -52,7 +52,7 @@ class SoftwarefolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 21;
+        return 25;
     }
 
     public static function form(Form $form): Form

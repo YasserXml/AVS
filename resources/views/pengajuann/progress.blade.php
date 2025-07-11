@@ -3,43 +3,91 @@
     $color = $getState()['color'] ?? 'gray';
     $status = $getState()['status'] ?? '';
 
-    // Definisi semua status dalam urutan workflow
+    // Definisi semua status dalam urutan workflow yang benar
     $statusFlow = [
         'pengajuan_terkirim' => [
             'label' => 'Pengajuan Terkirim',
             'icon' => '📤',
             'description' => 'Pengajuan berhasil dikirim',
-            'percentage' => 10,
+            'percentage' => 5,
         ],
         'pending_admin_review' => [
-            'label' => 'Dalam Review Admin',
+            'label' => 'Review Admin',
             'icon' => '👀',
-            'description' => 'Sedang direview admin',
-            'percentage' => 20,
+            'description' => 'Sedang direview oleh admin',
+            'percentage' => 10,
         ],
         'diajukan_ke_superadmin' => [
-            'label' => 'Review Pengadaan',
+            'label' => 'Dikirim ke Pengadaan',
             'icon' => '📋',
-            'description' => 'Direview tim pengadaan',
-            'percentage' => 30,
+            'description' => 'Dikirim ke tim pengadaan',
+            'percentage' => 15,
         ],
         'superadmin_approved' => [
             'label' => 'Disetujui Pengadaan',
             'icon' => '✅',
-            'description' => 'Disetujui tim pengadaan',
+            'description' => 'Disetujui oleh tim pengadaan',
+            'percentage' => 20,
+        ],
+        'pengajuan_dikirim_ke_direksi' => [
+            'label' => 'Dikirim ke Direksi',
+            'icon' => '🏢',
+            'description' => 'Dikirim ke direksi',
+            'percentage' => 25,
+        ],
+        'approved_by_direksi' => [
+            'label' => 'Disetujui Direksi',
+            'icon' => '👔',
+            'description' => 'Disetujui oleh direksi',
+            'percentage' => 35,
+        ],
+        'pengajuan_dikirim_ke_keuangan' => [
+            'label' => 'Dikirim ke Keuangan',
+            'icon' => '💰',
+            'description' => 'Dikirim ke bagian keuangan',
+            'percentage' => 40,
+        ],
+        'pending_keuangan' => [
+            'label' => 'Review Keuangan',
+            'icon' => '🔍',
+            'description' => 'Sedang direview keuangan',
+            'percentage' => 45,
+        ],
+        'process_keuangan' => [
+            'label' => 'Proses Keuangan',
+            'icon' => '⚙️',
+            'description' => 'Sedang diproses keuangan',
             'percentage' => 50,
+        ],
+        'execute_keuangan' => [
+            'label' => 'Selesai Proses Keuangan',
+            'icon' => '💸',
+            'description' => 'Proses keuangan selesai',
+            'percentage' => 55,
+        ],
+        'pengajuan_dikirim_ke_pengadaan' => [
+            'label' => 'Dikirim ke Pengadaan',
+            'icon' => '🛒',
+            'description' => 'Dikirim ke bagian pengadaan',
+            'percentage' => 65,
+        ],
+        'pengajuan_dikirim_ke_admin' => [
+            'label' => 'Dikirim ke Admin',
+            'icon' => '👤',
+            'description' => 'Dikirim kembali ke admin',
+            'percentage' => 70,
         ],
         'processing' => [
             'label' => 'Sedang Diproses',
             'icon' => '⚙️',
             'description' => 'Dalam tahap pengerjaan',
-            'percentage' => 60,
+            'percentage' => 80,
         ],
         'ready_pickup' => [
             'label' => 'Siap Diambil',
             'icon' => '📦',
             'description' => 'Siap untuk diambil',
-            'percentage' => 80,
+            'percentage' => 95,
         ],
         'completed' => [
             'label' => 'Selesai',
@@ -50,7 +98,7 @@
     ];
 
     // Status yang ditolak atau dibatalkan
-    $rejectedStatuses = ['superadmin_rejected', 'cancelled'];
+    $rejectedStatuses = ['superadmin_rejected', 'reject_direksi', 'cancelled'];
     $isRejected = in_array($status, $rejectedStatuses);
 
     // Tentukan status yang sudah selesai
@@ -63,7 +111,9 @@
     // Untuk status yang ditolak, tampilkan persentase berdasarkan di mana penolakan terjadi
     if ($isRejected) {
         if ($status === 'superadmin_rejected') {
-            $currentPercentage = 30; // Ditolak di tahap review pengadaan
+            $currentPercentage = 15; // Ditolak di tahap review pengadaan
+        } elseif ($status === 'reject_direksi') {
+            $currentPercentage = 25; // Ditolak di tahap direksi
         } else {
             $currentPercentage = 0; // Cancelled
         }
@@ -364,6 +414,8 @@
                 <div class="rejected-banner-text">
                     @if ($status === 'superadmin_rejected')
                         Pengajuan Ditolak oleh Tim Pengadaan
+                    @elseif ($status === 'reject_direksi')
+                        Pengajuan Ditolak oleh Direksi
                     @else
                         Pengajuan Dibatalkan
                     @endif
@@ -382,7 +434,7 @@
                 @php
                     $itemIndex = array_search($statusKey, array_keys($statusFlow));
                     
-                    // Logika baru: jika status completed, semua step dianggap completed
+                    // Logika: jika status completed, semua step dianggap completed
                     $stepCompleted = $isCompleted || $itemIndex < $currentStatusIndex;
                     $stepActive = !$isCompleted && $statusKey === $status;
                     $stepPending = !$isCompleted && $itemIndex > $currentStatusIndex;
@@ -432,6 +484,8 @@
                     <div class="step-label rejected">
                         @if ($status === 'superadmin_rejected')
                             Ditolak oleh Tim Pengadaan
+                        @elseif ($status === 'reject_direksi')
+                            Ditolak oleh Direksi
                         @else
                             Pengajuan Dibatalkan
                         @endif

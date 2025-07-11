@@ -52,7 +52,7 @@ class ElektrofolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 23;
+        return 21;
     }
 
     public static function form(Form $form): Form

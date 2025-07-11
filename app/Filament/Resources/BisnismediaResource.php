@@ -37,7 +37,7 @@ class BisnismediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 8;
+        return 20;
     }
 
     public static function getUrlFromFolderBisnis(Bisnisfolder $folder, string $name = 'index'): string

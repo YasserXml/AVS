@@ -37,7 +37,7 @@ class AccountingmediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 8;
+        return 18;
     }
 
     public static function getUrlFromFolderAkunting(Accountingfolder $folder, string $name = 'index'): string

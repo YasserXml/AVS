@@ -38,7 +38,7 @@ class MekanikmediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 28;
+        return 32;
     }
 
     public static function getUrlFromFolderMekanik(Mekanikfolder $folder, string $name = 'index'): string

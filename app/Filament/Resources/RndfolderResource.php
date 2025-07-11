@@ -52,7 +52,7 @@ class RndfolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 17;
+        return 23;
     }
 
     public static function form(Form $form): Form

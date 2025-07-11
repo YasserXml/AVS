@@ -52,7 +52,7 @@ class SekretariatfolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 7;
+        return 9;
     }
 
     public static function form(Form $form): Form

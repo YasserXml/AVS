@@ -37,7 +37,7 @@ class PmomediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 20;
+        return 28;
     }
 
     public static function getUrlFromFolderPmo(Pmofolder $folder, string $name = 'index'): string

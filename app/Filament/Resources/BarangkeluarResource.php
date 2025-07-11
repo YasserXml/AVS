@@ -344,15 +344,6 @@ class BarangkeluarResource extends Resource
                     ->description('Khusus untuk status project')
                     ->icon('heroicon-o-folder'),
 
-                Tables\Columns\TextColumn::make('pengajuan.user.name')
-                    ->label('Pemohon Pengajuan')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable()
-                    ->placeholder('Bukan dari pengajuan')
-                    ->description('Dari pengajuan yang disetujui')
-                    ->icon('heroicon-o-user-circle'),
-
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Diinput Oleh')
                     ->searchable()

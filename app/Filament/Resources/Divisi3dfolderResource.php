@@ -52,7 +52,7 @@ class Divisi3dfolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 25;
+        return 29;
     }
 
     public static function form(Form $form): Form

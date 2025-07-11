@@ -44,7 +44,7 @@ class Register extends FilamentRegister
                                     ->icon('heroicon-o-user-circle')
                                     ->collapsible(false)
                                     ->compact()
-                                    
+
                                     ->columns(2)
                                     ->schema([
                                         $this->getNameFormComponent(),
@@ -59,7 +59,7 @@ class Register extends FilamentRegister
                                     ->schema([
                                         $this->getDivisiFormComponent(),
                                     ]),
-                                
+
                                 Section::make('Keamanan')
                                     ->description('Buat kata sandi yang kuat untuk akun Anda.')
                                     ->icon('heroicon-o-shield-check')
@@ -83,18 +83,20 @@ class Register extends FilamentRegister
     {
         // Definisikan opsi divisi secara hardcoded
         $divisiOptions = [
-            'user_divisi_manager_hrd' => 'Manager HRD',
-            'user_divisi_hrd_ga' => 'HRD & GA',
-            'user_divisi_keuangan' => 'Keuangan',
-            'user_divisi_software' => 'Software',
-            'user_divisi_purchasing' => 'Purchasing',
-            'user_divisi_elektro' => 'Elektro',
-            'user_divisi_r&d' => 'R&D',
-            'user_divisi_3d' => '3D',
-            'user_divisi_mekanik' => 'Mekanik',
-            'user_divisi_pmo' => 'PMO', 
+            'user_sekretariat' => 'Sekretariat',
+            'user_hrd_ga' => 'HRD & GA',
+            'purchasing' => 'Purchasing',
+            'keuangan' => 'Keuangan',
+            'user_akuntansi' => 'Akuntansi',
+            'user_bisnis_marketing' => 'Bisnis & Marketing',
+            'user_system_engineer' => 'System Engineer',
+            'user_rnd' => 'RnD',
+            'user_game_programming' => 'Game Programming',
+            'user_pmo' => 'PMO',
+            'user_3d' => '3D',
+            'user_mekanik' => 'Mekanik',
         ];
-        
+
         return Select::make('divisi_role')
             ->label('Divisi')
             ->placeholder('Pilih Divisi Anda')
@@ -178,7 +180,7 @@ class Register extends FilamentRegister
                 ->body('Silakan coba lagi dalam beberapa saat.')
                 ->danger()
                 ->send();
-                
+
             return null;
         }
 
@@ -224,7 +226,7 @@ class Register extends FilamentRegister
     protected function getFormActions(): array
     {
         $actions = parent::getFormActions();
-        
+
         // Modifikasi tombol submit untuk tampilan yang lebih menarik
         if (isset($actions[0])) {
             $actions[0]->label('Buat Akun Sekarang')
@@ -235,12 +237,12 @@ class Register extends FilamentRegister
                     'class' => 'w-full md:w-auto',
                 ]);
         }
-        
+
         return $actions;
     }
 
-     public function getMaxWidth(): string
+    public function getMaxWidth(): string
     {
-        return 'xl'; 
+        return 'xl';
     }
 }

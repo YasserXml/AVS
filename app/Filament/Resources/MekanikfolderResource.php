@@ -52,7 +52,7 @@ class MekanikfolderResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 27;
+        return 31;
     }
 
     public static function form(Form $form): Form

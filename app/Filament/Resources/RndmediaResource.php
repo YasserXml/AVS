@@ -38,7 +38,7 @@ class RndmediaResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 18;
+        return 24;
     }
 
     public static function getUrlFromFolderRnd(Rndfolder $folder, string $name = 'index'): string
