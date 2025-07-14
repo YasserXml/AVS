@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Pengajuanoprasional;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -13,12 +14,14 @@ class PengajuanSentToAdminMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public $pengajuan;
+
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct(Pengajuanoprasional $pengajuan)
     {
-        //
+        $this->pengajuan = $pengajuan;
     }
 
     /**
@@ -27,7 +30,7 @@ class PengajuanSentToAdminMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pengajuan Sent To Admin Mail',
+            subject: 'Pengajuan Operasional Dikirim ke Admin ',
         );
     }
 
@@ -37,7 +40,12 @@ class PengajuanSentToAdminMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'pengajuann.oprasionalmail.sent-to-admin',
+            with: [
+                'pengajuan' => $this->pengajuan,
+                'pengaju' => $this->pengajuan->user,
+                'detailBarang' => $this->pengajuan->detail_barang,
+            ]
         );
     }
 

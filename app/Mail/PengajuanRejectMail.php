@@ -50,7 +50,6 @@ class PengajuanRejectMail extends Mailable
                 'tanggalPengajuan' => $this->pengajuan->tanggal_pengajuan->format('d F Y'),
                 'tanggalDitolak' => $this->pengajuan->rejected_at ? $this->pengajuan->rejected_at->format('d F Y H:i') : now()->format('d F Y H:i'),
                 'ditolakOleh' => $this->pengajuan->rejectedBy->name ?? 'Sistem',
-                'peranPenolak' => $this->pengajuan->rejected_by_role === 'admin' ? 'Administrator' : 'Tim Pengadaan',
             ]
         );
     }

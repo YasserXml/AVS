@@ -15,13 +15,8 @@ class PengajuanNotificationService
         $pengaju = $record->user;
         $currentUserId = filament()->auth()->id();
 
-        $adminUsers = User::whereHas(
-            'roles',
-            fn($query) => $query->whereIn('name', ['super_admin', 'admin', 'direktur_keuangan', 'keuangan', 'purchasing'])
-        )
-            ->where('id', '!=', $pengaju->id)
-            ->get();
-
+         $adminUsers = User::role(['super_admin', 'admin'])->get();
+         
         $notificationConfigs = self::getNotificationConfigs($status, $record, $additionalData);
 
         if ($pengaju && $pengaju->id != $currentUserId) {
@@ -225,7 +220,7 @@ class PengajuanNotificationService
                         'title' => 'Proses Keuangan Selesai',
                         'icon' => 'heroicon-o-check-circle',
                         'iconColor' => 'success',
-                        'body' => "✅ Proses keuangan pengajuan Anda telah selesai." .
+                        'body' => "✅ Proses pengajuan di keuangan Anda telah selesai." .
                             ($additionalData ? " Catatan: {$additionalData}" : '')
                     ],
                     'admin' => [

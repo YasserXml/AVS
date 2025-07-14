@@ -39,37 +39,37 @@
             'label' => 'Disetujui Direksi',
             'icon' => '👔',
             'description' => 'Disetujui oleh direksi',
-            'percentage' => 35,
+            'percentage' => 30, //Tingkatkan persentase
         ],
         'pengajuan_dikirim_ke_keuangan' => [
             'label' => 'Dikirim ke Keuangan',
             'icon' => '💰',
             'description' => 'Dikirim ke bagian keuangan',
-            'percentage' => 40,
+            'percentage' => 35, //Sesuaikan persentase
         ],
         'pending_keuangan' => [
             'label' => 'Review Keuangan',
             'icon' => '🔍',
             'description' => 'Sedang direview keuangan',
-            'percentage' => 45,
+            'percentage' => 40, //Sesuaikan persentase
         ],
         'process_keuangan' => [
             'label' => 'Proses Keuangan',
             'icon' => '⚙️',
             'description' => 'Sedang diproses keuangan',
-            'percentage' => 50,
+            'percentage' => 45, //Sesuaikan persentase
         ],
         'execute_keuangan' => [
             'label' => 'Selesai Proses Keuangan',
             'icon' => '💸',
             'description' => 'Proses keuangan selesai',
-            'percentage' => 55,
+            'percentage' => 50, //Sesuaikan persentase
         ],
         'pengajuan_dikirim_ke_pengadaan' => [
             'label' => 'Dikirim ke Pengadaan',
             'icon' => '🛒',
             'description' => 'Dikirim ke bagian pengadaan',
-            'percentage' => 65,
+            'percentage' => 60, //Sesuaikan persentase
         ],
         'pengajuan_dikirim_ke_admin' => [
             'label' => 'Dikirim ke Admin',
@@ -113,7 +113,7 @@
         if ($status === 'superadmin_rejected') {
             $currentPercentage = 15; // Ditolak di tahap review pengadaan
         } elseif ($status === 'reject_direksi') {
-            $currentPercentage = 25; // Ditolak di tahap direksi
+            $currentPercentage = 30; // ✅ PERBAIKAN: Ditolak di tahap direksi (sesuai dengan approved_by_direksi)
         } else {
             $currentPercentage = 0; // Cancelled
         }

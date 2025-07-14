@@ -31,7 +31,6 @@ class Pengajuanoprasional extends Model
         'rejected_by',
         'rejected_at',
         'reject_reason',
-        'rejected_by_role',
         'received_by',
         'received_by_name',
         'status_history',
@@ -222,7 +221,7 @@ class Pengajuanoprasional extends Model
             return 0;
         }
 
-        return collect($this->detail_barang)->sum('jumlah_barang_diajukan');
+        return collect($this->detail_barang)->sum('jumlah_barang_diajukan'); 
     }
 
     public function getTotalJenisBarangAttribute(): int
@@ -233,7 +232,7 @@ class Pengajuanoprasional extends Model
 
         return count($this->detail_barang);
     }
-
+ 
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);

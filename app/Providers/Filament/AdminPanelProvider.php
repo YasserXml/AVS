@@ -56,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->passwordResetRouteSlug('reset-password')
             ->emailVerificationRouteSlug('verifikasi-email')
             ->databaseNotifications()
-            ->databaseNotificationsPolling('30s')
+            ->databaseNotificationsPolling('10s')
             ->brandName('AVSimulator')
             ->brandLogo(fn() => view('logo-change.logo'))
             ->favicon(asset('images/Logo(1).webp'))

@@ -14,8 +14,11 @@ use Filament\Forms\Components\Card;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section as ComponentsSection;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\Card as ComponentsCard;
+use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Split;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
@@ -57,34 +60,47 @@ class PengajuanoprasionalResource extends Resource
 
     protected static ?string $modelLabel = 'Pengajuan Oprasional';
 
-    public static function downloadFile($fileId, $fileName)
-    {
-        $record = static::getModel()::findOrFail($fileId);
-
-        if ($record->uploaded_files && in_array($fileName, $record->uploaded_files)) {
-            $filePath = storage_path('app/public/pengajuan-operasional/' . $fileName);
-
-            if (file_exists($filePath)) {
-                return response()->download($filePath, $fileName);
-            }
-        }
-
-        abort(404, 'File tidak ditemukan');
-    }
-
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
-
-        // Jika user adalah super admin, tampilkan data yang dikirim ke super admin
-        if (filament()->auth()->user()->hasRole('purchasing')) {
-            return $query->where('status', 'diajukan_ke_superadmin')
-                ->orWhere('status', 'superadmin_approved')
-                ->orWhere('status', 'superadmin_rejected')
-                ->orWhere('status', 'cancelled');  // tambahkan ini
+        $user = filament()->auth()->user();
+        if ($user->hasRole('purchasing')) {
+            return $query->whereIn('status', [
+                'diajukan_ke_superadmin',
+                'superadmin_approved',
+                'superadmin_rejected',
+                'pengajuan_dikirim_ke_pengadaan',
+                'cancelled'
+            ]);
         }
-
-        return $query;
+        if ($user->hasRole('admin')) {
+            return $query->whereIn('status', [
+                'pengajuan_terkirim',
+                'pending_admin_review',
+                'pengajuan_dikirim_ke_admin',
+                'processing',
+                'ready_pickup',
+                'cancelled',
+                'completed',
+            ]);
+        }
+        if ($user->hasRole('direktur_keuangan')) {
+            return $query->whereIn('status', [
+                'pengajuan_dikirim_ke_direksi',
+                'approved_by_direksi',
+                'cancelled',
+            ]);
+        }
+        if ($user->hasRole('keuangan')) {
+            return $query->whereIn('status', [
+                'pengajuan_dikirim_ke_keuangan',
+                'pending_keuangan',
+                'process_keuangan',
+                'execute_keuangan',
+                'cancelled',
+            ]);
+        }
+        return $query->where('user_id', $user->id);
     }
 
     public static function form(Form $form): Form
@@ -380,6 +396,154 @@ class PengajuanoprasionalResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->paginated([15, 25, 50, 100]);
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                // Section Informasi Pengajuan
+                Section::make('Informasi Pengajuan')
+                    ->description('Informasi dasar pengajuan barang')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->schema([
+                        ComponentsCard::make()
+                            ->schema([
+                                Split::make([
+                                    Grid::make(['sm' => 1, 'md' => 2])
+                                        ->schema([
+                                            TextEntry::make('tanggal_pengajuan')
+                                                ->label('Tanggal Pengajuan')
+                                                ->date('d F Y')
+                                                ->icon('heroicon-o-calendar')
+                                                ->color('primary')
+                                                ->weight('medium'),
+
+                                            TextEntry::make('tanggal_dibutuhkan')
+                                                ->label('Tanggal Dibutuhkan')
+                                                ->date('d F Y')
+                                                ->icon('heroicon-o-calendar')
+                                                ->color('warning')
+                                                ->weight('medium'),
+                                        ]),
+                                ])
+                            ])
+                    ]),
+
+                // Section Detail Barang
+                Section::make('Detail Barang yang Diajukan')
+                    ->description('Daftar barang yang diajukan')
+                    ->icon('heroicon-o-cube')
+                    ->schema([
+                        RepeatableEntry::make('detail_barang')
+                            ->label('Daftar Barang')
+                            ->schema([
+                                ComponentsCard::make()
+                                    ->schema([
+                                        Grid::make(['sm' => 1, 'md' => 2])
+                                            ->schema([
+                                                TextEntry::make('nama_barang')
+                                                    ->label('Nama Barang')
+                                                    ->icon('heroicon-o-tag')
+                                                    ->color('primary')
+                                                    ->weight('bold')
+                                                    ->size('lg'),
+
+                                                TextEntry::make('jumlah_barang_diajukan')
+                                                    ->label('Jumlah Yang Diajukan')
+                                                    ->icon('heroicon-o-shopping-cart')
+                                                    ->suffix(' Unit')
+                                                    ->color('success')
+                                                    ->weight('medium')
+                                                    ->numeric(),
+                                            ]),
+
+                                        TextEntry::make('keterangan_barang')
+                                            ->label('Detail/Spesifikasi Barang')
+                                            ->icon('heroicon-o-document-text')
+                                            ->columnSpanFull()
+                                            ->prose()
+                                            ->placeholder('Tidak ada detail spesifikasi')
+                                            ->color('gray'),
+                                    ])
+                            ])
+                            ->contained(false)
+                            ->grid(['sm' => 1])
+                    ]),
+
+                // Section File Pendukung
+                Section::make('File Pendukung')
+                    ->description('File pendukung yang dilampirkan')
+                    ->icon('heroicon-o-paper-clip')
+                    ->schema([
+                        ComponentsCard::make()
+                            ->schema([
+                                TextEntry::make('uploaded_files')
+                                    ->label('File Pendukung')
+                                    ->listWithLineBreaks()
+                                    ->bulleted()
+                                    ->formatStateUsing(function ($state) {
+                                        if (!$state || empty($state)) {
+                                            return 'Tidak ada file pendukung';
+                                        }
+
+                                        $files = is_array($state) ? $state : json_decode($state, true);
+                                        if (!$files) {
+                                            return 'Tidak ada file pendukung';
+                                        }
+
+                                        $fileList = [];
+                                        foreach ($files as $file) {
+                                            $filename = basename($file);
+                                            $fileUrl = asset('storage/' . $file);
+                                            $fileList[] = '<a href="' . $fileUrl . '" target="_blank" class="text-primary-600 hover:text-primary-500 underline decoration-2 underline-offset-2 font-medium inline-flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            ' . $filename . '
+                                        </a>';
+                                        }
+
+                                        return implode('<br>', $fileList);
+                                    })
+                                    ->html()
+                                    ->placeholder('Tidak ada file pendukung')
+                                    ->icon('heroicon-o-document-arrow-down'),
+                            ])
+                    ]),
+
+                // Section Informasi Tambahan (jika diperlukan)
+                Section::make('Informasi Sistem')
+                    ->description('Informasi sistem pengajuan')
+                    ->icon('heroicon-o-information-circle')
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        ComponentsCard::make()
+                            ->schema([
+                                Grid::make(['sm' => 1, 'md' => 3])
+                                    ->schema([
+                                        TextEntry::make('user.name')
+                                            ->label('Diajukan Oleh')
+                                            ->icon('heroicon-o-user')
+                                            ->color('primary')
+                                            ->weight('medium'),
+
+                                        TextEntry::make('created_at')
+                                            ->label('Dibuat Pada')
+                                            ->dateTime('d F Y, H:i')
+                                            ->icon('heroicon-o-clock')
+                                            ->color('gray'),
+
+                                        TextEntry::make('updated_at')
+                                            ->label('Diperbarui Pada')
+                                            ->dateTime('d F Y, H:i')
+                                            ->icon('heroicon-o-arrow-path')
+                                            ->color('gray'),
+                                    ])
+                            ])
+                    ]),
+            ]);
     }
 
     public static function getRelations(): array

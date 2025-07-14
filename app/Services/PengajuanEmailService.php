@@ -36,9 +36,6 @@ class PengajuanEmailService
                 case 'rejected_direksi':
                     Mail::to($pengaju->email)->queue(new PengajuanRejectMail($record, 'Direksi', $additionalData));
                     break;
-                case 'execute_keuangan':
-                    Mail::to($pengaju->email)->queue(new PengajuanKeuanganExecuteMail($record, $additionalData));
-                    break;
                 case 'ready_pickup':
                     Mail::to($pengaju->email)->queue(new PengajuanReadyPickupMail($record));
                     break;

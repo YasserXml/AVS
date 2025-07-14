@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Pengajuanoprasional;
 use App\Models\Pengembalian;
 use App\Models\User;
+use App\Observers\PengajuanoprasionalObserver;
 use App\Observers\PengembalianObserver;
 use App\Observers\UserObserver;
 use Filament\Facades\Filament;

@@ -1,5 +1,5 @@
 @php
-    // Helper methods for status display
+    // Helper methods untuk menampilkan status
     if (!function_exists('getStatusIcon')) {
         function getStatusIcon($status) {
             $icons = [
@@ -50,7 +50,12 @@
             return $colors[$status] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
         }
     }
+
+    // Mengatur timezone ke Asia/Jakarta dan locale Indonesia
+    \Carbon\Carbon::setLocale('id');
+    date_default_timezone_set('Asia/Jakarta');
 @endphp
+
 <div class="space-y-4">
     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
         <div class="flex items-center space-x-2 mb-3">
@@ -93,7 +98,7 @@
                                 @endif
                             </div>
                             <time class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ \Carbon\Carbon::parse($item['created_at'])->format('d M Y, H:i') }}
+                                {{ \Carbon\Carbon::parse($item['created_at'])->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
                             </time>
                         </div>
 
@@ -112,7 +117,7 @@
                                 {{ $user ? $user->name : 'Pengguna tidak diketahui' }}
                             </span>
                             <span>•</span>
-                            <span>{{ \Carbon\Carbon::parse($item['created_at'])->diffForHumans() }}</span>
+                            <span>{{ \Carbon\Carbon::parse($item['created_at'])->setTimezone('Asia/Jakarta')->diffForHumans() }}</span>
                         </div>
                     </div>
                 </div>

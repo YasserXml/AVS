@@ -187,8 +187,9 @@ class UserResource extends Resource
                     ->placeholder('Tidak ada peran'),
 
                 IconColumn::make('email_verified_at')
-                    ->label('Email Verified')
+                    ->label('Email Terverifikasi')
                     ->boolean()
+                    ->alignCenter()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
@@ -203,8 +204,9 @@ class UserResource extends Resource
                     ->getStateUsing(fn(User $record): bool => $record->email_verified_at !== null),
 
                 IconColumn::make('admin_verified')
-                    ->label('Admin Verified')
+                    ->label('Diverifikasi Admin')
                     ->boolean()
+                    ->alignCenter()
                     ->trueIcon('heroicon-o-shield-check')
                     ->falseIcon('heroicon-o-shield-exclamation')
                     ->trueColor('success')

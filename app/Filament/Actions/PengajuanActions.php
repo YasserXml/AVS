@@ -158,7 +158,6 @@ class PengajuanActions
                     'rejected_by' => filament()->auth()->id(),
                     'rejected_at' => now(),
                     'reject_reason' => $data['alasan'],
-                    'rejected_by_role' => 'superadmin',
                 ]);
 
                 $record->addStatusHistory(
@@ -236,13 +235,14 @@ class PengajuanActions
             ->modalDescription('Apakah Anda yakin ingin menyetujui pengajuan ini?')
             ->action(function ($record, array $data) {
                 $record->update([
-                    'status' => 'acc_direksi',
+                    'status' => 'approved_by_direksi',
                     'approved_by_direksi' => filament()->auth()->id(),
                     'approved_at_direksi' => now(),
                 ]);
 
+                // ✅ PERBAIKAN: Gunakan status yang sama untuk history
                 $record->addStatusHistory(
-                    'acc_direksi',
+                    'approved_by_direksi',
                     filament()->auth()->id(),
                     $data['catatan'] ?? 'Pengajuan disetujui oleh direksi'
                 );
@@ -284,7 +284,6 @@ class PengajuanActions
                     'rejected_by' => filament()->auth()->id(),
                     'rejected_at' => now(),
                     'reject_reason' => $data['alasan'],
-                    'rejected_by_role' => 'direksi',
                 ]);
 
                 $record->addStatusHistory(
@@ -312,7 +311,7 @@ class PengajuanActions
             ->color('warning')
             ->visible(
                 fn($record) =>
-                $record->status === 'acc_direksi' &&
+                $record->status === 'approved_by_direksi' &&
                     filament()->auth()->user()->hasRole('direktur_keuangan')
             )
             ->requiresConfirmation()

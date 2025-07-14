@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Pengajuanoprasional;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -11,14 +12,16 @@ use Illuminate\Queue\SerializesModels;
 
 class PengajuanSentToKeuanganMail extends Mailable
 {
-    use Queueable, SerializesModels;
+     use Queueable, SerializesModels;
+
+    public $pengajuan;
 
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct(Pengajuanoprasional $pengajuan)
     {
-        //
+        $this->pengajuan = $pengajuan;
     }
 
     /**
@@ -27,25 +30,22 @@ class PengajuanSentToKeuanganMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pengajuan Sent To Keuangan Mail',
+            subject: 'Pengajuan Operasional Dikirim ke Keuangan - ' . $this->pengajuan->nomor_pengajuan,
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'pengajuann.oprasionalmail.sent-to-keuangan',
+            with: [
+                'pengajuan' => $this->pengajuan,
+                'user' => $this->pengajuan->user,
+                'detailBarang' => $this->pengajuan->detail_barang,
+            ]
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
     public function attachments(): array
     {
         return [];
