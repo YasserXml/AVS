@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\PengajuanProjectActions;
 use App\Filament\Resources\PengajuanprojectResource\Pages;
 use App\Filament\Resources\PengajuanprojectResource\RelationManagers;
 use App\Models\Nameproject;
 use App\Models\Pengajuanproject;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\Card;
 use Filament\Forms\Components\Hidden;
@@ -13,11 +15,16 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use ZipArchive;
 
 class PengajuanprojectResource extends Resource
 {
@@ -86,6 +93,7 @@ class PengajuanprojectResource extends Resource
                                             ->searchable()
                                             ->preload()
                                             ->live()
+                                            ->dehydrated(true)
                                             ->reactive()
                                             ->placeholder('Pilih project untuk pengajuan barang...')
                                             ->prefixIcon('heroicon-o-building-office')
@@ -165,7 +173,7 @@ class PengajuanprojectResource extends Resource
                                             ->live()
                                             ->directory('pengajuan-project/barang')
                                             ->preserveFilenames(true)
-                                            ->maxSize(5120) 
+                                            ->maxSize(5120)
                                             ->helperText('Upload file pendukung untuk barang ini seperti gambar, spesifikasi, atau dokumen lainnya (max 5MB per file)')
                                             ->columnSpanFull()
                                             ->disk('public')
@@ -198,7 +206,9 @@ class PengajuanprojectResource extends Resource
                                     ->modalSubmitActionLabel('Hapus')
                             )
                             ->columns(1)
-                            ->visible(fn(Get $get) => $get('project_id')),
+                            ->visible(fn(Get $get) => $get('project_id'))
+                            ->reactive()
+                            ->live(),
                     ]),
 
                 Section::make('File Pendukung Project')
@@ -234,19 +244,338 @@ class PengajuanprojectResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\Layout\Stack::make([
+                    Tables\Columns\Layout\Split::make([
+                        Tables\Columns\Layout\Stack::make([
+                            Tables\Columns\TextColumn::make('user.name')
+                                ->label('')
+                                ->formatStateUsing(fn($state) => "👤 Yang Mengajukan: {$state}")
+                                ->color('gray')
+                                ->weight(FontWeight::Medium)
+                        ])->space(1),
+
+                        Tables\Columns\Layout\Stack::make([
+                            Tables\Columns\TextColumn::make('tanggal_pengajuan')
+                                ->label('')
+                                ->formatStateUsing(fn($state) => "📅 Tanggal Pengajuan: " . Carbon::parse($state)->format('d M Y'))
+                                ->color('gray'),
+                        ])->space(1)->alignEnd(),
+                    ]),
+
+                    // Informasi Project
+                    Tables\Columns\Layout\Panel::make([
+                        Tables\Columns\Layout\Split::make([
+                            Tables\Columns\Layout\Stack::make([
+                                Tables\Columns\TextColumn::make('nameproject.nama_project')
+                                    ->label('')
+                                    ->formatStateUsing(fn($state) => "🏢 Project: {$state}")
+                                    ->color('primary')
+                                    ->weight(FontWeight::Medium),
+                            ])->space(1),
+
+                            Tables\Columns\Layout\Stack::make([
+                                Tables\Columns\TextColumn::make('nameproject.user.name')
+                                    ->label('')
+                                    ->formatStateUsing(fn($state) => $state ? "👨‍💼 Project Manager: {$state}" : "👨‍💼 Project Manager: Tidak ada PM")
+                                    ->color('info'),
+                            ])->space(1)->alignEnd(),
+                        ])->from('md'),
+                    ])->collapsible(),
+
+                    Tables\Columns\Layout\Panel::make([
+                        Tables\Columns\ViewColumn::make('progress')
+                            ->view('pengajuann.track')
+                            ->state(fn($record) => [
+                                'status' => $record->status,
+                                'percentage' => $record->getProgressPercentage(),
+                                'color' => 'blue'
+                            ]),
+                    ])->collapsible(),
+
+                    // Informasi Tanggal & Timeline
+                    Tables\Columns\Layout\Panel::make([
+                        Tables\Columns\Layout\Split::make([
+                            Tables\Columns\Layout\Stack::make([
+                                Tables\Columns\TextColumn::make('tanggal_dibutuhkan')
+                                    ->label('')
+                                    ->formatStateUsing(function ($state) {
+                                        if (!$state) return '⏰ Tanggal Dibutuhkan: Tidak ditentukan';
+                                        return '⏰ Tanggal Dibutuhkan: ' . Carbon::parse($state)->format('d M Y');
+                                    })
+                                    ->color('warning'),
+                            ])->space(1),
+                        ])->from('md'),
+                    ])->collapsible(),
+
+                    // Reject Reason (hanya jika ditolak)
+                    Tables\Columns\Layout\Panel::make([
+                        Tables\Columns\TextColumn::make('reject_reason')
+                            ->label('')
+                            ->formatStateUsing(fn($state) => $state ? "❌ Alasan Penolakan: {$state}" : "❌ Alasan Penolakan: Tidak ada alasan")
+                            ->color('danger')
+                            ->wrap()
+                            ->tooltip(fn($state) => $state),
+                    ])
+                        ->collapsible()
+                        ->collapsed()
+                        ->visible(fn($record) => $record->rejected_by !== null),
+
+                ])->space(3)
+                    ->extraAttributes([
+                        'class' => 'min-w-0 flex-1'
+                    ]),
             ])
+            ->contentGrid([
+                'md' => 1,
+                'lg' => 1,
+                'xl' => 2,
+                '2xl' => 2,
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->striped(false)
+            ->paginated([12, 24, 48, 96])
+            ->extremePaginationLinks()
+            ->poll('10s')
+            ->deferLoading()
+            ->persistSortInSession()
+            ->persistSearchInSession()
+            ->emptyStateActions([
+                Tables\Actions\CreateAction::make()
+                    ->label('Buat Pengajuan Project Pertama')
+                    ->icon('heroicon-m-plus'),
+            ])
+            ->emptyStateDescription('Belum ada pengajuan project yang dibuat.')
+            ->emptyStateHeading('Tidak ada pengajuan project')
+            ->emptyStateIcon('heroicon-o-document-plus')
             ->filters([
-                //
+                TrashedFilter::make()
+                    ->label('Termasuk yang Dihapus'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->label('Edit')
+                        ->color('warning')
+                        ->icon('heroicon-o-pencil-square'),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->label('Hapus')
+                        ->color('danger')
+                        ->icon('heroicon-o-trash')
+                        ->requiresConfirmation()
+                        ->modalHeading('Hapus Data Pengajuan Project')
+                        ->modalSubmitActionLabel('Ya, Hapus'),
+                ])
+                    ->color('gray')
+                    ->icon('heroicon-m-cog-6-tooth')
+                    ->label('Aksi')
+                    ->size('sm'),
+
+                PengajuanProjectActions::terimaDanReview(),
+                PengajuanProjectActions::setujuiDanKirimKePengadaan(),
+                PengajuanProjectActions::tolakPengajuan(),
+                PengajuanProjectActions::setujuiPengadaan(),
+                PengajuanProjectActions::tolakPengadaan(),
+                PengajuanProjectActions::kirimKeDireksi(),
+                PengajuanProjectActions::approveDireksi(),
+                PengajuanProjectActions::rejectDireksi(),
+                PengajuanProjectActions::kirimKeKeuangan(),
+                PengajuanProjectActions::reviewKeuangan(),
+                PengajuanProjectActions::prosesKeuangan(),
+                PengajuanProjectActions::executeKeuangan(),
+                PengajuanProjectActions::kirimKembaliKePengadaan(),
+                PengajuanProjectActions::kirimKeAdmin(),
+                PengajuanProjectActions::mulaiProsesPengadaan(),
+                PengajuanProjectActions::siapDiambil(),
+                PengajuanProjectActions::selesai(),
+
+                Tables\Actions\Action::make('detail')
+                    ->label('Lihat Detail Barang')
+                    ->color('info')
+                    ->icon('heroicon-o-eye')
+                    ->modalHeading('Detail Pengajuan Project')
+                    ->modalWidth('7xl')
+                    ->modalContent(function ($record) {
+                        return view('pengajuann.detail-project', [
+                            'record' => $record,
+                            'detailBarang' => $record->detail_barang ?? [],
+                            'uploadedFiles' => $record->uploaded_files ?? [],
+                        ]);
+                    })
+                    ->modalFooterActions([
+                        Tables\Actions\Action::make('download_all_files')
+                            ->label('Download Semua File')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->color('success')
+                            ->visible(function ($record) {
+                                // Cek apakah ada file di uploaded_files atau file_barang di detail_barang
+                                $hasUploadedFiles = !empty($record->uploaded_files);
+                                $hasBarangFiles = false;
+
+                                if (!empty($record->detail_barang)) {
+                                    foreach ($record->detail_barang as $barang) {
+                                        if (!empty($barang['file_barang'])) {
+                                            $hasBarangFiles = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                return $hasUploadedFiles || $hasBarangFiles;
+                            })
+                            ->action(function ($record) {
+                                // Kumpulkan semua file dari uploaded_files dan file_barang
+                                $allFiles = [];
+
+                                // Tambahkan file dari uploaded_files
+                                if (!empty($record->uploaded_files)) {
+                                    $allFiles = array_merge($allFiles, $record->uploaded_files);
+                                }
+
+                                // Tambahkan file dari detail_barang
+                                if (!empty($record->detail_barang)) {
+                                    foreach ($record->detail_barang as $barang) {
+                                        if (!empty($barang['file_barang'])) {
+                                            $allFiles = array_merge($allFiles, $barang['file_barang']);
+                                        }
+                                    }
+                                }
+
+                                if (empty($allFiles)) {
+                                    Notification::make()
+                                        ->title('Tidak Ada File')
+                                        ->body('Tidak ada file yang tersedia untuk diunduh.')
+                                        ->warning()
+                                        ->send();
+                                    return;
+                                }
+
+                                if (count($allFiles) === 1) {
+                                    $filePath = storage_path('app/public/' . $allFiles[0]);
+                                    if (file_exists($filePath)) {
+                                        return response()->download($filePath, basename($allFiles[0]));
+                                    }
+                                } else {
+                                    $zip = new ZipArchive();
+                                    $zipFileName = 'pengajuan_project_' . $record->id . '_files_' . date('Y-m-d_H-i-s') . '.zip';
+                                    $zipPath = storage_path('app/temp/' . $zipFileName);
+
+                                    if (!file_exists(storage_path('app/temp'))) {
+                                        mkdir(storage_path('app/temp'), 0755, true);
+                                    }
+
+                                    if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+                                        foreach ($allFiles as $file) {
+                                            $filePath = storage_path('app/public/' . $file);
+                                            if (file_exists($filePath)) {
+                                                $zip->addFile($filePath, basename($file));
+                                            }
+                                        }
+                                        $zip->close();
+
+                                        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+                                    }
+                                }
+
+                                Notification::make()
+                                    ->title('Gagal Mengunduh File')
+                                    ->body('File tidak ditemukan atau terjadi kesalahan.')
+                                    ->danger()
+                                    ->send();
+                            }),
+
+                        Tables\Actions\Action::make('download_project_files')
+                            ->label('Download File Project')
+                            ->icon('heroicon-o-folder-arrow-down')
+                            ->color('warning')
+                            ->visible(fn($record) => !empty($record->uploaded_files))
+                            ->action(function ($record) {
+                                $files = $record->uploaded_files;
+
+                                if (empty($files)) {
+                                    Notification::make()
+                                        ->title('Tidak Ada File Project')
+                                        ->body('Tidak ada file project yang tersedia untuk diunduh.')
+                                        ->warning()
+                                        ->send();
+                                    return;
+                                }
+
+                                if (count($files) === 1) {
+                                    $filePath = storage_path('app/public/' . $files[0]);
+                                    if (file_exists($filePath)) {
+                                        return response()->download($filePath, basename($files[0]));
+                                    }
+                                } else {
+                                    $zip = new ZipArchive();
+                                    $zipFileName = 'project_files_' . $record->id . '_' . date('Y-m-d_H-i-s') . '.zip';
+                                    $zipPath = storage_path('app/temp/' . $zipFileName);
+
+                                    if (!file_exists(storage_path('app/temp'))) {
+                                        mkdir(storage_path('app/temp'), 0755, true);
+                                    }
+
+                                    if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+                                        foreach ($files as $file) {
+                                            $filePath = storage_path('app/public/' . $file);
+                                            if (file_exists($filePath)) {
+                                                $zip->addFile($filePath, basename($file));
+                                            }
+                                        }
+                                        $zip->close();
+
+                                        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+                                    }
+                                }
+
+                                Notification::make()
+                                    ->title('Gagal Mengunduh File')
+                                    ->body('File tidak ditemukan atau terjadi kesalahan.')
+                                    ->danger()
+                                    ->send();
+                            }),
+                    ]),
+
+                // Action untuk lihat history
+                Tables\Actions\Action::make('lihat_history')
+                    ->label('Lihat Riwayat')
+                    ->icon('heroicon-o-clock')
+                    ->color('gray')
+                    ->modalHeading('Riwayat Status Pengajuan Project')
+                    ->modalWidth('2xl')
+                    ->modalContent(function ($record) {
+                        $history = $record->status_history ?? [];
+
+                        if (empty($history)) {
+                            return view('pengajuann.projecthistory.empty-history');
+                        }
+
+                        // Sort history by created_at descending (newest first)
+                        usort($history, function ($a, $b) {
+                            return strtotime($b['created_at']) - strtotime($a['created_at']);
+                        });
+
+                        return view('pengajuann.projecthistory.status-history', [
+                            'history' => $history,
+                            'record' => $record
+                        ]);
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->label('Hapus Terpilih'),
+                    Tables\Actions\ForceDeleteBulkAction::make()
+                        ->label('Hapus Permanen Terpilih')
+                        ->requiresConfirmation()
+                        ->modalHeading('Hapus Permanen Pengajuan Project')
+                        ->modalDescription('Apakah Anda yakin ingin menghapus pengajuan project ini secara permanen?'),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->paginated([15, 25, 50, 100]);
     }
 
     public static function getRelations(): array

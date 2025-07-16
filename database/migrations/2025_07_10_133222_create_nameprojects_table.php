@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('nama_project');
             $table->foreignId('user_id')->nullable()->constrained('users');
-            $table->dateTime('tanggal_mulai')->nullable();
-            $table->dateTime('tanggal_selesai')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

@@ -50,6 +50,7 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->registration(Register::class)
             ->breadcrumbs(false)
+            ->spa()
             ->profile(isSimple: false)
             ->loginRouteSlug('login')
             ->registrationRouteSlug('registrasi')

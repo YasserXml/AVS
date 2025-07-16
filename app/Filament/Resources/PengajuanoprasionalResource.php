@@ -34,8 +34,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use ZipArchive;
 
 class PengajuanoprasionalResource extends Resource
 {
@@ -332,12 +334,71 @@ class PengajuanoprasionalResource extends Resource
                     ->icon('heroicon-m-cog-6-tooth')
                     ->label('Aksi')
                     ->size('sm'),
-                Tables\Actions\ViewAction::make()
+                Tables\Actions\Action::make('detail')
                     ->label('Lihat Detail Barang')
                     ->color('info')
                     ->icon('heroicon-o-eye')
                     ->modalHeading('Detail Pengajuan')
-                    ->modalWidth('7xl'),
+                    ->modalWidth('7xl')
+                    ->modalContent(function ($record) {
+                        return view('pengajuann.detail-pengajuan', [
+                            'record' => $record,
+                            'detailBarang' => $record->detail_barang ?? [],
+                            'uploadedFiles' => $record->uploaded_files ?? [],
+                        ]);
+                    })
+                    ->modalFooterActions([
+                        Tables\Actions\Action::make('download_all_files')
+                            ->label('Download Semua File')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->color('success')
+                            ->visible(fn($record) => !empty($record->uploaded_files))
+                            ->action(function ($record) {
+                                $files = $record->uploaded_files;
+
+                                if (empty($files)) {
+                                    Notification::make()
+                                        ->title('Tidak Ada File')
+                                        ->body('Tidak ada file yang tersedia untuk diunduh.')
+                                        ->warning()
+                                        ->send();
+                                    return;
+                                }
+
+                                if (count($files) === 1) {
+                                    $filePath = storage_path('app/public/' . $files[0]);
+                                    if (file_exists($filePath)) {
+                                        return response()->download($filePath, basename($files[0]));
+                                    }
+                                } else {
+                                    $zip = new ZipArchive();
+                                    $zipFileName = 'pengajuan_' . $record->id . '_files_' . date('Y-m-d_H-i-s') . '.zip';
+                                    $zipPath = storage_path('app/temp/' . $zipFileName);
+
+                                    if (!file_exists(storage_path('app/temp'))) {
+                                        mkdir(storage_path('app/temp'), 0755, true);
+                                    }
+
+                                    if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+                                        foreach ($files as $file) {
+                                            $filePath = storage_path('app/public/' . $file);
+                                            if (file_exists($filePath)) {
+                                                $zip->addFile($filePath, basename($file));
+                                            }
+                                        }
+                                        $zip->close();
+
+                                        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+                                    }
+                                }
+
+                                Notification::make()
+                                    ->title('Gagal Mengunduh File')
+                                    ->body('File tidak ditemukan atau terjadi kesalahan.')
+                                    ->danger()
+                                    ->send();
+                            }),
+                    ]),
 
                 PengajuanActions::mulaiReview(),
                 PengajuanActions::kirimKeSuperAdmin(),
@@ -370,7 +431,6 @@ class PengajuanoprasionalResource extends Resource
                             return view('pengajuann.history.empty-status');
                         }
 
-                        // Sort history by created_at descending (newest first)
                         usort($history, function ($a, $b) {
                             return strtotime($b['created_at']) - strtotime($a['created_at']);
                         });
@@ -396,154 +456,6 @@ class PengajuanoprasionalResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->paginated([15, 25, 50, 100]);
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist
-            ->schema([
-                // Section Informasi Pengajuan
-                Section::make('Informasi Pengajuan')
-                    ->description('Informasi dasar pengajuan barang')
-                    ->icon('heroicon-o-clipboard-document-list')
-                    ->schema([
-                        ComponentsCard::make()
-                            ->schema([
-                                Split::make([
-                                    Grid::make(['sm' => 1, 'md' => 2])
-                                        ->schema([
-                                            TextEntry::make('tanggal_pengajuan')
-                                                ->label('Tanggal Pengajuan')
-                                                ->date('d F Y')
-                                                ->icon('heroicon-o-calendar')
-                                                ->color('primary')
-                                                ->weight('medium'),
-
-                                            TextEntry::make('tanggal_dibutuhkan')
-                                                ->label('Tanggal Dibutuhkan')
-                                                ->date('d F Y')
-                                                ->icon('heroicon-o-calendar')
-                                                ->color('warning')
-                                                ->weight('medium'),
-                                        ]),
-                                ])
-                            ])
-                    ]),
-
-                // Section Detail Barang
-                Section::make('Detail Barang yang Diajukan')
-                    ->description('Daftar barang yang diajukan')
-                    ->icon('heroicon-o-cube')
-                    ->schema([
-                        RepeatableEntry::make('detail_barang')
-                            ->label('Daftar Barang')
-                            ->schema([
-                                ComponentsCard::make()
-                                    ->schema([
-                                        Grid::make(['sm' => 1, 'md' => 2])
-                                            ->schema([
-                                                TextEntry::make('nama_barang')
-                                                    ->label('Nama Barang')
-                                                    ->icon('heroicon-o-tag')
-                                                    ->color('primary')
-                                                    ->weight('bold')
-                                                    ->size('lg'),
-
-                                                TextEntry::make('jumlah_barang_diajukan')
-                                                    ->label('Jumlah Yang Diajukan')
-                                                    ->icon('heroicon-o-shopping-cart')
-                                                    ->suffix(' Unit')
-                                                    ->color('success')
-                                                    ->weight('medium')
-                                                    ->numeric(),
-                                            ]),
-
-                                        TextEntry::make('keterangan_barang')
-                                            ->label('Detail/Spesifikasi Barang')
-                                            ->icon('heroicon-o-document-text')
-                                            ->columnSpanFull()
-                                            ->prose()
-                                            ->placeholder('Tidak ada detail spesifikasi')
-                                            ->color('gray'),
-                                    ])
-                            ])
-                            ->contained(false)
-                            ->grid(['sm' => 1])
-                    ]),
-
-                // Section File Pendukung
-                Section::make('File Pendukung')
-                    ->description('File pendukung yang dilampirkan')
-                    ->icon('heroicon-o-paper-clip')
-                    ->schema([
-                        ComponentsCard::make()
-                            ->schema([
-                                TextEntry::make('uploaded_files')
-                                    ->label('File Pendukung')
-                                    ->listWithLineBreaks()
-                                    ->bulleted()
-                                    ->formatStateUsing(function ($state) {
-                                        if (!$state || empty($state)) {
-                                            return 'Tidak ada file pendukung';
-                                        }
-
-                                        $files = is_array($state) ? $state : json_decode($state, true);
-                                        if (!$files) {
-                                            return 'Tidak ada file pendukung';
-                                        }
-
-                                        $fileList = [];
-                                        foreach ($files as $file) {
-                                            $filename = basename($file);
-                                            $fileUrl = asset('storage/' . $file);
-                                            $fileList[] = '<a href="' . $fileUrl . '" target="_blank" class="text-primary-600 hover:text-primary-500 underline decoration-2 underline-offset-2 font-medium inline-flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            ' . $filename . '
-                                        </a>';
-                                        }
-
-                                        return implode('<br>', $fileList);
-                                    })
-                                    ->html()
-                                    ->placeholder('Tidak ada file pendukung')
-                                    ->icon('heroicon-o-document-arrow-down'),
-                            ])
-                    ]),
-
-                // Section Informasi Tambahan (jika diperlukan)
-                Section::make('Informasi Sistem')
-                    ->description('Informasi sistem pengajuan')
-                    ->icon('heroicon-o-information-circle')
-                    ->collapsible()
-                    ->collapsed()
-                    ->schema([
-                        ComponentsCard::make()
-                            ->schema([
-                                Grid::make(['sm' => 1, 'md' => 3])
-                                    ->schema([
-                                        TextEntry::make('user.name')
-                                            ->label('Diajukan Oleh')
-                                            ->icon('heroicon-o-user')
-                                            ->color('primary')
-                                            ->weight('medium'),
-
-                                        TextEntry::make('created_at')
-                                            ->label('Dibuat Pada')
-                                            ->dateTime('d F Y, H:i')
-                                            ->icon('heroicon-o-clock')
-                                            ->color('gray'),
-
-                                        TextEntry::make('updated_at')
-                                            ->label('Diperbarui Pada')
-                                            ->dateTime('d F Y, H:i')
-                                            ->icon('heroicon-o-arrow-path')
-                                            ->color('gray'),
-                                    ])
-                            ])
-                    ]),
-            ]);
     }
 
     public static function getRelations(): array

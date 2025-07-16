@@ -22,15 +22,23 @@ return new class extends Migration
             $table->json('uploaded_files')->nullable();
             $table->enum('status', [
                 'pengajuan_terkirim',
-                'pending_admin_review',
-                'diajukan_ke_superadmin',
-                'superadmin_approved',
-                'superadmin_rejected',
+                'pending_pm_review',
+                'disetujui_pm_dikirim_ke_pengadaan',    
+                'ditolak_pm',
+                'disetujui_pengadaan',
+                'ditolak_pengadaan',
+                'pengajuan_dikirim_ke_direksi',
+                'approved_by_direksi',
+                'reject_direksi',
+                'pengajuan_dikirim_ke_keuangan',
+                'pending_keuangan',
+                'process_keuangan',
+                'execute_keuangan',
+                'pengajuan_dikirim_ke_pengadaan_final',
                 'pengajuan_dikirim_ke_admin',
                 'processing',
                 'ready_pickup',
-                'completed',
-                'cancelled'
+                'completed'
             ])
                 ->default('pengajuan_terkirim');
             $table->foreignId('approved_by')->nullable()->constrained('users');
@@ -38,12 +46,12 @@ return new class extends Migration
             $table->foreignId('rejected_by')->nullable()->constrained('users');
             $table->dateTime('rejected_at')->nullable();
             $table->text('reject_reason')->nullable();
-            $table->enum('rejected_by_role', ['admin', 'superadmin'])->nullable();
             $table->foreignId('received_by')->nullable()->constrained('users');
             $table->string('received_by_name')->nullable();
             $table->json('status_history')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->text('catatan')->nullable();
             $table->foreignId('project_id')->constrained('nameprojects');
             $table->index(['status', 'created_at']);
             $table->index(['user_id', 'status']);

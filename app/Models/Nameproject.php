@@ -33,7 +33,7 @@ class Nameproject extends Model
   /**
    * Relasi dengan model Pengajuanproject
    */
-  public function pengajuanprojects()
+  public function pengajuanproject()
   {
     return $this->hasMany(Pengajuanproject::class, 'project_id');
   }
@@ -45,49 +45,5 @@ class Nameproject extends Model
   {
     return $this->user?->name ?? 'Tidak ada PM';
   }
-
-  /**
-   * Accessor untuk mendapatkan status project
-   */
-  public function getStatusAttribute(): string
-  {
-    if (!$this->tanggal_mulai || !$this->tanggal_selesai) {
-      return 'Belum Dijadwalkan';
-    }
-
-    $now = now();
-
-    if ($now < $this->tanggal_mulai) {
-      return 'Belum Dimulai';
-    } elseif ($now >= $this->tanggal_mulai && $now <= $this->tanggal_selesai) {
-      return 'Sedang Berjalan';
-    } else {
-      return 'Selesai';
-    }
-  }
-
-  /**
-   * Scope untuk project yang sedang aktif
-   */
-  public function scopeActive($query)
-  {
-    return $query->where('tanggal_mulai', '<=', now())
-      ->where('tanggal_selesai', '>=', now());
-  }
-
-  /**
-   * Scope untuk project yang belum dimulai
-   */
-  public function scopeUpcoming($query)
-  {
-    return $query->where('tanggal_mulai', '>', now());
-  }
-
-  /**
-   * Scope untuk project yang sudah selesai
-   */
-  public function scopeCompleted($query)
-  {
-    return $query->where('tanggal_selesai', '<', now());
-  }
 }
+ 

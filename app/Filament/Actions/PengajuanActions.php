@@ -82,7 +82,7 @@ class PengajuanActions
 
                 Notification::make()
                     ->title('Berhasil')
-                    ->body('Pengajuan berhasil dikirim ke tim pengadaan.')
+                    ->body('Pengajuan berhasil dikirim ke tim pengadaan.') 
                     ->success()
                     ->send();
             });
@@ -424,7 +424,7 @@ class PengajuanActions
             )
             ->form([
                 Forms\Components\Textarea::make('catatan')
-                    ->label('Catatan Keuangan')
+                    ->label('Catatan ')
                     ->rows(3)
                     ->placeholder('Tambahkan catatan proses keuangan...'),
             ])

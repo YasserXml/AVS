@@ -3,9 +3,14 @@
 namespace App\Filament\Resources\PengajuanprojectResource\Pages;
 
 use App\Filament\Resources\PengajuanprojectResource;
+use App\Models\Nameproject;
+use App\Services\PengajuanEmailProjectService;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 
 class CreatePengajuanproject extends CreateRecord
@@ -20,7 +25,22 @@ class CreatePengajuanproject extends CreateRecord
             </div>
         ');
     }
-    
+
+    protected function afterCreate(): void
+    {
+        // Kirim notifikasi ke admin
+        PengajuanEmailProjectService::sendEmailToPm($this->record);
+        
+        // Notifikasi sukses untuk user yang mengajukan
+        Notification::make()
+            ->title('Pengajuan Berhasil Dikirim')
+            ->icon('heroicon-o-check-circle')
+            ->iconColor('success')
+            ->body('Pengajuan barang Anda telah berhasil dikirim dan akan diproses.')
+            ->success()
+            ->send();
+    }
+
     protected function getFormActions(): array
     {
         return [
@@ -36,5 +56,10 @@ class CreatePengajuanproject extends CreateRecord
                 ->icon('heroicon-o-x-mark')
                 ->color('gray'),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }

@@ -1,3 +1,4 @@
+{{-- resources/views/pengajuann/progress.blade.php --}}
 @php
     $percentage = $getState()['percentage'] ?? 0;
     $color = $getState()['color'] ?? 'gray';
