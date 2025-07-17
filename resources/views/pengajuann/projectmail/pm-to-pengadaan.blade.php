@@ -154,7 +154,7 @@
             </div>
             
             <div class="info-row">
-                <span class="info-label">Pengaju:</span>
+                <span class="info-label">Yang Mengajukan:</span>
                 <span class="info-value">{{ $pengajuan->user->name }}</span>
             </div>
             

@@ -58,12 +58,6 @@ class BarangResource extends Resource
         return static::getModel()::count() > 0 ? 'success' : 'danger';
     }
 
-    public static function getNavigationBadgeTooltip(): ?string
-    {
-        $count = static::getModel()::count();
-        return $count > 0 ? "Jumlah barang tersedia: $count" : 'Tidak ada barang tersedia';
-    }
-
     public static function form(Form $form): Form
     {
         return $form

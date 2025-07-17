@@ -190,7 +190,7 @@
                     <span>{{ $projectName }}</span>
                 </div>
                 <div class="info-item">
-                    <strong>Pengaju:</strong>
+                    <strong>Yang Mengajukan:</strong>
                     <span>{{ $pengajuName }}</span>
                 </div>
                 <div class="info-item">

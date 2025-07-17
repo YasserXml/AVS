@@ -250,15 +250,13 @@ class PengajuanprojectResource extends Resource
                             Tables\Columns\TextColumn::make('user.name')
                                 ->label('')
                                 ->formatStateUsing(fn($state) => "👤 Yang Mengajukan: {$state}")
-                                ->color('gray')
                                 ->weight(FontWeight::Medium)
                         ])->space(1),
 
                         Tables\Columns\Layout\Stack::make([
                             Tables\Columns\TextColumn::make('tanggal_pengajuan')
                                 ->label('')
-                                ->formatStateUsing(fn($state) => "📅 Tanggal Pengajuan: " . Carbon::parse($state)->format('d M Y'))
-                                ->color('gray'),
+                                ->formatStateUsing(fn($state) => "📅 Tanggal Pengajuan: " . Carbon::parse($state)->format('d M Y')),
                         ])->space(1)->alignEnd(),
                     ]),
 
@@ -269,15 +267,13 @@ class PengajuanprojectResource extends Resource
                                 Tables\Columns\TextColumn::make('nameproject.nama_project')
                                     ->label('')
                                     ->formatStateUsing(fn($state) => "🏢 Project: {$state}")
-                                    ->color('primary')
                                     ->weight(FontWeight::Medium),
                             ])->space(1),
 
                             Tables\Columns\Layout\Stack::make([
                                 Tables\Columns\TextColumn::make('nameproject.user.name')
                                     ->label('')
-                                    ->formatStateUsing(fn($state) => $state ? "👨‍💼 Project Manager: {$state}" : "👨‍💼 Project Manager: Tidak ada PM")
-                                    ->color('info'),
+                                    ->formatStateUsing(fn($state) => $state ? "👨‍💼 Project Manager: {$state}" : "👨‍💼 Project Manager: Tidak ada PM"),
                             ])->space(1)->alignEnd(),
                         ])->from('md'),
                     ])->collapsible(),
@@ -408,7 +404,6 @@ class PengajuanprojectResource extends Resource
                             ->icon('heroicon-o-arrow-down-tray')
                             ->color('success')
                             ->visible(function ($record) {
-                                // Cek apakah ada file di uploaded_files atau file_barang di detail_barang
                                 $hasUploadedFiles = !empty($record->uploaded_files);
                                 $hasBarangFiles = false;
 
@@ -466,57 +461,6 @@ class PengajuanprojectResource extends Resource
 
                                     if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
                                         foreach ($allFiles as $file) {
-                                            $filePath = storage_path('app/public/' . $file);
-                                            if (file_exists($filePath)) {
-                                                $zip->addFile($filePath, basename($file));
-                                            }
-                                        }
-                                        $zip->close();
-
-                                        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
-                                    }
-                                }
-
-                                Notification::make()
-                                    ->title('Gagal Mengunduh File')
-                                    ->body('File tidak ditemukan atau terjadi kesalahan.')
-                                    ->danger()
-                                    ->send();
-                            }),
-
-                        Tables\Actions\Action::make('download_project_files')
-                            ->label('Download File Project')
-                            ->icon('heroicon-o-folder-arrow-down')
-                            ->color('warning')
-                            ->visible(fn($record) => !empty($record->uploaded_files))
-                            ->action(function ($record) {
-                                $files = $record->uploaded_files;
-
-                                if (empty($files)) {
-                                    Notification::make()
-                                        ->title('Tidak Ada File Project')
-                                        ->body('Tidak ada file project yang tersedia untuk diunduh.')
-                                        ->warning()
-                                        ->send();
-                                    return;
-                                }
-
-                                if (count($files) === 1) {
-                                    $filePath = storage_path('app/public/' . $files[0]);
-                                    if (file_exists($filePath)) {
-                                        return response()->download($filePath, basename($files[0]));
-                                    }
-                                } else {
-                                    $zip = new ZipArchive();
-                                    $zipFileName = 'project_files_' . $record->id . '_' . date('Y-m-d_H-i-s') . '.zip';
-                                    $zipPath = storage_path('app/temp/' . $zipFileName);
-
-                                    if (!file_exists(storage_path('app/temp'))) {
-                                        mkdir(storage_path('app/temp'), 0755, true);
-                                    }
-
-                                    if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
-                                        foreach ($files as $file) {
                                             $filePath = storage_path('app/public/' . $file);
                                             if (file_exists($filePath)) {
                                                 $zip->addFile($filePath, basename($file));

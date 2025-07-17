@@ -158,14 +158,14 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <h1>🚀 Pengajuan Project Baru</h1>
-            <p>Telah dibuat pengajuan project yang memerlukan persetujuan</p>
+            <h1>🚀 Pengajuan Barang Project Baru</h1>
+            <p>Telah dibuat pengajuan barang project yang memerlukan persetujuan</p>
         </div>
 
         <div class="content">
             <div class="info-section">
                 <div class="info-row">
-                    <span class="info-label">Pengaju:</span>
+                    <span class="info-label">Yang Mengajukan:</span>
                     <span class="info-value">{{ $pengaju->name }}</span>
                 </div>
                 <div class="info-row">

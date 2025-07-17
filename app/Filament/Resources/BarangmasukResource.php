@@ -336,7 +336,6 @@ class BarangmasukResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(30)
-
                     ->wrap()
                     ->icon('heroicon-o-cube')
                     ->toggleable(),
@@ -349,7 +348,7 @@ class BarangmasukResource extends Resource
                     ->toggleable(),
 
                 TextColumn::make('jumlah_barang_masuk')
-                    ->label('Jumlah Masuk')
+                    ->label('Jumlah Barang Masuk')
                     ->numeric()
                     ->sortable()
                     ->icon('heroicon-o-arrow-trending-up')

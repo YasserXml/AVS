@@ -19,6 +19,9 @@ class ListRndfolders extends ListRecords
             Actions\CreateAction::make()
                 ->label('Buat Folder')
                 ->icon('heroicon-o-folder-plus')
+                ->modalHeading('Buat Folder Baru')
+                ->modalSubmitActionLabel('Buat Folder')
+                ->modalCancelActionLabel('Batal')
                 ->mutateFormDataUsing(function (array $data): array {
                     // Pastikan user_id diset ke user yang sedang login
                     $data['user_id'] = filament()->auth()->id();

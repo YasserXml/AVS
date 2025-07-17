@@ -200,7 +200,7 @@
                     <span>{{ $pengajuan->tanggal_dibutuhkan ? \Carbon\Carbon::parse($pengajuan->tanggal_dibutuhkan)->format('d F Y') : 'Tidak ditentukan' }}</span>
                 </div>
                 <div class="info-item">
-                    <label>Pengaju</label>
+                    <label>Yang Mengajukan</label>
                     <span>{{ $pengajuan->user->name ?? 'Tidak diketahui' }}</span>
                 </div>
                 <div class="info-item">

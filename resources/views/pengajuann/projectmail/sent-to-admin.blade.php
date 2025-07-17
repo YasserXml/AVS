@@ -192,7 +192,6 @@
     <div class="container">
         <div class="header">
             <h1>🔔 Pengajuan Barang Project</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Memerlukan Tindakan Segera</p>
         </div>
 
         <div class="content">
@@ -203,7 +202,7 @@
                     <div>{{ $project->nama_project ?? 'Tidak ada project' }}</div>
                 </div>
                 <div class="info-item">
-                    <strong>Pengaju</strong>
+                    <strong>Yang Mengajukan</strong>
                     <div>{{ $pengaju->name ?? 'Tidak diketahui' }}</div>
                 </div>
                 <div class="info-item">

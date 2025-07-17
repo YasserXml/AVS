@@ -28,4 +28,9 @@ class Asetpt extends Model
         'status' => 'string',
         'kondisi' => 'string',
     ];
+
+    public function barang()
+    {
+        return $this->belongsTo(Barang::class);
+    }
 }

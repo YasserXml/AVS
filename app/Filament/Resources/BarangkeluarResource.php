@@ -352,20 +352,6 @@ class BarangkeluarResource extends Resource
                     ->weight(FontWeight::Medium)
                     ->icon('heroicon-o-user'),
 
-                Tables\Columns\TextColumn::make('keterangan')
-                    ->label('Keterangan')
-                    ->searchable()
-                    ->limit(50)
-                    ->toggleable()
-                    ->placeholder('Tidak ada keterangan')
-                    ->tooltip(function (TextColumn $column): ?string {
-                        $state = $column->getState();
-                        if (strlen($state) <= 50) {
-                            return null;
-                        }
-                        return $state;
-                    }),
-
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y H:i')

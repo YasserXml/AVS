@@ -7,6 +7,7 @@
     $record = $getState()['record'] ?? null;
 
     // Definisi semua status dalam urutan workflow yang benar untuk PROJECT
+    // PASTIKAN status ini sesuai dengan enum di database
     $statusFlow = [
         'pengajuan_terkirim' => [
             'label' => 'Pengajuan Terkirim',
@@ -34,28 +35,28 @@
             'icon' => '✅',
             'description' => 'Disetujui oleh tim pengadaan',
             'percentage' => 25,
-            'actor' => 'purchasing',
+            'actor' => 'Pengadaan',
         ],
         'pengajuan_dikirim_ke_direksi' => [
             'label' => 'Dikirim ke Direksi',
             'icon' => '🏢',
             'description' => 'Dikirim ke direksi untuk persetujuan',
             'percentage' => 30,
-            'actor' => 'purchasing',
+            'actor' => 'Pengadaan',
         ],
         'approved_by_direksi' => [
             'label' => 'Disetujui Direksi',
             'icon' => '👔',
             'description' => 'Disetujui oleh direksi',
             'percentage' => 40,
-            'actor' => 'direktur_keuangan',
+            'actor' => 'Direktur Keuangan',
         ],
         'pengajuan_dikirim_ke_keuangan' => [
             'label' => 'Dikirim ke Keuangan',
             'icon' => '💰',
             'description' => 'Dikirim ke bagian keuangan',
             'percentage' => 45,
-            'actor' => 'direktur_keuangan',
+            'actor' => 'Direktur Keuangan',
         ],
         'pending_keuangan' => [
             'label' => 'Review Keuangan',
@@ -64,12 +65,34 @@
             'percentage' => 50,
             'actor' => 'keuangan',
         ],
+        // TAMBAHKAN STATUS INI YANG HILANG
+        'process_keuangan' => [
+            'label' => 'Proses Keuangan',
+            'icon' => '⚡',
+            'description' => 'Sedang diproses oleh tim keuangan',
+            'percentage' => 55,
+            'actor' => 'keuangan',
+        ],
+        'execute_keuangan' => [
+            'label' => 'Eksekusi Keuangan',
+            'icon' => '💳',
+            'description' => 'Eksekusi pembayaran oleh tim keuangan',
+            'percentage' => 60,
+            'actor' => 'keuangan',
+        ],
+        'pengajuan_dikirim_ke_pengadaan_final' => [
+            'label' => 'Dikirim ke Pengadaan ',
+            'icon' => '📦',
+            'description' => 'Dikirim ke pengadaan untuk proses',
+            'percentage' => 70,
+            'actor' => 'keuangan',
+        ],
         'pengajuan_dikirim_ke_admin' => [
             'label' => 'Dikirim ke Admin',
             'icon' => '👨‍💼',
             'description' => 'Dikirim ke admin untuk proses',
             'percentage' => 75,
-            'actor' => 'purchasing',
+            'actor' => 'Pengadaan',
         ],
         'processing' => [
             'label' => 'Sedang Diproses',
@@ -113,11 +136,18 @@
         $completedStatuses[] = $status;
     }
 
+    // PERBAIKI: Gunakan persentase dari $statusFlow, bukan dari getState()
     $currentPercentage = $statusFlow[$status]['percentage'] ?? 0;
+
+    // Jika $currentPercentage masih 0, coba ambil dari model
+    if ($currentPercentage === 0 && $record && method_exists($record, 'getProgressPercentage')) {
+        $currentPercentage = $record->getProgressPercentage();
+    }
+
     $uniqueId = 'project-tracking-' . uniqid();
 
-    // Fungsi untuk mendapatkan step yang akan ditampilkan - gunakan nama unik
-    $getProjectVisibleSteps = function($statusFlow, $status, $completedStatuses, $isRejected) {
+    // Fungsi untuk mendapatkan step yang akan ditampilkan
+    $getProjectVisibleSteps = function ($statusFlow, $status, $completedStatuses, $isRejected) {
         $statusKeys = array_keys($statusFlow);
         $currentIndex = array_search($status, $statusKeys);
 

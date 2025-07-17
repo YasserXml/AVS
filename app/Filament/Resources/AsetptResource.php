@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Exports\AsetExporter;
 use App\Filament\Resources\AsetptResource\Pages;
 use App\Filament\Resources\AsetptResource\RelationManagers;
 use App\Models\Asetpt;
@@ -20,6 +21,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class AsetptResource extends Resource
@@ -170,7 +172,7 @@ class AsetptResource extends Resource
                     
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
-                    ->dateTime('d/m/Y H:i')
+                    ->dateTime('d/m/Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -239,7 +241,23 @@ class AsetptResource extends Resource
                         ->label('Hapus Permanen'),
                 ])
             ])
+            ->headerActions([
+                Tables\Actions\Action::make('export')
+                    ->label('Export Semua Data')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function (){
+                        return (new AsetExporter())->export();
+                    }),
+            ])
             ->bulkActions([
+                Tables\Actions\BulkAction::make('export_selected')
+                    ->label('Export Data Terpilih')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function (Collection $records){
+                        return(new AsetExporter())->export();
+                    }),
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('Hapus Terpilih'),

@@ -182,7 +182,7 @@
                 </div>
             </div>
             <div class="info-row">
-                <div class="info-label">Pengaju:</div>
+                <div class="info-label">Yang Mengajukan:</div>
                 <div class="info-value">{{ $pengaju->name }}</div>
             </div>
         </div>
@@ -248,7 +248,6 @@
         <div class="action-section">
             <div class="action-title">🚀 Tindakan Selanjutnya</div>
             <div class="action-text">
-                Pengajuan ini telah disetujui oleh Project Manager dan kini menunggu review dari Tim Pengadaan. 
                 Silakan login ke sistem untuk melakukan review dan tindakan selanjutnya.
             </div>
         </div>

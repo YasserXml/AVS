@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengajuan Project Siap Diambil</title>
+    <title>Pengajuan Barang Project Siap Diambil</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -152,27 +152,23 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 Pengajuan Project Siap Diambil</h1>
+            <h1>🎉 Pengajuan Barang Project Siap Diambil</h1>
             <div class="status-badge">Siap Diambil</div>
         </div>
 
         <div class="alert alert-success">
-            <strong>Selamat!</strong> Pengajuan project Anda telah selesai diproses dan barang sudah siap untuk diambil.
+             Pengajuan Barang project Anda telah selesai diproses dan barang sudah siap untuk diambil.
         </div>
 
         <div class="info-section">
             <h3>📋 Informasi Pengajuan</h3>
             <div class="info-grid">
                 <div class="info-item">
-                    <label>Nomor Pengajuan:</label>
-                    <span>{{ $nomorPengajuan }}</span>
-                </div>
-                <div class="info-item">
                     <label>Nama Project:</label>
                     <span>{{ $namaProject }}</span>
                 </div>
                 <div class="info-item">
-                    <label>Pengaju:</label>
+                    <label>Yang Mengajukan:</label>
                     <span>{{ $namaPengaju }}</span>
                 </div>
                 <div class="info-item">
@@ -209,11 +205,6 @@
                     </div>
                 @endif
             </div>
-        </div>
-
-        <div class="alert">
-            <strong>📍 Langkah Selanjutnya:</strong><br>
-            Silakan hubungi bagian administrasi untuk mengatur waktu pengambilan barang. Pastikan membawa identitas dan surat tugas jika diperlukan.
         </div>
 
         @if($pengajuan->catatan)

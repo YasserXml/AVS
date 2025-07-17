@@ -76,6 +76,7 @@ class Divisi3dfolderResource extends Resource
                     ->label('Koleksi')
                     ->columnSpanFull()
                     ->unique()
+                    ->hidden()
                     ->required()
                     ->maxLength(255),
                 Textarea::make('description')
@@ -170,6 +171,14 @@ class Divisi3dfolderResource extends Resource
             ->contentGrid([
                 'md' => 3,
                 'xl' => 4,
+            ])
+            ->emptyStateHeading('Belum Ada folder')
+            ->emptyStateIcon('heroicon-o-folder')
+            ->emptyStateDescription('Buat folder pertama anda.')
+            ->emptyStateActions([
+                Tables\Actions\CreateAction::make()
+                    ->label('Buat Folder')
+                    ->icon('heroicon-m-folder-plus'),
             ])
             ->filters([])
             ->actions([])

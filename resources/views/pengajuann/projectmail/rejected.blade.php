@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengajuan Project Ditolak</title>
+    <title>Pengajuan Barang Project Ditolak</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -197,12 +197,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>❌ Pengajuan Project Ditolak</h1>
+            <h1>❌ Pengajuan Barang Project Ditolak</h1>
             <div class="status-badge">Ditolak</div>
         </div>
 
         <div class="alert">
-            <strong>Maaf!</strong> Pengajuan project Anda telah ditolak oleh <strong>{{ $rejectionType }}</strong>.
+            <strong>Maaf!</strong> Pengajuan barang project Anda telah ditolak oleh <strong>{{ $rejectionType }}</strong>.
         </div>
 
         <div class="info-section">
@@ -213,7 +213,7 @@
                     <span>{{ $namaProject }}</span>
                 </div>
                 <div class="info-item">
-                    <label>Pengaju:</label>
+                    <label>Yang Mengajukan:</label>
                     <span>{{ $namaPengaju }}</span>
                 </div>
                 <div class="info-item">
@@ -274,11 +274,6 @@
         <div class="next-steps">
             <h4>🔄 Langkah Selanjutnya</h4>
             <p>Anda dapat melakukan tindakan berikut:</p>
-            <ul>
-                <li>Perbaiki pengajuan berdasarkan alasan penolakan yang diberikan</li>
-                <li>Hubungi {{ $rejectionType }} untuk klarifikasi lebih lanjut</li>
-                <li>Ajukan ulang pengajuan dengan perbaikan yang diperlukan</li>
-            </ul>
         </div>
 
         <div class="info-section">
@@ -304,7 +299,7 @@
 
         <div class="footer">
             <p>Email ini dikirim secara otomatis oleh sistem manajemen project.<br>
-            Jika Anda memiliki pertanyaan, silakan hubungi {{ $rejectionType }} atau bagian administrasi.</p>
+            Jika Anda memiliki pertanyaan, silakan hubungi {{ $rejectionType }}.</p>
             <p><small>Dikirim pada: {{ now()->format('d F Y H:i') }}</small></p>
         </div>
     </div>
