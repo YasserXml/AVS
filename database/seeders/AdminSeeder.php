@@ -24,10 +24,10 @@ class AdminSeeder extends Seeder
 
         // Buat atau update user admin
         $admin = User::updateOrCreate(
-            ['email' => 'admin@avsimulator.com'],
+            ['email' => 'afihirkam@gmail.com'],
             [
                 'name' => 'Admin User',
-                'email' => 'admin@avsimulator.com',
+                'email' => 'afihirkam@gmail.com',
                 'password' => Hash::make('123'),
                 'email_verified_at' => now(),
                 'admin_verified' => true,
@@ -41,8 +41,8 @@ class AdminSeeder extends Seeder
 
         $this->command->info('=== ADMIN BERHASIL DIBUAT ===');
         $this->command->info('Nama: Admin User');
-        $this->command->info('Email: admin@avsimulator.com');
-        $this->command->info('Password: admin123');
+        $this->command->info('Email: afihirkam@gmail.com');
+        $this->command->info('Password: 123');
         $this->command->info('Role: admin');
         $this->command->warn('PENTING: Ganti password setelah login pertama kali!');
     }

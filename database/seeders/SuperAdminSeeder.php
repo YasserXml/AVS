@@ -23,10 +23,10 @@ class SuperAdminSeeder extends Seeder
 
         // Buat atau update user super admin
         $superAdmin = User::updateOrCreate(
-            ['email' => 'yasser@avsimulator.com'],
+            ['email' => 'afigirkam@gmail.com'],
             [
                 'name' => 'Yasser',
-                'email' => 'yasser@avsimulator.com',
+                'email' => 'afigirkam@gmail.com',
                 'password' => Hash::make('123'),
                 'email_verified_at' => now(),
                 'admin_verified' => true,
@@ -49,7 +49,7 @@ class SuperAdminSeeder extends Seeder
 
         $this->command->info('=== SUPER ADMIN BERHASIL DIBUAT ===');
         $this->command->info('Nama: Yasser');
-        $this->command->info('Email: yasser@avsimulator.com');
+        $this->command->info('Email: afigirkam@gmail.com');
         $this->command->info('Password: 123');
         $this->command->info('Role: super_admin');
         $this->command->warn('PENTING: Ganti password setelah login pertama kali!');
