@@ -49,6 +49,73 @@ class PengajuanprojectResource extends Resource
 
     protected static ?string $modelLabel = 'Pengajuan Project';
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = filament()->auth()->user();
+
+        // Role purchasing - dapat melihat status terkait pengadaan
+        if ($user->hasRole('purchasing')) {
+            return $query->whereIn('status', [
+                'disetujui_pm_dikirim_ke_pengadaan',     // Dari action setujuiDanKirimKePengadaan
+                'disetujui_pengadaan',                   // Dari action setujuiPengadaan
+                'ditolak_pengadaan',                     // Dari action tolakPengadaan
+                'pengajuan_dikirim_ke_pengadaan_final',  // Dari action kirimKembaliKePengadaan
+                'cancelled'
+            ]);
+        }
+
+        // Role admin - dapat melihat status terkait admin dan proses akhir
+        if ($user->hasRole('admin')) {
+            return $query->whereIn('status', [
+                'pengajuan_terkirim',                    // Status awal yang muncul di actions
+                'pending_admin_review',                  // Status yang sudah ada
+                'pengajuan_dikirim_ke_admin',           // Dari action kirimKeAdmin
+                'processing',                           // Dari action mulaiProsesPengadaan
+                'ready_pickup',                         // Dari action siapDiambil
+                'completed',                            // Dari action selesai
+                'cancelled'
+            ]);
+        }
+
+        // Role direktur_keuangan - dapat melihat status terkait direksi
+        if ($user->hasRole('direktur_keuangan')) {
+            return $query->whereIn('status', [
+                'pengajuan_dikirim_ke_direksi',         // Dari action kirimKeDireksi
+                'approved_by_direksi',                  // Dari action approveDireksi
+                'reject_direksi',                       // Dari action rejectDireksi
+                'cancelled'
+            ]);
+        }
+
+        // Role keuangan - dapat melihat status terkait keuangan
+        if ($user->hasRole('keuangan')) {
+            return $query->whereIn('status', [
+                'pengajuan_dikirim_ke_keuangan',        // Dari action kirimKeKeuangan
+                'pending_keuangan',                     // Dari action reviewKeuangan
+                'process_keuangan',                     // Dari action prosesKeuangan
+                'execute_keuangan',                     // Dari action executeKeuangan
+                'cancelled'
+            ]);
+        }
+
+        // Role PM atau user biasa - hanya dapat melihat pengajuan mereka sendiri
+        return $query->where('user_id', $user->id);
+    }
+    
+    protected function applyUserFilter(Builder $query): Builder
+    {
+        $user = filament()->auth()->user();
+
+        // Jika user memiliki role khusus, tidak perlu filter tambahan
+        if ($user->hasAnyRole(['purchasing', 'admin', 'direktur_keuangan', 'keuangan'])) {
+            return $query;
+        }
+
+        // Untuk user biasa atau PM, pastikan hanya data mereka sendiri yang tampil
+        return $query->where('user_id', $user->id);
+    }
+
     public static function form(Form $form): Form
     {
         return $form

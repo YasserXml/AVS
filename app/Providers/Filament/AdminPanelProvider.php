@@ -12,11 +12,13 @@ use App\Filament\Widgets\BarangKeluarWidget;
 use App\Filament\Widgets\BarangMasukChartWidget;
 use App\Filament\Widgets\BarangMasukWidget;
 use App\Filament\Widgets\BarangWidget;
+use App\Filament\Widgets\PengajuanOprasionalWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspector;
 use CodeWithDennis\FilamentThemeInspector\FilamentThemeInspectorPlugin;
 use Devonab\FilamentEasyFooter\EasyFooterPlugin;
+use Filafly\Icons\FontAwesome\FontAwesomeIcons;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -76,6 +78,7 @@ class AdminPanelProvider extends PanelProvider
                 StatsOverviewWidget::class,
                 BarangMasukChartWidget::class,
                 BarangKeluarChartWidget::class,
+                PengajuanOprasionalWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -95,13 +98,16 @@ class AdminPanelProvider extends PanelProvider
                 EasyFooterPlugin::make()
                     ->withFooterPosition('footer')
                     ->withLoadTime()
-                    ->withBorder()
+                    ->withBorder()  
                     ->withLogo(
                         asset('images/Logo.png'),
                         'https://avsimulator.com/',
                     )
                     ->hiddenFromPagesEnabled()
                     ->hiddenFromPages(['admin/login', 'admin/registrasi']),
+                FontAwesomeIcons::make()
+                    ->classicRegular()
+                    ->free(),
             ])
             ->authMiddleware([
                 Authenticate::class,

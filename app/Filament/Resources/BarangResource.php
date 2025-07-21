@@ -148,7 +148,7 @@ class BarangResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('serial_number')
                     ->label('Serial Number')
-                    ->searchable()
+                    ->searchable(isIndividual: true)
                     ->sortable()
                     ->copyable()
                     ->color('gray'),
@@ -161,7 +161,7 @@ class BarangResource extends Resource
 
                 Tables\Columns\TextColumn::make('nama_barang')
                     ->label('Nama Barang')
-                    ->searchable()
+                    ->searchable(isIndividual: true)
                     ->sortable()
                     ->limit(30)
                     ->wrap(),

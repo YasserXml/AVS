@@ -5,6 +5,7 @@ namespace App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource;
 use Filament\Actions;
 use Filament\Actions\Action;
+use Filament\Notifications\Actions\Action as ActionsAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Contracts\Support\Htmlable;
@@ -32,7 +33,7 @@ class CreateUser extends CreateRecord
             ->iconColor('success')
             ->success()
             ->actions([
-                Action::make('view')
+                ActionsAction::make('view')
                     ->url($this->getResource()::getUrl('index'))
                     ->label('Lihat'),
             ])

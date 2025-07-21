@@ -66,6 +66,8 @@ class PengajuanoprasionalResource extends Resource
     {
         $query = parent::getEloquentQuery();
         $user = filament()->auth()->user();
+
+        // Role purchasing - dapat melihat status terkait pengadaan
         if ($user->hasRole('purchasing')) {
             return $query->whereIn('status', [
                 'diajukan_ke_superadmin',
@@ -75,6 +77,8 @@ class PengajuanoprasionalResource extends Resource
                 'cancelled'
             ]);
         }
+
+        // Role admin - dapat melihat status terkait admin dan proses akhir
         if ($user->hasRole('admin')) {
             return $query->whereIn('status', [
                 'pengajuan_terkirim',
@@ -86,6 +90,8 @@ class PengajuanoprasionalResource extends Resource
                 'completed',
             ]);
         }
+
+        // Role direktur_keuangan - dapat melihat status terkait direksi
         if ($user->hasRole('direktur_keuangan')) {
             return $query->whereIn('status', [
                 'pengajuan_dikirim_ke_direksi',
@@ -93,6 +99,8 @@ class PengajuanoprasionalResource extends Resource
                 'cancelled',
             ]);
         }
+
+        // Role keuangan - dapat melihat status terkait keuangan
         if ($user->hasRole('keuangan')) {
             return $query->whereIn('status', [
                 'pengajuan_dikirim_ke_keuangan',
@@ -102,9 +110,23 @@ class PengajuanoprasionalResource extends Resource
                 'cancelled',
             ]);
         }
+
+        // User biasa - hanya dapat melihat pengajuan mereka sendiri
         return $query->where('user_id', $user->id);
     }
 
+    protected function applyUserFilter(Builder $query): Builder
+    {
+        $user = filament()->auth()->user();
+
+        // Jika user memiliki role khusus, tidak perlu filter tambahan
+        if ($user->hasAnyRole(['purchasing', 'admin', 'direktur_keuangan', 'keuangan'])) {
+            return $query;
+        }
+
+        // Untuk user biasa, pastikan hanya data mereka sendiri yang tampil
+        return $query->where('user_id', $user->id);
+    }
     public static function form(Form $form): Form
     {
         return $form

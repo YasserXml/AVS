@@ -395,7 +395,7 @@ class BarangmasukResource extends Resource
 
                 TextColumn::make('project_name')
                     ->label('Nama Project')
-                    ->searchable()
+                    ->searchable(isIndividual: true)
                     ->sortable()
                     ->placeholder('Tidak ada project')
                     ->limit(25)
