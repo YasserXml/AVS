@@ -17,7 +17,7 @@ return new class extends Migration
             //Morph
             $table->string('model_type')->nullable();
             $table->unsignedBigInteger('model_id')->nullable();
- 
+
             //Folder
             $table->string('name')->index();
             $table->string('slug')->nullable();
@@ -40,7 +40,8 @@ return new class extends Migration
             $table->foreignId('parent_id')->nullable()->constrained('keuanganfolders')->onDelete('cascade');
             $table->index(['model_type', 'model_id']);
             $table->timestamps();
-            $table->softDeletes(); 
+            $table->softDeletes();
+            $table->foreignId('kategori_id')->nullable()->constrained('kategorikeuangans')->cascadeOnDelete();
         });
     }
 

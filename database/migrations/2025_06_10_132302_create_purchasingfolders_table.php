@@ -41,6 +41,7 @@ return new class extends Migration
             $table->index(['model_type', 'model_id']);
             $table->timestamps();
             $table->softDeletes();
+            $table->foreignId('kategori_id')->nullable()->constrained('kategoripurchasings')->cascadeOnDelete();
         });
     }
 

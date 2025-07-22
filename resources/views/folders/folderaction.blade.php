@@ -1,3 +1,4 @@
+{{-- resources/views/folders/folderaction.blade.php --}}
 <x-filament-actions::action
     :action="$action"
     dynamic-component="filament::button"
