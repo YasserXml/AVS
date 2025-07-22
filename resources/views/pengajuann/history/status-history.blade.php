@@ -64,7 +64,7 @@
                 Riwayat Perubahan Status
             </h3>
         </div>
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-sm text-gray-400 dark:text-gray-400">
             Berikut adalah riwayat lengkap perubahan status pengajuan ini.
         </p>
     </div>

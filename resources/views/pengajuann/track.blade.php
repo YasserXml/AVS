@@ -1,7 +1,6 @@
 {{-- resources/views/pengajuann/track.blade.php --}}
 @php
     $percentage = $getState()['percentage'] ?? 0;
-    $color = $getState()['color'] ?? 'gray';
     $status = $getState()['status'] ?? '';
     $statusHistory = $getState()['status_history'] ?? [];
     $record = $getState()['record'] ?? null;
@@ -65,7 +64,6 @@
             'percentage' => 50,
             'actor' => 'keuangan',
         ],
-        // TAMBAHKAN STATUS INI YANG HILANG
         'process_keuangan' => [
             'label' => 'Proses Keuangan',
             'icon' => '⚡',
@@ -76,7 +74,7 @@
         'execute_keuangan' => [
             'label' => 'Eksekusi Keuangan',
             'icon' => '💳',
-            'description' => 'Eksekusi pembayaran oleh tim keuangan',
+            'description' => 'Eksekusi pencairan oleh tim keuangan',
             'percentage' => 60,
             'actor' => 'keuangan',
         ],
@@ -144,8 +142,6 @@
         $currentPercentage = $record->getProgressPercentage();
     }
 
-    $uniqueId = 'project-tracking-' . uniqid();
-
     // Fungsi untuk mendapatkan step yang akan ditampilkan
     $getProjectVisibleSteps = function ($statusFlow, $status, $completedStatuses, $isRejected) {
         $statusKeys = array_keys($statusFlow);
@@ -161,10 +157,15 @@
                 }
             }
         } else {
-            // Tampilkan langkah yang sudah selesai dan langkah aktif saat ini
-            foreach ($statusKeys as $index => $statusKey) {
-                if ($index <= $currentIndex) {
-                    $visibleSteps[] = $statusKey;
+            // Jika completed, tampilkan semua langkah
+            if ($status === 'completed') {
+                $visibleSteps = $statusKeys;
+            } else {
+                // Tampilkan langkah yang sudah selesai dan langkah aktif saat ini
+                foreach ($statusKeys as $index => $statusKey) {
+                    if ($index <= $currentIndex) {
+                        $visibleSteps[] = $statusKey;
+                    }
                 }
             }
         }
@@ -619,9 +620,10 @@
         </div>
         <div class="tracking-progress">
             @if (!$isRejected)
-                <span>{{ $currentPercentage }}% Selesai</span>
+                <span>{{ $status === 'completed' ? 100 : $currentPercentage }}% Selesai</span>
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ $currentPercentage }}%"></div>
+                    <div class="progress-fill" style="width: {{ $status === 'completed' ? 100 : $currentPercentage }}%">
+                    </div>
                 </div>
             @else
                 <span style="color: #ef4444; font-weight: 500;">❌ Ditolak</span>
@@ -663,13 +665,13 @@
                     $currentIndex = array_search($status, $statusKeys);
                     $stepIndex = array_search($statusKey, $statusKeys);
 
-                    $stepCompleted = $stepIndex < $currentIndex;
-                    $stepActive = $stepIndex === $currentIndex;
-
-                    // Gunakan method dari model untuk mendapatkan history info
-                    $statusHistoryInfo = null;
-                    if ($record && method_exists($record, 'getStatusHistoryByStatus')) {
-                        $statusHistoryInfo = $record->getStatusHistoryByStatus($statusKey);
+                    // Jika status adalah completed, semua step menjadi completed
+                    if ($status === 'completed') {
+                        $stepCompleted = true;
+                        $stepActive = false;
+                    } else {
+                        $stepCompleted = $stepIndex < $currentIndex;
+                        $stepActive = $stepIndex === $currentIndex;
                     }
                 @endphp
 
@@ -698,22 +700,6 @@
                         <div class="step-actor">
                             👤 {{ $statusInfo['actor'] }}
                         </div>
-
-                        @if ($statusHistoryInfo && ($stepCompleted || $stepActive))
-                            <div class="step-timestamp">
-                                @if ($record && method_exists($record, 'formatIndonesianDate'))
-                                    📅 {{ $record->formatIndonesianDate($statusHistoryInfo['created_at']) }}
-                                @else
-                                    📅 {{ $statusHistoryInfo['created_at'] }}
-                                @endif
-                            </div>
-
-                            @if (isset($statusHistoryInfo['note']) && !empty($statusHistoryInfo['note']))
-                                <div class="step-note">
-                                    💬 {{ $statusHistoryInfo['note'] }}
-                                </div>
-                            @endif
-                        @endif
 
                         <div class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
                             @if ($stepCompleted)

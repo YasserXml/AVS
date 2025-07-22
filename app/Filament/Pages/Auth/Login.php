@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
+use App\Models\User;
 use Filament\Pages\Auth\Login as BaseLogin;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Checkbox;
@@ -27,7 +28,7 @@ class Login extends BaseLogin
     {
         return $form
             ->schema([
-                $this->getEmailFormComponent(), // Sekarang mendukung email atau username
+                $this->getEmailFormComponent(),
                 $this->getPasswordFormComponent(),
                 $this->getRememberFormComponent(),
             ])
@@ -44,11 +45,11 @@ class Login extends BaseLogin
     {
         return TextInput::make('email')
             ->label('Email / Nama Pengguna')
-            ->placeholder('Masukkan email atau Nama pengguna Anda')
+            ->placeholder('Masukkan email atau nama pengguna Anda')
             ->required()
             ->autocomplete('email')
             ->autofocus()
-            ->prefixIcon('heroicon-o-user') 
+            ->prefixIcon('heroicon-o-user')
             ->extraInputAttributes(['tabindex' => 1]);
     }
 
@@ -90,17 +91,11 @@ class Login extends BaseLogin
         return $actions;
     }
 
-    /**
-     * @return string|null
-     */
-    protected function getGuard()
+    protected function getGuard(): string
     {
         return Filament::getAuthGuard();
     }
 
-    /**
-     * Get the authentication guard.
-     */
     protected function getAuthGuard()
     {
         return auth()->guard($this->getGuard());
@@ -108,6 +103,7 @@ class Login extends BaseLogin
 
     public function authenticate(): ?LoginResponse
     {
+        // Rate limiting untuk mencegah brute force attack
         try {
             $this->rateLimit(5);
         } catch (TooManyRequestsException $exception) {
@@ -124,59 +120,122 @@ class Login extends BaseLogin
         // Menentukan apakah input adalah email atau username
         $loginField = filter_var($data['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
 
-        // Menggunakan Auth facade untuk attempt login dengan guard yang benar
-        // Sekarang mendukung login dengan email atau name (username)
+        // Mencoba melakukan autentikasi
         if (! auth()->guard($this->getGuard())->attempt([
-            $loginField => $data['email'], // Menggunakan field yang sesuai (email atau name)
+            $loginField => $data['email'],
             'password' => $data['password'],
         ], $data['remember'] ?? false)) {
             throw ValidationException::withMessages([
-                'data.email' => __('filament-panels::pages/auth/login.messages.failed'),
+                'data.email' => 'Email/username atau kata sandi yang Anda masukkan salah.',
             ]);
         }
 
-        $user = auth()->guard($this->getGuard())->user();
+        $user = $this->getAuthGuard()->user();
 
-        // Add null check to avoid "Attempt to read property on null" error
+        // Pastikan user berhasil diambil
         if (!$user) {
+            auth()->guard($this->getGuard())->logout();
             throw ValidationException::withMessages([
-                'data.email' => 'Gagal melakukan autentikasi user.',
+                'data.email' => 'Terjadi kesalahan saat mengautentikasi pengguna.',
             ]);
         }
 
-        // Periksa apakah pengguna sudah diverifikasi oleh admin
+        // Validasi 1: Periksa apakah akun sudah diverifikasi oleh admin
         if (!$user->admin_verified) {
-            // Logout user
             auth()->guard($this->getGuard())->logout();
 
             Notification::make()
-                ->title('Akun Belum Diverifikasi')
-                ->body('Akun Anda belum diverifikasi oleh admin. Silakan tunggu email konfirmasi atau hubungi administrator.')
+                ->title('Akun Belum Diverifikasi Admin')
+                ->body('Akun Anda belum diverifikasi oleh administrator. Silakan tunggu konfirmasi dari admin atau hubungi tim support.')
                 ->danger()
+                ->duration(8000)
                 ->send();
 
             throw ValidationException::withMessages([
-                'data.email' => 'Akun Anda belum diverifikasi oleh admin.',
+                'data.email' => 'Akun Anda belum diverifikasi oleh admin. Silakan hubungi administrator.',
             ]);
         }
 
-        // Periksa apakah email sudah diverifikasi (jika diperlukan)
-        if (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail() && config('filament.auth.require_email_verification', false)) {
+        // Validasi 2: Periksa apakah email sudah diverifikasi
+        if (is_null($user->email_verified_at)) {
             auth()->guard($this->getGuard())->logout();
 
             Notification::make()
                 ->title('Email Belum Diverifikasi')
-                ->body('Anda harus memverifikasi email Anda sebelum dapat login. Silakan cek email Anda untuk link verifikasi.')
-                ->danger()
+                ->body('Anda harus menunggu email Anda diverifikasi terlebih dahulu oleh administrator sebelum dapat masuk')
+                ->warning()
+                ->duration(8000)
                 ->send();
 
             throw ValidationException::withMessages([
-                'data.email' => 'Anda harus memverifikasi email Anda sebelum dapat login.',
+                'data.email' => 'Email Anda belum diverifikasi',
             ]);
         }
 
+        // Validasi 3: Periksa apakah akun masih aktif (tidak soft deleted)
+        if ($user->deleted_at !== null) {
+            auth()->guard($this->getGuard())->logout();
+
+            Notification::make()
+                ->title('Akun Tidak Aktif')
+                ->body('Akun Anda telah dinonaktifkan. Silakan hubungi administrator untuk informasi lebih lanjut.')
+                ->danger()
+                ->duration(8000)
+                ->send();
+
+            throw ValidationException::withMessages([
+                'data.email' => 'Akun Anda tidak aktif. Hubungi administrator.',
+            ]);
+        }
+
+        // Validasi tambahan: Periksa jika ada method hasVerifiedEmail() dari Laravel
+        if (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail()) {
+            auth()->guard($this->getGuard())->logout();
+
+            Notification::make()
+                ->title('Verifikasi Email Diperlukan')
+                ->body('Silakan verifikasi email Anda terlebih dahulu melalui link yang telah dikirim ke email Anda.')
+                ->warning()
+                ->duration(8000)
+                ->send();
+
+            throw ValidationException::withMessages([
+                'data.email' => 'Silakan verifikasi email Anda terlebih dahulu.',
+            ]);
+        }
+
+        // Jika semua validasi berhasil, regenerate session untuk keamanan
         session()->regenerate();
 
+        // Tampilkan notifikasi sukses
+        Notification::make()
+            ->title('Login Berhasil')
+            ->body("Selamat datang kembali, {$user->name}!")
+            ->success()
+            ->duration(5000)
+            ->send();
+
         return app(LoginResponse::class);
+    }
+
+    /**
+     * Method untuk mengirim ulang email verifikasi (opsional)
+     */
+    public function resendEmailVerification()
+    {
+        $data = $this->form->getState();
+        $loginField = filter_var($data['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+
+        $user = User::where($loginField, $data['email'])->first();
+
+        if ($user && is_null($user->email_verified_at)) {
+            $user->sendEmailVerificationNotification();
+
+            Notification::make()
+                ->title('Email Verifikasi Dikirim')
+                ->body('Link verifikasi email telah dikirim ulang ke email Anda.')
+                ->success()
+                ->send();
+        }
     }
 }

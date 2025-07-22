@@ -359,6 +359,7 @@ class BarangmasukResource extends Resource
                 TextColumn::make('tanggal_barang_masuk')
                     ->label('Tanggal Masuk')
                     ->date('d M Y')
+                    ->searchable(isIndividual: true)
                     ->sortable()
                     ->icon('heroicon-o-calendar')
                     ->toggleable(),

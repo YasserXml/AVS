@@ -404,7 +404,7 @@ class PengajuanprojectResource extends Resource
             ->persistSearchInSession()
             ->emptyStateActions([
                 Tables\Actions\CreateAction::make()
-                    ->label('Buat Pengajuan Project Pertama')
+                    ->label('Buat Pengajuan Pertama')
                     ->icon('heroicon-m-plus'),
             ])
             ->emptyStateDescription('Belum ada pengajuan project yang dibuat.')

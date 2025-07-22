@@ -17,7 +17,6 @@ return new class extends Migration
             $table->foreignId('barang_id')->constrained('barangs');
             $table->integer('jumlah_barang_masuk');
             $table->date('tanggal_barang_masuk');
-            $table->string('diajukan_oleh');
             $table->enum('status', ['oprasional_kantor', 'project']);
             $table->string('dibeli')->nullable();
             $table->string('project_name')->nullable();
