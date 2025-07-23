@@ -80,9 +80,9 @@ class AccountingmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.akuntansimedia'))
+            ->emptyState(fn() => view('folders.akuntansi.akuntansimedia'))
             ->content(function () {
-                return view('folders.akuntansimedia');
+                return view('folders.akuntansi.akuntansimedia');
             })
             ->columns([
                 Stack::make([

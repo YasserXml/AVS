@@ -113,6 +113,6 @@ class ListPmofolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Pmo.folderaction', ['item' => $item]);
     }
 }

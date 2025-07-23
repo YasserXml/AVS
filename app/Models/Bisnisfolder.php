@@ -76,6 +76,34 @@ class Bisnisfolder extends Model implements HasMedia
         return $this->children();
     }
 
+     public function kategori()
+    {
+        return $this->belongsTo(Kategoribisnis::class, 'kategori_id');
+    }
+
+    // Scope untuk filter berdasarkan kategori
+    public function scopeByKategori(Builder $query, $kategoriId): Builder
+    {
+        return $query->where('kategori_id', $kategoriId);
+    }
+
+    public function scopeWithKategori(Builder $query): Builder
+    {
+        return $query->with('kategori');
+    }
+
+    // Method untuk mendapatkan nama kategori
+    public function getKategoriNameAttribute(): ?string
+    {
+        return $this->kategori?->nama_kategori;
+    }
+
+    // Method untuk cek apakah folder memiliki kategori
+    public function hasKategori(): bool
+    {
+        return !is_null($this->kategori_id) && !is_null($this->kategori);
+    }
+
     public function parentFolder()
     {
         return $this->parent();

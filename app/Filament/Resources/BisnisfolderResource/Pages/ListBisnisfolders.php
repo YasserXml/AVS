@@ -113,6 +113,6 @@ class ListBisnisfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Bisnis.folderaction', ['item' => $item]);
     }
 }

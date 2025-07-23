@@ -113,6 +113,6 @@ class ListAccountingfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.akuntansi.folderaction', ['item' => $item]);
     }
 }

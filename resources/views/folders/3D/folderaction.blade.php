@@ -43,21 +43,31 @@
             <div>
                 <h1 class="font-semibold text-base text-center">{{ $item->name }}</h1>
             </div>
+            
+            {{-- Menghapus tampilan kategori karena sudah dikelompokkan --}}
+            {{-- @if($item->kategori)
+                <div class="mt-1">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        <x-icon name="heroicon-o-tag" class="w-3 h-3 mr-1"/>
+                        {{ $item->kategori->nama_kategori }}
+                    </span>
+                </div>
+            @endif --}}
+            
             @if($item->description)
                 <div class="mt-1">
-                    <p class="text-xs text-gray-600 dark:text-gray-400 text-center">{{ $item->description }}</p>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 text-center line-clamp-2">{{ $item->description }}</p>
                 </div>
             @endif
-            <div class="flex justify-center mt-1">
+            
+            <div class="flex items-center justify-center gap-2 mt-2">
                 <p class="text-gray-600 dark:text-gray-300 text-xs">
                     {{ $item->created_at->diffForHumans() }}
                 </p>
-            </div>
-            @if($item->is_protected)
-                <div class="flex justify-center mt-1">
+                @if($item->is_protected)
                     <x-icon name="heroicon-o-lock-closed" class="w-3 h-3 text-yellow-500"/>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
     </div>
 </x-filament-actions::action>

@@ -119,6 +119,6 @@ class ListDirektoratfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Direktorat.folderaction', ['item' => $item]);
     }
 }

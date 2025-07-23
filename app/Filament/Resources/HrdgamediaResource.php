@@ -86,9 +86,9 @@ class HrdgamediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.hrdgamedia'))
+            ->emptyState(fn() => view('folders.HrdGa.hrdgamedia'))
             ->content(function () {
-                return view('folders.hrdgamedia');
+                return view('folders.HrdGa.hrdgamedia');
             })
             ->columns([
                 Stack::make([

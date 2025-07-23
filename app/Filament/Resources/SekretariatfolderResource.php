@@ -23,6 +23,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class SekretariatfolderResource extends Resource
 {
@@ -110,7 +111,7 @@ class SekretariatfolderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-             ->modifyQueryUsing(function (Builder $query) {
+            ->modifyQueryUsing(function (Builder $query) {
                 if (request()->has('model_type') && !request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->where('model_id', null)
@@ -124,15 +125,23 @@ class SekretariatfolderResource extends Resource
                     // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
-                          ->where('collection', null)
-                          ->orWhere('model_type', null);
+                            ->where('collection', null)
+                            ->orWhere('model_type', null);
                     })
-                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
-                    ->whereNull('parent_id');
+                        // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
+                        ->whereNull('parent_id');
                 }
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategorisekretariats', 'sekretariatfolders.kategori_id', '=', 'kategorisekretariats.id')
+                    ->addSelect([
+                        'sekretariatfolders.*',
+                        DB::raw("CASE WHEN sekretariatfolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategorisekretariats.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('sekretariatfolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.Sekretariat.folder');
             })
             ->columns([
                 Stack::make([

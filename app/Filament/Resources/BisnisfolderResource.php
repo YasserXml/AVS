@@ -23,6 +23,7 @@ use Filament\Tables\Table;
 use illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class BisnisfolderResource extends Resource
 {
@@ -41,7 +42,7 @@ class BisnisfolderResource extends Resource
         } else if (request()->has('model_type') && request()->has('collection')) {
             return str(request()->get('collection'))->title();
         } else {
-            return ('Bisnis');
+            return ('Divisi Bisnis & Marketing');
         }
     }
 
@@ -132,9 +133,17 @@ class BisnisfolderResource extends Resource
                     // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
                     ->whereNull('parent_id');
                 }
+                  $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategoribisnis', 'bisnisfolders.kategori_id', '=', 'kategoribisnis.id')
+                    ->addSelect([
+                        'bisnisfolders.*',
+                        DB::raw("CASE WHEN bisnisfolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategoribisnis.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('bisnisfolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.Bisnis.folder');
             })
             ->columns([
                 Stack::make([

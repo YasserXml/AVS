@@ -23,6 +23,7 @@ use Filament\Tables\Table;
 use illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class HrdgafolderResource extends Resource
 {
@@ -130,9 +131,17 @@ class HrdgafolderResource extends Resource
                         // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategorihrdgas', 'hrdgafolders.kategori_id', '=', 'kategorihrdgas.id')
+                    ->addSelect([
+                        'hrdgafolders.*',
+                        DB::raw("CASE WHEN hrdgafolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategorihrdgas.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('hrdgafolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.HrdGa.folder');
             })
             ->columns([
                 Stack::make([

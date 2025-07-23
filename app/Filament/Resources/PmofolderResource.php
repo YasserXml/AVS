@@ -23,6 +23,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class PmofolderResource extends Resource
 {
@@ -130,9 +131,17 @@ class PmofolderResource extends Resource
                         // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategoripmos', 'pmofolders.kategori_id', '=', 'kategoripmos.id')
+                    ->addSelect([
+                        'pmofolders.*',
+                        DB::raw("CASE WHEN pmofolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategoripmos.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('pmofolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.Pmo.folder');
             })
             ->columns([
                 Stack::make([

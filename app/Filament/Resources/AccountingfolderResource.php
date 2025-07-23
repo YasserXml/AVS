@@ -23,12 +23,13 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class AccountingfolderResource extends Resource
 {
     protected static ?string $model = Accountingfolder::class;
 
-     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
     protected static ?string $navigationGroup = 'Arsip';
 
@@ -41,7 +42,7 @@ class AccountingfolderResource extends Resource
         } else if (request()->has('model_type') && request()->has('collection')) {
             return str(request()->get('collection'))->title();
         } else {
-            return ('Akuntansi');
+            return ('Divisi Akuntansi');
         }
     }
 
@@ -112,7 +113,7 @@ class AccountingfolderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-             ->modifyQueryUsing(function (Builder $query) {
+            ->modifyQueryUsing(function (Builder $query) {
                 if (request()->has('model_type') && !request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->where('model_id', null)
@@ -126,15 +127,23 @@ class AccountingfolderResource extends Resource
                     // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
-                          ->where('collection', null)
-                          ->orWhere('model_type', null);
+                            ->where('collection', null)
+                            ->orWhere('model_type', null);
                     })
-                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
-                    ->whereNull('parent_id');
+                        // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
+                        ->whereNull('parent_id');
                 }
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategoriaccountings', 'accountingfolders.kategori_id', '=', 'kategoriaccountings.id')
+                    ->addSelect([
+                        'accountingfolders.*',
+                        DB::raw("CASE WHEN accountingfolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategoriaccountings.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('accountingfolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.Akuntansi.folder');
             })
             ->columns([
                 Stack::make([

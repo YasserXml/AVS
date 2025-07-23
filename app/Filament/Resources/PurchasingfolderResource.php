@@ -23,6 +23,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class PurchasingfolderResource extends Resource
 {
@@ -55,7 +56,7 @@ class PurchasingfolderResource extends Resource
         return 13;
     }
 
-   public static function form(Form $form): Form
+    public static function form(Form $form): Form
     {
         return $form
             ->schema([
@@ -130,9 +131,17 @@ class PurchasingfolderResource extends Resource
                         // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategoripurchasings', 'purchasingfolders.kategori_id', '=', 'kategoripurchasings.id')
+                    ->addSelect([
+                        'purchasingfolders.*',
+                        DB::raw("CASE WHEN purchasingfolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategoripurchasings.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('purchasingfolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.Purchasing.folder');
             })
             ->columns([
                 Stack::make([

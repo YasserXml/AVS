@@ -87,9 +87,9 @@ class MekanikmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.mekanikmedia'))
+            ->emptyState(fn() => view('folders.mekanik.mekanikmedia'))
             ->content(function () {
-                return view('folders.mekanikmedia');
+                return view('folders.mekanik.mekanikmedia');
             })
             ->columns([
                 Stack::make([

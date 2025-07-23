@@ -122,6 +122,6 @@ class ListSekretariatfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Sekretariat.folderaction', ['item' => $item]);
     }
 }

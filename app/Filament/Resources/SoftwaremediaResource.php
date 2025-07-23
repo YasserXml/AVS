@@ -81,9 +81,9 @@ class SoftwaremediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.softwaremedia'))
+            ->emptyState(fn() => view('folders.Software.softwaremedia'))
             ->content(function () {
-                return view('folders.softwaremedia');
+                return view('folders.Software.softwaremedia');
             })
             ->columns([
                 Stack::make([

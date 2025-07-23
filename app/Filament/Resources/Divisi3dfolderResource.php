@@ -6,8 +6,10 @@ use App\Filament\Resources\Divisi3dfolderResource\Pages;
 use App\Filament\Resources\Divisi3dfolderResource\RelationManagers;
 use App\Models\Divisi3dfolder;
 use Filament\Forms;
+use Filament\Forms\Components\Actions\Action as ActionsAction;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,12 +19,16 @@ use illuminate\Support\Str;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class Divisi3dfolderResource extends Resource
 {
@@ -63,8 +69,10 @@ class Divisi3dfolderResource extends Resource
                     ->default(filament()->auth()->id()),
                 Hidden::make('user_type')
                     ->default(get_class(filament()->auth()->user())),
+
+
                 TextInput::make('name')
-                    ->label('Nama')
+                    ->label('Nama Folder')
                     ->columnSpanFull()
                     ->live(onBlur: true)
                     ->afterStateUpdated(function (Set $set, Get $get) {
@@ -72,6 +80,29 @@ class Divisi3dfolderResource extends Resource
                     })
                     ->required()
                     ->maxLength(255),
+                // Tambahkan select untuk kategori
+                Select::make('kategori_id')
+                    ->label('Kategori')
+                    ->relationship('kategori', 'nama_kategori')
+                    ->searchable()
+                    ->preload()
+                    ->reactive()
+                    ->live()
+                    ->createOptionForm([
+                        TextInput::make('nama_kategori')
+                            ->label('Nama Kategori')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique()
+                            ->placeholder('Masukkan nama kategori baru')
+                    ])
+                    ->createOptionAction(function (ActionsAction $action) {
+                        return $action
+                            ->modalHeading('Buat Kategori Baru')
+                            ->modalSubmitActionLabel('Buat')
+                            ->modalCancelActionLabel('Batal');
+                    })
+                    ->columnSpanFull(),
                 TextInput::make('collection')
                     ->label('Koleksi')
                     ->columnSpanFull()
@@ -84,7 +115,8 @@ class Divisi3dfolderResource extends Resource
                     ->columnSpanFull()
                     ->maxLength(255),
                 ColorPicker::make('color')
-                    ->label('Warna'),
+                    ->label('Warna Folder')
+                    ->default('#ffab09'),
                 Toggle::make('is_protected')
                     ->label('Dilindungi Password')
                     ->live()
@@ -107,6 +139,7 @@ class Divisi3dfolderResource extends Resource
             ])->columns(2);
     }
 
+    // Update pada bagian table untuk menampilkan kategori
     public static function table(Table $table): Table
     {
         return $table
@@ -120,24 +153,36 @@ class Divisi3dfolderResource extends Resource
                         ->whereNotNull('model_id')
                         ->where('collection', request()->get('collection'));
                 } else {
-                    //  Hanya tampilkan folder root (tanpa parent_id)
-                    // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
                             ->where('collection', null)
                             ->orWhere('model_type', null);
                     })
-                        // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
+                // Optimasi query untuk pengelompokan kategori
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategori3ds', 'divisi3dfolders.kategori_id', '=', 'kategori3ds.id')
+                    ->addSelect([
+                        'divisi3dfolders.*',
+                        DB::raw("CASE WHEN divisi3dfolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategori3ds.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('divisi3dfolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.3D.folder');
             })
+            // ... rest of the table configuration remains the same
             ->columns([
                 Stack::make([
                     TextColumn::make('name')
                         ->label('Nama')
+                        ->searchable(),
+                    TextColumn::make('kategori.nama_kategori')
+                        ->label('Kategori')
+                        ->badge()
+                        ->color('primary')
                         ->searchable(),
                     TextColumn::make('description')
                         ->label('Deskripsi')
@@ -160,6 +205,24 @@ class Divisi3dfolderResource extends Resource
                         ->dateTime()
                         ->toggleable(isToggledHiddenByDefault: true),
                 ])
+            ])
+            ->filters([
+                SelectFilter::make('kategori_id')
+                    ->label('Filter berdasarkan Kategori')
+                    ->relationship('kategori', 'nama_kategori')
+                    ->searchable()
+                    ->preload()
+                    ->multiple()
+                    ->placeholder('Pilih Kategori'),
+
+                // Tambahkan filter untuk folder tanpa kategori
+                Filter::make('tanpa_kategori')
+                    ->label('Tanpa Kategori')
+                    ->query(fn(Builder $query): Builder => $query->whereNull('kategori_id'))
+                    ->toggle(),
+            ])
+            ->actions([
+                // Actions existing...
             ])
             ->defaultPaginationPageOption(12)
             ->paginationPageOptions([

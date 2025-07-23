@@ -113,6 +113,6 @@ class ListKeuanganfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Keuangan.folderaction', ['item' => $item]);
     }
 }

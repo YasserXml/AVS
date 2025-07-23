@@ -80,9 +80,9 @@ class PmomediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.pmomedia'))
+            ->emptyState(fn() => view('folders.Pmo.pmomedia'))
             ->content(function () {
-                return view('folders.pmomedia');
+                return view('folders.Pmo.pmomedia');
             })
             ->columns([
                 Stack::make([

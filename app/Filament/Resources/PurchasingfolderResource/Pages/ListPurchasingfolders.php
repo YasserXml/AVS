@@ -113,6 +113,6 @@ class ListPurchasingfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Purchasing.folderaction', ['item' => $item]);
     }
 }

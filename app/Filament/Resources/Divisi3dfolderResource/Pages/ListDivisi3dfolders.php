@@ -113,6 +113,6 @@ class ListDivisi3dfolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.3D.folderaction', ['item' => $item]);
     }
 }

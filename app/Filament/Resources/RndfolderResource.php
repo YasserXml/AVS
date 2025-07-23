@@ -23,6 +23,7 @@ use Filament\Tables\Table;
 use illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class RndfolderResource extends Resource
 {
@@ -130,9 +131,17 @@ class RndfolderResource extends Resource
                         // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
+                $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategorirnds', 'rndfolders.kategori_id', '=', 'kategorirnds.id')
+                    ->addSelect([
+                        'rndfolders.*',
+                        DB::raw("CASE WHEN rndfolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategorirnds.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('rndfolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.RnD.folder');
             })
             ->columns([
                 Stack::make([

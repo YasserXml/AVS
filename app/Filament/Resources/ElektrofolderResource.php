@@ -23,6 +23,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class ElektrofolderResource extends Resource
 {
@@ -130,9 +131,17 @@ class ElektrofolderResource extends Resource
                         // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
+                  $query->with(['kategori:id,nama_kategori'])
+                    ->leftJoin('kategorielektros', 'elektrofolders.kategori_id', '=', 'kategorielektros.id')
+                    ->addSelect([
+                        'elektrofolders.*',
+                        DB::raw("CASE WHEN elektrofolders.kategori_id IS NULL THEN 'zzz_tanpa_kategori' ELSE kategorielektros.nama_kategori END as kategori_sort")
+                    ])
+                    ->orderBy('kategori_sort')
+                    ->orderBy('elektrofolders.name');
             })
             ->content(function () {
-                return view('folders.folder');
+                return view('folders.Elektro.folder');
             })
             ->columns([
                 Stack::make([

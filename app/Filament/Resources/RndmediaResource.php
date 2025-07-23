@@ -81,9 +81,9 @@ class RndmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.rndmedia'))
+            ->emptyState(fn() => view('folders.RnD.rndmedia'))
             ->content(function () {
-                return view('folders.rndmedia');
+                return view('folders.RnD.rndmedia');
             })
             ->columns([
                 Stack::make([

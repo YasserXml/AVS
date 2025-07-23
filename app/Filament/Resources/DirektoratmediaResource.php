@@ -88,9 +88,9 @@ class DirektoratmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.media'))
+            ->emptyState(fn() => view('folders.direktorat.media'))
             ->content(function () {
-                return view('folders.media');
+                return view('folders.direktorat.media');
             })
             ->columns([
                 Stack::make([

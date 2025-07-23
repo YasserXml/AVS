@@ -113,6 +113,6 @@ class ListElektrofolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Elektro.folderaction', ['item' => $item]);
     }
 }

@@ -86,9 +86,9 @@ class BisnismediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.bisnismedia'))
+            ->emptyState(fn() => view('folders.bisnis.bisnismedia'))
             ->content(function () {
-                return view('folders.bisnismedia');
+                return view('folders.bisnis.bisnismedia');
             })
             ->columns([
                 Stack::make([

@@ -86,9 +86,9 @@ class KeuanganmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.keuanganmedia'))
+            ->emptyState(fn() => view('folders.keuangan.keuanganmedia'))
             ->content(function () {
-                return view('folders.keuanganmedia');
+                return view('folders.keuangan.keuanganmedia');
             })
             ->columns([
                 Stack::make([

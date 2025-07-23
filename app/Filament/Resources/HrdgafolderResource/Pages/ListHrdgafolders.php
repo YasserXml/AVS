@@ -113,6 +113,6 @@ class ListHrdgafolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.HrdGa.folderaction', ['item' => $item]);
     }
 }

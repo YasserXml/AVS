@@ -86,9 +86,9 @@ class Divisi3dmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.3dmedia'))
+            ->emptyState(fn() => view('folders.3D.3dmedia'))
             ->content(function () {
-                return view('folders.3dmedia');
+                return view('folders.3D.3dmedia');
             })
             ->columns([
                 Stack::make([

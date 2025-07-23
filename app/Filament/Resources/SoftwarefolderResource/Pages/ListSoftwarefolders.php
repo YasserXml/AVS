@@ -113,6 +113,6 @@ class ListSoftwarefolders extends ListRecords
                     ]);
                 }
             })
-            ->view('folders.folderaction', ['item' => $item]);
+            ->view('folders.Software.folderaction', ['item' => $item]);
     }
 }

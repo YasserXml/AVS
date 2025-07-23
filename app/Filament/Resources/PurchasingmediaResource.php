@@ -81,9 +81,9 @@ class PurchasingmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.purchasingmedia'))
+            ->emptyState(fn() => view('folders.Purchasing.purchasingmedia'))
             ->content(function () {
-                return view('folders.purchasingmedia');
+                return view('folders.Purchasing.purchasingmedia');
             })
             ->columns([
                 Stack::make([

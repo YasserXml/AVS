@@ -86,9 +86,9 @@ class SekretariatmediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.sekretariat'))
+            ->emptyState(fn() => view('folders.Sekretariat.sekretariat'))
             ->content(function () {
-                return view('folders.sekretariat');
+                return view('folders.Sekretariat.sekretariat');
             })
             ->columns([
                 Stack::make([

@@ -39,7 +39,7 @@ class Sekretariatfolder extends Model implements HasMedia
         'has_user_access' => 'boolean',
     ];
 
-    
+
     public function model()
     {
         return $this->morphTo();
@@ -49,23 +49,51 @@ class Sekretariatfolder extends Model implements HasMedia
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function sekretariatmedia()
     {
         return $this->hasMany(Sekretariatmedia::class, 'model_id')
-        ->where('model_type', self::class);
+            ->where('model_type', self::class);
     }
-    
+
     public function sekremedia()
     {
         return $this->sekretariatmedia();
     }
-    
+
+    public function kategori()
+    {
+        return $this->belongsTo(Kategorisekretariat::class, 'kategori_id');
+    }
+
+    // Scope untuk filter berdasarkan kategori
+    public function scopeByKategori(Builder $query, $kategoriId): Builder
+    {
+        return $query->where('kategori_id', $kategoriId);
+    }
+
+    public function scopeWithKategori(Builder $query): Builder
+    {
+        return $query->with('kategori');
+    }
+
+    // Method untuk mendapatkan nama kategori
+    public function getKategoriNameAttribute(): ?string
+    {
+        return $this->kategori?->nama_kategori;
+    }
+
+    // Method untuk cek apakah folder memiliki kategori
+    public function hasKategori(): bool
+    {
+        return !is_null($this->kategori_id) && !is_null($this->kategori);
+    }
+
     public function parent()
     {
         return $this->belongsTo(Sekretariatfolder::class, 'parent_id');
     }
-    
+
     public function children()
     {
         return $this->hasMany(Sekretariatfolder::class, 'parent_id');
@@ -80,19 +108,19 @@ class Sekretariatfolder extends Model implements HasMedia
     {
         return $this->parent();
     }
-    
+
     public function getAllMedia()
     {
         // Gunakan direktoratmedia(), bukan media
         $media = collect($this->sekretariatmedia);
-        
+
         foreach ($this->subfolders as $subfolder) {
             $media = $media->merge($subfolder->getAllMedia());
         }
 
         return $media;
     }
-    
+
     public function deleteRecursively()
     {
         // Hapus semua media dalam folder ini
@@ -102,16 +130,16 @@ class Sekretariatfolder extends Model implements HasMedia
             }
             $mediaItem->delete();
         }
-        
+
         // Hapus subfolder secara rekursif
         foreach ($this->subfolders as $subfolder) {
             $subfolder->deleteRecursively();
         }
-        
+
         // Hapus folder ini
         $this->delete();
     }
-    
+
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -122,7 +150,7 @@ class Sekretariatfolder extends Model implements HasMedia
         $baseSlug = Str::slug($name);
         $slug = $baseSlug;
         $counter = 1;
-        
+
         // Cek apakah slug sudah ada (kecuali untuk record ini sendiri)
         while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
             $slug = $baseSlug . '-' . $counter;
@@ -191,7 +219,7 @@ class Sekretariatfolder extends Model implements HasMedia
             if ($model->isDirty('name')) {
                 $newSlug = Str::slug($model->name);
                 $oldSlug = Str::slug($model->getOriginal('name'));
-                
+
                 // Update slug jika kosong atau slug lama sama dengan nama lama
                 if (empty($model->slug) || $model->slug === $oldSlug) {
                     $model->slug = $model->generateUniqueSlug($model->name);
@@ -207,13 +235,12 @@ class Sekretariatfolder extends Model implements HasMedia
                 });
             }
         });
-
     }
 
     // Method untuk mendapatkan URL media dengan slug
     public function getMediaUrl(): string
     {
-        return route('filament.admin.resources.arsip.sekre.folder.index', [
+        return route('filament.admin.resources.arsip.sekretariat.folder.index', [
             'folder' => $this->slug
         ]);
     }
@@ -221,7 +248,7 @@ class Sekretariatfolder extends Model implements HasMedia
     // Method untuk mendapatkan URL lengkap dengan nested path
     public function getFullUrl(): string
     {
-        return route('filament.admin.resources.arsip.sekre.folder.index', [
+        return route('filament.admin.resources.arsip.sekretariat.folder.index', [
             'folder' => $this->full_slug_path
         ]);
     }

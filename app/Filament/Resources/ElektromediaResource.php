@@ -86,9 +86,9 @@ class ElektromediaResource extends Resource
                     $query->whereRaw('1 = 0');
                 }
             })
-            ->emptyState(fn() => view('folders.elektromedia'))
+            ->emptyState(fn() => view('folders.elektro.elektromedia'))
             ->content(function () {
-                return view('folders.elektromedia');
+                return view('folders.elektro.elektromedia');
             })
             ->columns([
                 Stack::make([
