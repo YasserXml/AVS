@@ -203,8 +203,8 @@ class ListDivisi3dmedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('3d_media')
+                    ->directory('3d'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -225,9 +225,9 @@ class ListDivisi3dmedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
+                    $filePath = storage_path('app/public/3d/' . $file);
                     $media->mime_type = mime_content_type($filePath);
-                    $media->disk = 'public';
+                    $media->disk = '3d_media';
                     $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [

@@ -59,8 +59,8 @@ class Hrdgamedia extends Model implements HasMedia
     public function getUrlAttribute(): string
     {
         // Langsung return URL berdasarkan disk
-        if ($this->disk === 'public') {
-            return asset('storage/' . $this->file_name);
+        if ($this->disk === 'hrd-ga_media') {
+            return asset('storage/hrd-ga/' . $this->file_name);
         }
 
         // Untuk disk lainnya, gunakan URL helper
@@ -72,20 +72,26 @@ class Hrdgamedia extends Model implements HasMedia
     public function getPublicUrl(): string
     {
         try {
+            // Jika menggunakan disk accounting_media
+            if ($this->disk === 'hrd-ga_media') {
+                return asset('storage/hrd-ga/' . $this->file_name);
+            }
+
             // Jika file ada di disk public
             if ($this->disk === 'public') {
                 return asset('storage/' . $this->file_name);
             }
 
-            // Jika file ada di disk local, copy ke public jika belum ada
+            // Jika file ada di disk local, copy ke accounting_media jika belum ada
             if ($this->disk === 'local') {
-                if (!Storage::disk('public')->exists($this->file_name)) {
-                    // Copy file dari local ke public
+                $targetDisk = 'hrd-ga_media';
+                if (!Storage::disk($targetDisk)->exists($this->file_name)) {
+                    // Copy file dari local ke accounting_media
                     $fileContent = Storage::disk('local')->get($this->file_name);
-                    Storage::disk('public')->put($this->file_name, $fileContent);
+                    Storage::disk($targetDisk)->put($this->file_name, $fileContent);
                 }
 
-                return asset('storage/' . $this->file_name);
+                return asset('storage/hrdga/' . $this->file_name);
             }
 
             // Fallback
@@ -255,6 +261,10 @@ class Hrdgamedia extends Model implements HasMedia
 
             if (empty($model->collection_name)) {
                 $model->collection_name = 'default';
+            }
+
+            if (empty($model->disk)) {
+                $model->disk = 'hrd-ga_media';
             }
 
             if (empty($model->manipulations)) {

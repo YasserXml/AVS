@@ -66,8 +66,10 @@ class BisnisfolderResource extends Resource
                     ->default(filament()->auth()->id()),
                 Hidden::make('user_type')
                     ->default(get_class(filament()->auth()->user())),
+
+
                 TextInput::make('name')
-                    ->label('Nama')
+                    ->label('Nama Folder')
                     ->columnSpanFull()
                     ->live(onBlur: true)
                     ->afterStateUpdated(function (Set $set, Get $get) {
@@ -75,6 +77,29 @@ class BisnisfolderResource extends Resource
                     })
                     ->required()
                     ->maxLength(255),
+                // Tambahkan select untuk kategori
+                Select::make('kategori_id')
+                    ->label('Kategori')
+                    ->relationship('kategori', 'nama_kategori')
+                    ->searchable()
+                    ->preload()
+                    ->reactive()
+                    ->live()
+                    ->createOptionForm([
+                        TextInput::make('nama_kategori')
+                            ->label('Nama Kategori')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique()
+                            ->placeholder('Masukkan nama kategori baru')
+                    ])
+                    ->createOptionAction(function (Action $action) {
+                        return $action
+                            ->modalHeading('Buat Kategori Baru')
+                            ->modalSubmitActionLabel('Buat')
+                            ->modalCancelActionLabel('Batal');
+                    })
+                    ->columnSpanFull(),
                 TextInput::make('collection')
                     ->label('Koleksi')
                     ->columnSpanFull()
@@ -87,7 +112,8 @@ class BisnisfolderResource extends Resource
                     ->columnSpanFull()
                     ->maxLength(255),
                 ColorPicker::make('color')
-                    ->label('Warna'),
+                    ->label('Warna Folder')
+                    ->default('#ffab09'),
                 Toggle::make('is_protected')
                     ->label('Dilindungi Password')
                     ->live()
@@ -113,7 +139,7 @@ class BisnisfolderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-             ->modifyQueryUsing(function (Builder $query) {
+            ->modifyQueryUsing(function (Builder $query) {
                 if (request()->has('model_type') && !request()->has('collection')) {
                     $query->where('model_type', request()->get('model_type'))
                         ->where('model_id', null)
@@ -127,13 +153,13 @@ class BisnisfolderResource extends Resource
                     // dan folder yang bukan subfolder dari folder lain
                     $query->where(function ($q) {
                         $q->where('model_id', null)
-                          ->where('collection', null)
-                          ->orWhere('model_type', null);
+                            ->where('collection', null)
+                            ->orWhere('model_type', null);
                     })
-                    // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
-                    ->whereNull('parent_id');
+                        // KUNCI UTAMA: Hanya tampilkan folder yang tidak memiliki parent
+                        ->whereNull('parent_id');
                 }
-                  $query->with(['kategori:id,nama_kategori'])
+                $query->with(['kategori:id,nama_kategori'])
                     ->leftJoin('kategoribisnis', 'bisnisfolders.kategori_id', '=', 'kategoribisnis.id')
                     ->addSelect([
                         'bisnisfolders.*',

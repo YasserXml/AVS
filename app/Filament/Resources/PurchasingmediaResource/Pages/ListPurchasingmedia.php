@@ -176,8 +176,8 @@ class ListPurchasingmedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('purchasing_media')
+                    ->directory('purchasing'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -198,9 +198,9 @@ class ListPurchasingmedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
+                    $filePath = storage_path('app/public/purchasing/' . $file);
                     $media->mime_type = mime_content_type($filePath);
-                    $media->disk = 'public';
+                    $media->disk = 'purchasing_media'; // Ganti dari 'public' ke 'purchasing_media'
                     $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [

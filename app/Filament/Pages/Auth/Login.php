@@ -210,7 +210,7 @@ class Login extends BaseLogin
         // Tampilkan notifikasi sukses
         Notification::make()
             ->title('Login Berhasil')
-            ->body("Selamat datang kembali, {$user->name}!")
+            ->body("Selamat datang , {$user->name}!")
             ->success()
             ->duration(5000)
             ->send();

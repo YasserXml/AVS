@@ -176,8 +176,8 @@ class ListKeuanganmedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('keuangan_media')
+                    ->directory('keuangan'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -198,9 +198,9 @@ class ListKeuanganmedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
+                    $filePath = storage_path('app/public/keuangan/' . $file);
                     $media->mime_type = mime_content_type($filePath);
-                    $media->disk = 'public';
+                    $media->disk = 'keuangan_media';
                     $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [

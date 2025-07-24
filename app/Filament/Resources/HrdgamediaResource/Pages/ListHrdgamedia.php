@@ -203,10 +203,8 @@ class ListHrdgamedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->maxSize(100000)
-                    ->maxFiles(5)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('hrd-ga_media')
+                    ->directory('hrd-ga'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -227,16 +225,11 @@ class ListHrdgamedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
-                    if (file_exists($filePath)) {
-                        $media->mime_type = mime_content_type($filePath);
-                        $media->size = filesize($filePath);
-                    } else {
-                        $media->mime_type = 'application/octet-stream';
-                        $media->size = 0;
-                    }
-
-                    $media->disk = 'public';
+                    // Update path untuk disk accounting_media
+                    $filePath = storage_path('app/public/hrd-ga/' . $file);
+                    $media->mime_type = mime_content_type($filePath);
+                    $media->disk = 'hrd-ga_media'; // Ganti dari 'public' ke 'accounting_media'
+                    $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [
                         'title' => $data['title'] ?? null,
@@ -252,13 +245,9 @@ class ListHrdgamedia extends ListRecords
                     ->success()
                     ->send();
 
-                // Refresh data
+                // Refresh data dan tetap di halaman yang sama
                 $this->loadSubfolders();
-
-                // Redirect untuk refresh halaman
-                return redirect()->route('filament.admin.resources.arsip.hrdga.folder.index', [
-                    'folder' => $this->folder->slug
-                ]);
+                $this->dispatch('$refresh');
             });
     }
 

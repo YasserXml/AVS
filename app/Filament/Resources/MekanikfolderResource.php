@@ -6,8 +6,10 @@ use App\Filament\Resources\MekanikfolderResource\Pages;
 use App\Filament\Resources\MekanikfolderResource\RelationManagers;
 use App\Models\Mekanikfolder;
 use Filament\Forms;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -64,8 +66,10 @@ class MekanikfolderResource extends Resource
                     ->default(filament()->auth()->id()),
                 Hidden::make('user_type')
                     ->default(get_class(filament()->auth()->user())),
+
+
                 TextInput::make('name')
-                    ->label('Nama')
+                    ->label('Nama Folder')
                     ->columnSpanFull()
                     ->live(onBlur: true)
                     ->afterStateUpdated(function (Set $set, Get $get) {
@@ -73,6 +77,29 @@ class MekanikfolderResource extends Resource
                     })
                     ->required()
                     ->maxLength(255),
+                // Tambahkan select untuk kategori
+                Select::make('kategori_id')
+                    ->label('Kategori')
+                    ->relationship('kategori', 'nama_kategori')
+                    ->searchable()
+                    ->preload()
+                    ->reactive()
+                    ->live()
+                    ->createOptionForm([
+                        TextInput::make('nama_kategori')
+                            ->label('Nama Kategori')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique()
+                            ->placeholder('Masukkan nama kategori baru')
+                    ])
+                    ->createOptionAction(function (Action $action) {
+                        return $action
+                            ->modalHeading('Buat Kategori Baru')
+                            ->modalSubmitActionLabel('Buat')
+                            ->modalCancelActionLabel('Batal');
+                    })
+                    ->columnSpanFull(),
                 TextInput::make('collection')
                     ->label('Koleksi')
                     ->columnSpanFull()
@@ -85,7 +112,8 @@ class MekanikfolderResource extends Resource
                     ->columnSpanFull()
                     ->maxLength(255),
                 ColorPicker::make('color')
-                    ->label('Warna'),
+                    ->label('Warna Folder')
+                    ->default('#ffab09'),
                 Toggle::make('is_protected')
                     ->label('Dilindungi Password')
                     ->live()
@@ -131,7 +159,7 @@ class MekanikfolderResource extends Resource
                         // Hanya tampilkan folder yang tidak memiliki parent
                         ->whereNull('parent_id');
                 }
-                  $query->with(['kategori:id,nama_kategori'])
+                $query->with(['kategori:id,nama_kategori'])
                     ->leftJoin('kategorimekaniks', 'mekanikfolders.kategori_id', '=', 'kategorimekaniks.id')
                     ->addSelect([
                         'mekanikfolders.*',

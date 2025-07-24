@@ -59,8 +59,8 @@ class Keuanganmedia extends Model implements HasMedia
     public function getUrlAttribute(): string
     {
         // Langsung return URL berdasarkan disk
-        if ($this->disk === 'public') {
-            return asset('storage/' . $this->file_name);
+        if ($this->disk === 'keuangan_media') {
+            return asset('storage/keuangan/' . $this->file_name);
         }
 
         // Untuk disk lainnya, gunakan URL helper
@@ -247,9 +247,14 @@ class Keuanganmedia extends Model implements HasMedia
                 $model->collection_name = 'default';
             }
 
+             if (empty($model->disk)) {
+                $model->disk = 'keuangan_media';
+            }
+
             if (empty($model->manipulations)) {
                 $model->manipulations = [];
             }
+            
 
             if (empty($model->custom_properties)) {
                 $model->custom_properties = [];

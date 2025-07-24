@@ -201,8 +201,8 @@ class ListAccountingmedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('accounting_media')
+                    ->directory('accounting'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -223,9 +223,10 @@ class ListAccountingmedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
+                    // Update path untuk disk accounting_media
+                    $filePath = storage_path('app/public/accounting/' . $file);
                     $media->mime_type = mime_content_type($filePath);
-                    $media->disk = 'public';
+                    $media->disk = 'accounting_media'; // Ganti dari 'public' ke 'accounting_media'
                     $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [
@@ -242,14 +243,9 @@ class ListAccountingmedia extends ListRecords
                     ->success()
                     ->send();
 
-                // FIX: Refresh data dan tetap di halaman yang sama
+                // Refresh data dan tetap di halaman yang sama
                 $this->loadSubfolders();
                 $this->dispatch('$refresh');
-
-                // Jangan redirect, biarkan tetap di halaman
-                // return redirect()->route('filament.admin.resources.arsip.managerhrd.folder.index', [
-                //     'folder' => $this->folder->slug
-                // ]);
             });
     }
 

@@ -55,34 +55,43 @@ class Accountingmedia extends Model implements HasMedia
 
     public function getUrlAttribute(): string
     {
-        // Langsung return URL berdasarkan disk
+        // Gunakan disk yang sesuai untuk generate URL
+        if ($this->disk === 'accounting_media') {
+            return asset('storage/accounting/' . $this->file_name);
+        }
+
         if ($this->disk === 'public') {
             return asset('storage/' . $this->file_name);
         }
 
-        // Untuk disk lainnya, gunakan URL helper
         return Storage::disk($this->disk)->exists($this->file_name)
-            ? asset(Storage::url($this->file_name))
-            : url('storage/' . $this->file_name);
-    }
+            ? Storage::disk($this->disk)->url($this->file_name)
+            : asset('storage/' . $this->file_name);
+    }   
 
     public function getPublicUrl(): string
     {
         try {
+            // Jika menggunakan disk accounting_media
+            if ($this->disk === 'accounting_media') {
+                return asset('storage/accounting/' . $this->file_name);
+            }
+
             // Jika file ada di disk public
             if ($this->disk === 'public') {
                 return asset('storage/' . $this->file_name);
             }
 
-            // Jika file ada di disk local, copy ke public jika belum ada
+            // Jika file ada di disk local, copy ke accounting_media jika belum ada
             if ($this->disk === 'local') {
-                if (!Storage::disk('public')->exists($this->file_name)) {
-                    // Copy file dari local ke public
+                $targetDisk = 'accounting_media';
+                if (!Storage::disk($targetDisk)->exists($this->file_name)) {
+                    // Copy file dari local ke accounting_media
                     $fileContent = Storage::disk('local')->get($this->file_name);
-                    Storage::disk('public')->put($this->file_name, $fileContent);
+                    Storage::disk($targetDisk)->put($this->file_name, $fileContent);
                 }
 
-                return asset('storage/' . $this->file_name);
+                return asset('storage/accounting/' . $this->file_name);
             }
 
             // Fallback
@@ -234,7 +243,6 @@ class Accountingmedia extends Model implements HasMedia
                 $model->user_id = filament()->auth()->id();
             }
 
-
             // Set default values untuk mencegah null constraint error
             if (empty($model->model_type)) {
                 $model->model_type = Accountingfolder::class;
@@ -242,6 +250,11 @@ class Accountingmedia extends Model implements HasMedia
 
             if (empty($model->collection_name)) {
                 $model->collection_name = 'default';
+            }
+
+            // Set default disk ke accounting_media
+            if (empty($model->disk)) {
+                $model->disk = 'accounting_media';
             }
 
             if (empty($model->manipulations)) {
@@ -358,5 +371,5 @@ class Accountingmedia extends Model implements HasMedia
         }
 
         return false;
-    } 
+    }
 }

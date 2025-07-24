@@ -176,8 +176,8 @@ class ListSoftwaremedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('game-programming_media')
+                    ->directory('game-programming'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -198,9 +198,9 @@ class ListSoftwaremedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
+                    $filePath = storage_path('app/public/game-programming/' . $file);
                     $media->mime_type = mime_content_type($filePath);
-                    $media->disk = 'public';
+                    $media->disk = 'game-programming_media';
                     $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [

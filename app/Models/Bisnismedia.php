@@ -58,8 +58,8 @@ class Bisnismedia extends Model implements HasMedia
     public function getUrlAttribute(): string
     {
         // Langsung return URL berdasarkan disk
-        if ($this->disk === 'public') {
-            return asset('storage/' . $this->file_name);
+        if ($this->disk === 'bisnis_media') {
+            return asset('storage/bisnis/' . $this->file_name);
         }
 
         // Untuk disk lainnya, gunakan URL helper
@@ -71,20 +71,26 @@ class Bisnismedia extends Model implements HasMedia
     public function getPublicUrl(): string
     {
         try {
+            // Jika menggunakan disk accounting_media
+            if ($this->disk === 'bisnis_media') {
+                return asset('storage/bisnis/' . $this->file_name);
+            }
+
             // Jika file ada di disk public
             if ($this->disk === 'public') {
                 return asset('storage/' . $this->file_name);
             }
 
-            // Jika file ada di disk local, copy ke public jika belum ada
+            // Jika file ada di disk local, copy ke accounting_media jika belum ada
             if ($this->disk === 'local') {
-                if (!Storage::disk('public')->exists($this->file_name)) {
-                    // Copy file dari local ke public
+                $targetDisk = 'bisnis_media';
+                if (!Storage::disk($targetDisk)->exists($this->file_name)) {
+                    // Copy file dari local ke accounting_media
                     $fileContent = Storage::disk('local')->get($this->file_name);
-                    Storage::disk('public')->put($this->file_name, $fileContent);
+                    Storage::disk($targetDisk)->put($this->file_name, $fileContent);
                 }
 
-                return asset('storage/' . $this->file_name);
+                return asset('storage/bisnis/' . $this->file_name);
             }
 
             // Fallback
@@ -246,6 +252,11 @@ class Bisnismedia extends Model implements HasMedia
                 $model->collection_name = 'default';
             }
 
+            // Set default disk ke accounting_media
+            if (empty($model->disk)) {
+                $model->disk = 'bisnis_media';
+            }
+
             if (empty($model->manipulations)) {
                 $model->manipulations = [];
             }
@@ -360,5 +371,5 @@ class Bisnismedia extends Model implements HasMedia
         }
 
         return false;
-    } 
+    }
 }

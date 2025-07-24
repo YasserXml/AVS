@@ -177,8 +177,8 @@ class ListElektromedia extends ListRecords
                     ->multiple()
                     ->required()
                     ->preserveFilenames(true)
-                    ->disk('public')
-                    ->directory('media'),
+                    ->disk('system-engineering_media')
+                    ->directory('system-engineering'),
                 TextInput::make('title')
                     ->label('Judul')
                     ->maxLength(255),
@@ -199,9 +199,9 @@ class ListElektromedia extends ListRecords
                     $media->name = $data['title'] ?? pathinfo($file, PATHINFO_FILENAME);
                     $media->file_name = $file;
 
-                    $filePath = storage_path('app/public/' . $file);
+                    $filePath = storage_path('app/public/system-engineering/' . $file);
                     $media->mime_type = mime_content_type($filePath);
-                    $media->disk = 'public';
+                    $media->disk = 'system-engineering_media';
                     $media->size = filesize($filePath);
                     $media->manipulations = [];
                     $media->custom_properties = [
