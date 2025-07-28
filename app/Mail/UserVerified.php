@@ -42,7 +42,7 @@ class UserVerified extends Mailable implements ShouldQueue
     {
         // Pemetaan nilai divisi ke nama yang lebih manusiawi
         $divisiMapping = [
-           'user_sekretariat' => 'Sekretariat',
+            'user_sekretariat' => 'Sekretariat',
             'user_hrd_ga' => 'HRD & GA',
             'purchasing' => 'Purchasing',
             'keuangan' => 'Keuangan',

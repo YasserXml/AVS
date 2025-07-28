@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('serial_number')->unique();
             $table->integer('kode_barang');
             $table->string('nama_barang');
+            $table->json('spesifikasi')->nullable();
             $table->integer('jumlah_barang');
             $table->foreignId('kategori_id')->constrained('kategoris');
             $table->timestamps();
