@@ -32,6 +32,7 @@ use Filament\Notifications\Notification;
 use Filament\Tables\Actions\Action as TablesActionsAction;
 use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class BarangmasukResource extends Resource
 {
@@ -524,7 +525,10 @@ class BarangmasukResource extends Resource
                     ->color('success')
                     ->action(function () {
                         return (new BarangMasukExport())->export();
-                    }),
+                    })
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'admin'])
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('export_selected')
@@ -534,7 +538,10 @@ class BarangmasukResource extends Resource
                     ->action(function (Collection $records) {
                         // Kirim data yang dipilih ke method export
                         return (new BarangMasukExport())->export($records);
-                    }),
+                    })
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'admin'])
+                    ),
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

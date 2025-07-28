@@ -25,6 +25,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class AsetptResource extends Resource
 {
@@ -383,6 +384,9 @@ class AsetptResource extends Resource
                     ->action(function () {
                         return (new AsetExporter())->export();
                     })
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'admin'])
+                    )
                     ->requiresConfirmation()
                     ->modalHeading('Export Data Aset')
                     ->modalDescription('Apakah Anda ingin mengexport semua data aset?')
@@ -397,7 +401,10 @@ class AsetptResource extends Resource
                         return (new AsetExporter())->export();
                     })
                     ->requiresConfirmation()
-                    ->deselectRecordsAfterCompletion(),
+                    ->deselectRecordsAfterCompletion()
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'admin'])
+                    ),
 
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()

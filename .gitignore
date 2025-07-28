@@ -21,3 +21,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/storage/app/backup/
+/storage/app/backup-temp/
+*.zip
+*.tar.gz
+*.sql
+*.dump

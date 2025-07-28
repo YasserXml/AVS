@@ -45,7 +45,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('avs')
             ->authGuard('web')
             ->sidebarWidth('15rem')
             // ->topNavigation()
@@ -104,7 +104,7 @@ class AdminPanelProvider extends PanelProvider
                         'https://avsimulator.com/',
                     )
                     ->hiddenFromPagesEnabled()
-                    ->hiddenFromPages(['admin/login', 'admin/registrasi']),
+                    ->hiddenFromPages(['avs/login', 'avs/registrasi']),
                 FontAwesomeIcons::make()
                     ->classicRegular()
                     ->free(),

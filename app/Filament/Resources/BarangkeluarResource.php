@@ -445,28 +445,34 @@ class BarangkeluarResource extends Resource
                 ]),
             ])
             ->headerActions([
-               Action::make('exportAll')
+                Action::make('exportAll')
                     ->label('Export Semua Data')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('success')
                     ->action(function () {
                         $exporter = new BarangKeluarExport();
                         return $exporter->export();
-                    }),
+                    })
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'admin'])
+                    ),
             ])
             ->bulkActions([
                 BulkAction::make('exportSelected')
-                        ->label('Export Data Terpilih')
-                        ->icon('heroicon-o-document-arrow-down')
-                        ->color('info')
-                        ->action(function (Collection $records) {
-                            $exporter = new BarangKeluarExport();
-                            return $exporter->export($records);
-                        })
-                        ->requiresConfirmation()
-                        ->modalHeading('Export Data Barang Keluar Terpilih')
-                        ->modalDescription('Apakah Anda yakin ingin mengexport data barang keluar yang dipilih?')
-                        ->modalSubmitActionLabel('Ya, Export'),
+                    ->label('Export Data Terpilih')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('info')
+                    ->action(function (Collection $records) {
+                        $exporter = new BarangKeluarExport();
+                        return $exporter->export($records);
+                    })
+                    ->visible(
+                        fn() => Auth::user()->hasAnyRole(['super_admin', 'admin'])
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Export Data Barang Keluar Terpilih')
+                    ->modalDescription('Apakah Anda yakin ingin mengexport data barang keluar yang dipilih?')
+                    ->modalSubmitActionLabel('Ya, Export'),
 
                 Tables\Actions\DeleteBulkAction::make()
                     ->modalHeading('Hapus Beberapa Data')

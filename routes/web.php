@@ -18,9 +18,9 @@ use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Socialite\Facades\Socialite;
 
-Route::redirect('/', 'admin');
+Route::redirect('/', '/avs');
 
-Route::get('/admin/verify-user/{user}', [AdminVerificationController::class, 'verifyUser'])
+Route::get('/avs/verify-user/{user}', [AdminVerificationController::class, 'verifyUser'])
     ->name('admin.verify-user')
     ->middleware(['signed']);
 
