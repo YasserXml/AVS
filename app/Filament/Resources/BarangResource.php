@@ -434,7 +434,9 @@ class BarangResource extends Resource
                     ->label('Sampah')
                     ->indicator('Terhapus')
                     ->trueLabel('Data aktif + terhapus')
-                    ->falseLabel('Terhapus'),
+                    ->falseLabel('Terhapus')
+                    ->preload()
+                    ->searchable(),
 
                 Tables\Filters\SelectFilter::make('stok')
                     ->label('Status Stok')

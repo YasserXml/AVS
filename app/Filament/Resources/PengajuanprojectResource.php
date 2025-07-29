@@ -24,6 +24,7 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class PengajuanprojectResource extends Resource
@@ -57,10 +58,10 @@ class PengajuanprojectResource extends Resource
         // Role purchasing - dapat melihat status terkait pengadaan
         if ($user->hasRole('purchasing')) {
             return $query->whereIn('status', [
-                'disetujui_pm_dikirim_ke_pengadaan',     // Dari action setujuiDanKirimKePengadaan
-                'disetujui_pengadaan',                   // Dari action setujuiPengadaan
-                'ditolak_pengadaan',                     // Dari action tolakPengadaan
-                'pengajuan_dikirim_ke_pengadaan_final',  // Dari action kirimKembaliKePengadaan
+                'disetujui_pm_dikirim_ke_pengadaan',
+                'disetujui_pengadaan',
+                'ditolak_pengadaan',
+                'pengajuan_dikirim_ke_pengadaan_final',
                 'cancelled'
             ]);
         }
@@ -68,12 +69,12 @@ class PengajuanprojectResource extends Resource
         // Role admin - dapat melihat status terkait admin dan proses akhir
         if ($user->hasRole('admin')) {
             return $query->whereIn('status', [
-                'pengajuan_terkirim',                    // Status awal yang muncul di actions
-                'pending_admin_review',                  // Status yang sudah ada
-                'pengajuan_dikirim_ke_admin',           // Dari action kirimKeAdmin
-                'processing',                           // Dari action mulaiProsesPengadaan
-                'ready_pickup',                         // Dari action siapDiambil
-                'completed',                            // Dari action selesai
+                'pengajuan_terkirim',
+                'pending_admin_review',
+                'pengajuan_dikirim_ke_admin',
+                'processing',
+                'ready_pickup',
+                'completed',
                 'cancelled'
             ]);
         }
@@ -81,9 +82,9 @@ class PengajuanprojectResource extends Resource
         // Role direktur_keuangan - dapat melihat status terkait direksi
         if ($user->hasRole('direktur_keuangan')) {
             return $query->whereIn('status', [
-                'pengajuan_dikirim_ke_direksi',         // Dari action kirimKeDireksi
-                'approved_by_direksi',                  // Dari action approveDireksi
-                'reject_direksi',                       // Dari action rejectDireksi
+                'pengajuan_dikirim_ke_direksi',
+                'approved_by_direksi',
+                'reject_direksi',
                 'cancelled'
             ]);
         }
@@ -91,28 +92,49 @@ class PengajuanprojectResource extends Resource
         // Role keuangan - dapat melihat status terkait keuangan
         if ($user->hasRole('keuangan')) {
             return $query->whereIn('status', [
-                'pengajuan_dikirim_ke_keuangan',        // Dari action kirimKeKeuangan
-                'pending_keuangan',                     // Dari action reviewKeuangan
-                'process_keuangan',                     // Dari action prosesKeuangan
-                'execute_keuangan',                     // Dari action executeKeuangan
+                'pengajuan_dikirim_ke_keuangan',
+                'pending_keuangan',
+                'process_keuangan',
+                'execute_keuangan',
                 'cancelled'
             ]);
         }
+        $isProjectManager = DB::table('nameprojects')->where('user_id', $user->id)->exists();
 
-        // Role PM atau user biasa - hanya dapat melihat pengajuan mereka sendiri
+        if ($isProjectManager) {
+            // User adalah PM, dapat melihat pengajuan dari project yang mereka kelola
+            // dan pengajuan yang mereka buat sendiri
+            return $query->where(function ($q) use ($user) {
+                $q->whereHas('nameproject', function ($projectQuery) use ($user) {
+                    $projectQuery->where('user_id', $user->id); // Project yang dia kelola sebagai PM
+                })
+                    ->orWhere('user_id', $user->id); // Pengajuan yang dia buat sendiri
+            })
+                ->whereIn('status', [
+                    'pengajuan_terkirim',
+                    'pending_pm_review',
+                    'disetujui_pm_dikirim_ke_pengadaan',
+                    'ditolak_pm',
+                    'cancelled'
+                ]);
+        }
+
+        // User biasa - hanya dapat melihat pengajuan mereka sendiri
         return $query->where('user_id', $user->id);
     }
-    
+
     protected function applyUserFilter(Builder $query): Builder
     {
         $user = filament()->auth()->user();
 
-        // Jika user memiliki role khusus, tidak perlu filter tambahan
-        if ($user->hasAnyRole(['purchasing', 'admin', 'direktur_keuangan', 'keuangan'])) {
+        // Jika user memiliki role khusus atau adalah PM, tidak perlu filter tambahan
+        $isProjectManager = DB::table('nameprojects')->where('user_id', $user->id)->exists();
+
+        if ($user->hasAnyRole(['purchasing', 'admin', 'direktur_keuangan', 'keuangan']) || $isProjectManager) {
             return $query;
         }
 
-        // Untuk user biasa atau PM, pastikan hanya data mereka sendiri yang tampil
+        // Untuk user biasa, pastikan hanya data mereka sendiri yang tampil
         return $query->where('user_id', $user->id);
     }
 

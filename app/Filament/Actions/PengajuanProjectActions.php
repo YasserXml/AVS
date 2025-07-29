@@ -20,6 +20,9 @@ class PengajuanProjectActions
             ->color('primary')
             ->visible(function ($record) {
                 $user = filament()->auth()->user();
+
+                // PERBAIKAN: User bisa melihat action jika dia adalah PM dari project tersebut
+                // (user_id di nameprojects sama dengan user yang login)
                 return $record->status === 'pengajuan_terkirim' &&
                     $record->nameproject &&
                     $record->nameproject->user_id === $user->id;
@@ -105,11 +108,11 @@ class PengajuanProjectActions
             ->icon('heroicon-o-x-circle')
             ->color('danger')
             ->visible(function ($record) {
-                $user = filament()->auth()->user();
-                return $record->status === 'pending_pm_review' &&
-                    $record->nameproject &&
-                    $record->nameproject->user_id === $user->id;
-            })
+            $user = filament()->auth()->user();
+            return $record->status === 'pending_pm_review' &&
+                $record->nameproject &&
+                $record->nameproject->user_id === $user->id;
+        })
             ->form([
                 Textarea::make('alasan_penolakan')
                     ->label('Alasan Penolakan')
