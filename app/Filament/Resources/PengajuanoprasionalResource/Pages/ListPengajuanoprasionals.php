@@ -26,7 +26,7 @@ class ListPengajuanoprasionals extends ListRecords
     {
         return new HtmlString('
             <div class="flex items-center gap-2 ">
-                <span class="text-xl font-bold">Pengajuan Barang Oprasional</span>
+                <span class="text-xl font-bold">Pengajuan Barang Operasional</span>
             </div>
         ');
     }

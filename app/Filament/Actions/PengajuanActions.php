@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Services\PengajuanEmailService;
 use App\Services\PengajuanNotificationService;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables;
 use Illuminate\Support\Facades\Log;
@@ -82,7 +84,7 @@ class PengajuanActions
 
                 Notification::make()
                     ->title('Berhasil')
-                    ->body('Pengajuan berhasil dikirim ke tim pengadaan.') 
+                    ->body('Pengajuan berhasil dikirim ke tim pengadaan.')
                     ->success()
                     ->send();
             });
@@ -253,6 +255,63 @@ class PengajuanActions
                     ->title('Berhasil')
                     ->body('Pengajuan berhasil disetujui.')
                     ->success()
+                    ->send();
+            });
+    }
+
+    public static function pendingDireksi()
+    {
+        return Tables\Actions\Action::make('pending_direksi')
+            ->label('Pending')
+            ->icon('heroicon-o-pause')
+            ->color('warning')
+            ->visible(function ($record) {
+                $user = filament()->auth()->user();
+                return $record->status === 'pengajuan_dikirim_ke_direksi' &&
+                    $user->hasRole('direktur_keuangan');
+            })
+            ->form([
+                DatePicker::make('tanggal_pending')
+                    ->label('Tanggal Pending')
+                    ->required()
+                    ->native(false)
+                    ->helperText('Tanggal kapan pengajuan akan dipending'),
+                Textarea::make('catatan')
+                    ->label('Alasan Pending')
+                    ->required()
+                    ->placeholder('Jelaskan alasan mengapa pengajuan ini dipending...')
+                    ->rows(3)
+                    ->helperText('Berikan alasan yang jelas untuk pending.'),
+            ])
+            ->requiresConfirmation()
+            ->modalHeading('Pending Pengajuan')
+            ->modalDescription(function ($record) {
+                return 'Apakah Anda yakin ingin memending pengajuan ini?';
+            })
+            ->action(function ($record, array $data) {
+                $record->update([
+                    'status' => 'pending_direksi',
+                    'tanggal_pending' => $data['tanggal_pending'],
+                    'catatan' => $data['catatan'] ?? null,
+                ]);
+
+                $record->addStatusHistory(
+                    'pending_direksi',
+                    filament()->auth()->id(),
+                    'Pengajuan dipending oleh direksi hingga ' . $data['tanggal_pending'] . '. Alasan: ' . $data['catatan']
+                );
+
+                PengajuanEmailService::sendNotificationWithEmail($record, 'pending_direksi', $data['catatan']);
+                PengajuanEmailService::sendEmailPendingDireksiToKeuangan(
+                    $record,
+                    $data['catatan'],
+                    $data['tanggal_pending']
+                );
+
+                Notification::make()
+                    ->title('Pengajuan Dipending')
+                    ->body('Pengajuan berhasil dipending.')
+                    ->warning()
                     ->send();
             });
     }
@@ -641,6 +700,7 @@ class PengajuanActions
             self::rejectSuperAdmin(),
             self::kirimKeDireksi(),
             self::approveDireksi(),
+            self::pendingDireksi(),
             self::rejectDireksi(),
             self::kirimKeKeuangan(),
             self::reviewKeuangan(),

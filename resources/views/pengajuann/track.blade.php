@@ -6,7 +6,6 @@
     $record = $getState()['record'] ?? null;
 
     // Definisi semua status dalam urutan workflow yang benar untuk PROJECT
-    // PASTIKAN status ini sesuai dengan enum di database
     $statusFlow = [
         'pengajuan_terkirim' => [
             'label' => 'Pengajuan Terkirim',
@@ -42,6 +41,13 @@
             'description' => 'Dikirim ke direksi untuk persetujuan',
             'percentage' => 30,
             'actor' => 'Pengadaan',
+        ],
+        'pending_direksi' => [
+            'label' => 'Pending Direksi',
+            'icon' => '⏸️',
+            'description' => 'Pengajuan dipending oleh direksi hingga tanggal tertentu',
+            'percentage' => 35,
+            'actor' => 'Direktur Keuangan',
         ],
         'approved_by_direksi' => [
             'label' => 'Disetujui Direksi',
@@ -119,7 +125,7 @@
     $rejectedStatuses = ['ditolak_pm', 'ditolak_pengadaan', 'reject_direksi'];
     $isRejected = in_array($status, $rejectedStatuses);
 
-    // Dapatkan status history yang sudah terjadi
+    // Dapatkan status history yang sudah terjadi dari database
     $completedStatuses = [];
     if ($statusHistory && is_array($statusHistory)) {
         foreach ($statusHistory as $history) {
@@ -129,12 +135,13 @@
         }
     }
 
-    // Jika tidak ada status history, tambahkan status saat ini
-    if (empty($completedStatuses)) {
+    // PENTING: Pastikan status saat ini juga ada di completedStatuses
+    // Jika tidak ada status history, atau status saat ini belum ada di history
+    if (!empty($status) && !in_array($status, $completedStatuses)) {
         $completedStatuses[] = $status;
     }
 
-    // PERBAIKI: Gunakan persentase dari $statusFlow, bukan dari getState()
+    // Gunakan persentase dari $statusFlow
     $currentPercentage = $statusFlow[$status]['percentage'] ?? 0;
 
     // Jika $currentPercentage masih 0, coba ambil dari model
@@ -142,38 +149,125 @@
         $currentPercentage = $record->getProgressPercentage();
     }
 
-    // Fungsi untuk mendapatkan step yang akan ditampilkan
-    $getProjectVisibleSteps = function ($statusFlow, $status, $completedStatuses, $isRejected) {
+    // ANALISIS JALUR YANG DIAMBIL - Perbaikan logika deteksi
+    $hasPendingDireksi = in_array('pending_direksi', $completedStatuses);
+    $hasApprovedDireksi = in_array('approved_by_direksi', $completedStatuses);
+    $hasKeuangan = in_array('pengajuan_dikirim_ke_keuangan', $completedStatuses);
+
+    // Debug: Cek apa yang ada di completedStatuses
+    // Uncomment baris ini untuk debugging:
+    // dd('Current Status: ' . $status, 'Completed Statuses:', $completedStatuses, 'Direksi Path: ' . $direksiPath);
+
+    // Tentukan jalur direksi yang diambil dengan logika yang lebih tepat
+    $direksiPath = 'none';
+
+    // Prioritas 1: Cek status saat ini
+    if ($status === 'pending_direksi') {
+        $direksiPath = 'pending';
+    } elseif ($status === 'approved_by_direksi') {
+        $direksiPath = 'approved';
+    }
+    // Prioritas 2: Cek dari history jika status sudah lewat
+    elseif ($hasKeuangan) {
+        // Jika sudah sampai keuangan, lihat jalur mana yang diambil sebelumnya
+        if ($hasPendingDireksi && !$hasApprovedDireksi) {
+            $direksiPath = 'pending';
+        } elseif ($hasApprovedDireksi && !$hasPendingDireksi) {
+            $direksiPath = 'approved';
+        }
+    }
+    // Prioritas 3: Cek dari history langsung
+    elseif ($hasPendingDireksi) {
+        $direksiPath = 'pending';
+    } elseif ($hasApprovedDireksi) {
+        $direksiPath = 'approved';
+    }
+
+    // Buat array step yang akan ditampilkan
+    $visibleSteps = [];
+
+    if ($isRejected) {
+        // Jika ditolak, tampilkan semua step yang ada di history
+        $visibleSteps = $completedStatuses;
+    } else {
+        // Step-step yang selalu ditampilkan (sebelum direksi)
+        $alwaysVisibleSteps = [
+            'pengajuan_terkirim',
+            'pending_pm_review',
+            'disetujui_pm_dikirim_ke_pengadaan',
+            'disetujui_pengadaan',
+            'pengajuan_dikirim_ke_direksi',
+        ];
+
+        // Step setelah direksi
+        $afterDireksiSteps = [
+            'pengajuan_dikirim_ke_keuangan',
+            'pending_keuangan',
+            'process_keuangan',
+            'execute_keuangan',
+            'pengajuan_dikirim_ke_pengadaan_final',
+            'pengajuan_dikirim_ke_admin',
+            'processing',
+            'ready_pickup',
+            'completed',
+        ];
+
         $statusKeys = array_keys($statusFlow);
-        $currentIndex = array_search($status, $statusKeys);
+        $currentStatusIndex = array_search($status, $statusKeys);
 
-        $visibleSteps = [];
+        foreach ($statusKeys as $index => $statusKey) {
+            $shouldShow = false;
 
-        if ($isRejected) {
-            // Jika ditolak, hanya tampilkan langkah yang sudah selesai sebelum penolakan
-            foreach ($statusKeys as $index => $statusKey) {
-                if (in_array($statusKey, $completedStatuses)) {
-                    $visibleSteps[] = $statusKey;
+            // 1. Step sebelum direksi - tampilkan jika sudah dilalui
+            if (in_array($statusKey, $alwaysVisibleSteps)) {
+                if (
+                    in_array($statusKey, $completedStatuses) ||
+                    $statusKey === $status ||
+                    ($currentStatusIndex !== false && $index < $currentStatusIndex)
+                ) {
+                    $shouldShow = true;
                 }
             }
-        } else {
-            // Jika completed, tampilkan semua langkah
-            if ($status === 'completed') {
-                $visibleSteps = $statusKeys;
-            } else {
-                // Tampilkan langkah yang sudah selesai dan langkah aktif saat ini
-                foreach ($statusKeys as $index => $statusKey) {
-                    if ($index <= $currentIndex) {
-                        $visibleSteps[] = $statusKey;
-                    }
+            // 2. Step direksi - tampilkan berdasarkan jalur yang dipilih
+            elseif ($statusKey === 'pending_direksi') {
+                if ($direksiPath === 'pending') {
+                    $shouldShow = true;
                 }
+            } elseif ($statusKey === 'approved_by_direksi') {
+                if ($direksiPath === 'approved') {
+                    $shouldShow = true;
+                }
+            }
+            // 3. Step setelah direksi - tampilkan jika ada di history atau status saat ini
+            elseif (in_array($statusKey, $afterDireksiSteps)) {
+                if (in_array($statusKey, $completedStatuses) || $statusKey === $status) {
+                    $shouldShow = true;
+                }
+            }
+
+            if ($shouldShow) {
+                $visibleSteps[] = $statusKey;
             }
         }
 
-        return $visibleSteps;
-    };
+        // Khusus untuk status completed - pastikan step yang diperlukan ditampilkan
+        if ($status === 'completed') {
+            foreach ($afterDireksiSteps as $stepKey) {
+                if (!in_array($stepKey, $visibleSteps) && $stepKey !== 'completed') {
+                    $visibleSteps[] = $stepKey;
+                }
+            }
 
-    $visibleSteps = $getProjectVisibleSteps($statusFlow, $status, $completedStatuses, $isRejected);
+            // Urutkan ulang
+            $orderedSteps = [];
+            foreach ($statusKeys as $statusKey) {
+                if (in_array($statusKey, $visibleSteps)) {
+                    $orderedSteps[] = $statusKey;
+                }
+            }
+            $visibleSteps = $orderedSteps;
+        }
+    }
 @endphp
 
 <style>

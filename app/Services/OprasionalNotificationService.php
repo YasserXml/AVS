@@ -17,7 +17,7 @@ class OprasionalNotificationService
         $adminUsers = User::role(['super_admin', 'admin'])->get();
         
         // Buat URL untuk melihat detail pengajuan
-        $pengajuanUrl = route('filament.admin.resources.permintaan.pengajuan-oprasional.index', [
+        $pengajuanUrl = route('filament.admin.resources.permintaan.pengajuan-operasional.index', [
             'record' => $pengajuan->id
         ]);
         

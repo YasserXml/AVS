@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\PengajuanKePengadaanMail;
 use App\Mail\PengajuanProjectApprovedDireksiMail;
 use App\Mail\PengajuanProjectApprovedPengadaanMail;
+use App\Mail\PengajuanProjectPendingDireksiMail;
 use App\Mail\PengajuanProjectReadyPickUpMail;
 use App\Mail\PengajuanProjectRejectedMail;
 use App\Mail\PengajuanProjectSentToAdminMail;
@@ -41,6 +42,13 @@ class PengajuanEmailProjectService
                 case 'reject_direksi':
                     Mail::to($pengaju->email)->queue(new PengajuanProjectRejectedMail($record, 'Direksi', $additionalData));
                     break;
+                case 'pending_direksi':
+                    Mail::to($pengaju->email)->queue(new PengajuanProjectPendingDireksiMail(
+                        $record,
+                        $additionalData ?? 'Pengajuan dipending oleh direksi',
+                        $record->tanggal_pending ?? now()->toDateString()
+                    ));
+                    break;
                 case 'ready_pickup':
                     Mail::to($pengaju->email)->queue(new PengajuanProjectReadyPickUpMail($record));
                     break;
@@ -55,7 +63,7 @@ class PengajuanEmailProjectService
         try {
             // Kirim email ke Project Manager yang memiliki project ini 
             $projectManager = $record->nameproject->user ?? null;
-            
+
             if ($projectManager && $projectManager->email) {
                 Mail::to($projectManager->email)->queue(new PengajuanProjectSentToPmMail($record));
             }
@@ -108,6 +116,27 @@ class PengajuanEmailProjectService
             foreach ($keuangan as $keu) {
                 if ($keu->email) {
                     Mail::to($keu->email)->queue(new PengajuanProjectSentToKeuanganMail($record));
+                }
+            }
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    public static function sendEmailPendingDireksiToKeuangan($record, $alasanPending, $tanggalPending)
+    {
+        try {
+            $keuangan = User::whereHas('roles', function ($query) {
+                $query->where('name', 'keuangan');
+            })->get();
+
+            foreach ($keuangan as $keu) {
+                if ($keu->email) {
+                    Mail::to($keu->email)->queue(new PengajuanProjectPendingDireksiMail(
+                        $record,
+                        $alasanPending,
+                        $tanggalPending
+                    ));
                 }
             }
         } catch (\Exception $e) {

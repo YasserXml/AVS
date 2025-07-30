@@ -47,7 +47,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('avs')
             ->authGuard('web')
-            ->sidebarWidth('15rem')
+            ->sidebarWidth('16rem')
             // ->topNavigation()
             ->login(Login::class)
             ->registration(Register::class)

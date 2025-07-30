@@ -51,16 +51,26 @@ class PengajuanoprasionalResource extends Resource
 
     protected static ?int $navigationSort = 6;
 
-    protected static ?string $navigationLabel = 'Pengajuan Oprasional';
+    protected static ?string $navigationLabel = 'Pengajuan Operasional';
 
     public static function getSlug(): string
     {
-        return 'permintaan/pengajuan-oprasional';
+        return 'permintaan/pengajuan-operasional';
     }
 
-    protected static ?string $pluralModelLabel = 'Pengajuan Oprasional';
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
 
-    protected static ?string $modelLabel = 'Pengajuan Oprasional';
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'success';
+    }
+
+    protected static ?string $pluralModelLabel = 'Pengajuan Operasional';
+
+    protected static ?string $modelLabel = 'Pengajuan Operasional';
 
     public static function getEloquentQuery(): Builder
     {
@@ -238,7 +248,7 @@ class PengajuanoprasionalResource extends Resource
                             ->maxSize(5120) // 5MB
                             ->helperText('Upload file pendukung seperti gambar, spesifikasi, atau dokumen lainnya (max 5MB per file)')
                             ->columnSpanFull()
-                            ->directory('public')
+                            ->directory('pengajuan-operasional')
                             ->disk('public')
                             ->visibility('public')
                             ->uploadingMessage('Mengupload file...')

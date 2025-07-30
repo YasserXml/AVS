@@ -23,11 +23,12 @@ return new class extends Migration
             $table->enum('status', [
                 'pengajuan_terkirim',
                 'pending_pm_review',
-                'disetujui_pm_dikirim_ke_pengadaan',    
+                'disetujui_pm_dikirim_ke_pengadaan',
                 'ditolak_pm',
                 'disetujui_pengadaan',
                 'ditolak_pengadaan',
                 'pengajuan_dikirim_ke_direksi',
+                'pending_direksi',
                 'approved_by_direksi',
                 'reject_direksi',
                 'pengajuan_dikirim_ke_keuangan',
@@ -41,6 +42,7 @@ return new class extends Migration
                 'completed'
             ])
                 ->default('pengajuan_terkirim');
+            $table->date('tanggal_pending')->nullable();
             $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->dateTime('approved_at')->nullable();
             $table->foreignId('rejected_by')->nullable()->constrained('users');

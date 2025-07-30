@@ -35,41 +35,47 @@
             'description' => 'Dikirim ke direksi',
             'percentage' => 25,
         ],
+        'pending_direksi' => [
+            'label' => 'Pending Direksi',
+            'icon' => '👔',
+            'description' => 'Pengajuan dipending oleh direksi hingga tanggal tertentu',
+            'percentage' => 30, // Sesuaikan persentase
+        ],
         'approved_by_direksi' => [
             'label' => 'Disetujui Direksi',
             'icon' => '👔',
             'description' => 'Disetujui oleh direksi',
-            'percentage' => 30, //Tingkatkan persentase
+            'percentage' => 35, //Tingkatkan persentase
         ],
         'pengajuan_dikirim_ke_keuangan' => [
             'label' => 'Dikirim ke Keuangan',
             'icon' => '💰',
             'description' => 'Dikirim ke bagian keuangan',
-            'percentage' => 35, //Sesuaikan persentase
+            'percentage' => 40, //Sesuaikan persentase
         ],
         'pending_keuangan' => [
             'label' => 'Review Keuangan',
             'icon' => '🔍',
             'description' => 'Sedang direview keuangan',
-            'percentage' => 40, //Sesuaikan persentase
+            'percentage' => 45, //Sesuaikan persentase
         ],
         'process_keuangan' => [
             'label' => 'Proses Keuangan',
             'icon' => '⚙️',
             'description' => 'Sedang diproses keuangan',
-            'percentage' => 45, //Sesuaikan persentase
+            'percentage' => 50, //Sesuaikan persentase
         ],
         'execute_keuangan' => [
             'label' => 'Selesai Proses Keuangan',
             'icon' => '💸',
             'description' => 'Proses keuangan selesai',
-            'percentage' => 50, //Sesuaikan persentase
+            'percentage' => 55, //Sesuaikan persentase
         ],
         'pengajuan_dikirim_ke_pengadaan' => [
             'label' => 'Dikirim ke Pengadaan',
             'icon' => '🛒',
             'description' => 'Dikirim ke bagian pengadaan',
-            'percentage' => 60, //Sesuaikan persentase
+            'percentage' => 65, //Sesuaikan persentase
         ],
         'pengajuan_dikirim_ke_admin' => [
             'label' => 'Dikirim ke Admin',
@@ -104,7 +110,7 @@
     // Tentukan status yang sudah selesai
     $currentStatusIndex = array_search($status, array_keys($statusFlow));
     $currentPercentage = $statusFlow[$status]['percentage'] ?? 0;
-    
+
     // Cek apakah sudah completed (selesai)
     $isCompleted = $status === 'completed';
 
@@ -365,9 +371,12 @@
     }
 
     @keyframes pulse {
-        0%, 100% {
+
+        0%,
+        100% {
             opacity: 1;
         }
+
         50% {
             opacity: 0.8;
         }
@@ -433,7 +442,7 @@
             @foreach ($statusFlow as $statusKey => $statusInfo)
                 @php
                     $itemIndex = array_search($statusKey, array_keys($statusFlow));
-                    
+
                     // Logika: jika status completed, semua step dianggap completed
                     $stepCompleted = $isCompleted || $itemIndex < $currentStatusIndex;
                     $stepActive = !$isCompleted && $statusKey === $status;
@@ -462,7 +471,8 @@
                         <div class="step-description">
                             {{ $statusInfo['description'] }}
                         </div>
-                        <div class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : 'pending') }}">
+                        <div
+                            class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : 'pending') }}">
                             @if ($stepCompleted)
                                 ✓ Selesai
                             @elseif($stepActive)

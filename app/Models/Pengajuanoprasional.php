@@ -54,6 +54,7 @@ class Pengajuanoprasional extends Model
     public const STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI = 'pengajuan_dikirim_ke_direksi';
     public const STATUS_APPROVED_BY_DIREKSI = 'approved_by_direksi';
     public const STATUS_APPROVED_AT_DIREKSI = 'approved_at_direksi';
+    public const STATUS_PENDING_DIREKSI = 'pending_direksi';
     public const STATUS_REJECT_DIREKSI = 'reject_direksi';
     public const STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN = 'pengajuan_dikirim_ke_keuangan';
     public const STATUS_PENDING_KEUANGAN = 'pending_keuangan';
@@ -170,6 +171,7 @@ class Pengajuanoprasional extends Model
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'Dikirim ke Direksi',
             self::STATUS_APPROVED_BY_DIREKSI => 'Disetujui Direksi',
             self::STATUS_APPROVED_AT_DIREKSI => 'Disetujui pada Direksi',
+            self::STATUS_PENDING_DIREKSI => 'Pending Direksi',
             self::STATUS_REJECT_DIREKSI => 'Ditolak Direksi',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Dikirim ke Keuangan',
             self::STATUS_PENDING_KEUANGAN => 'Menunggu Keuangan',
@@ -198,6 +200,7 @@ class Pengajuanoprasional extends Model
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'info',
             self::STATUS_APPROVED_BY_DIREKSI => 'success',
             self::STATUS_APPROVED_AT_DIREKSI => 'success',
+            self::STATUS_PENDING_DIREKSI => 'warning',
             self::STATUS_REJECT_DIREKSI => 'danger',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'info',
             self::STATUS_PENDING_KEUANGAN => 'warning',
@@ -221,7 +224,7 @@ class Pengajuanoprasional extends Model
             return 0;
         }
 
-        return collect($this->detail_barang)->sum('jumlah_barang_diajukan'); 
+        return collect($this->detail_barang)->sum('jumlah_barang_diajukan');
     }
 
     public function getTotalJenisBarangAttribute(): int
@@ -232,7 +235,7 @@ class Pengajuanoprasional extends Model
 
         return count($this->detail_barang);
     }
- 
+
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);
@@ -326,9 +329,13 @@ class Pengajuanoprasional extends Model
             ],
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => [
                 self::STATUS_APPROVED_BY_DIREKSI => 'Setujui Direksi',
+                self::STATUS_PENDING_DIREKSI => 'Pending Direksi',
                 self::STATUS_REJECT_DIREKSI => 'Tolak Direksi',
             ],
             self::STATUS_APPROVED_BY_DIREKSI => [
+                self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Kirim ke Keuangan',
+            ],
+            self::STATUS_PENDING_DIREKSI => [
                 self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Kirim ke Keuangan',
             ],
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => [
@@ -367,6 +374,7 @@ class Pengajuanoprasional extends Model
             self::STATUS_DIAJUKAN_KE_SUPERADMIN => 15,
             self::STATUS_SUPERADMIN_APPROVED => 20,
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 25,
+            self::STATUS_PENDING_DIREKSI => 30,
             self::STATUS_APPROVED_BY_DIREKSI => 35,
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 40,
             self::STATUS_PENDING_KEUANGAN => 45,

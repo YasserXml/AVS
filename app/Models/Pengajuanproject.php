@@ -32,6 +32,7 @@ class Pengajuanproject extends Model
         'reject_reason',
         'received_by',
         'received_by_name',
+        'tanggal_pending',
         'status_history',
         'catatan',
         'project_id',
@@ -40,6 +41,7 @@ class Pengajuanproject extends Model
     protected $casts = [
         'tanggal_pengajuan' => 'date',
         'tanggal_dibutuhkan' => 'date',
+        'tanggal_pending' => 'date',
         'detail_barang' => 'array',
         'uploaded_files' => 'array',
         'status_history' => 'array',
@@ -100,6 +102,7 @@ class Pengajuanproject extends Model
     public const STATUS_DITOLAK_PENGADAAN = 'ditolak_pengadaan';
     public const STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI = 'pengajuan_dikirim_ke_direksi';
     public const STATUS_APPROVED_BY_DIREKSI = 'approved_by_direksi';
+    public const STATUS_PENDING_DIREKSI = 'pending_direksi';
     public const STATUS_REJECT_DIREKSI = 'reject_direksi';
     public const STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN = 'pengajuan_dikirim_ke_keuangan';
     public const STATUS_PENDING_KEUANGAN = 'pending_keuangan';
@@ -180,6 +183,7 @@ class Pengajuanproject extends Model
             self::STATUS_DISETUJUI_PENGADAAN => 'Disetujui Pengadaan',
             self::STATUS_DITOLAK_PENGADAAN => 'Ditolak Pengadaan',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'Dikirim ke Direksi',
+            self::STATUS_PENDING_DIREKSI => 'Pending Direksi',
             self::STATUS_APPROVED_BY_DIREKSI => 'Disetujui Direksi',
             self::STATUS_REJECT_DIREKSI => 'Ditolak Direksi',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Dikirim ke Keuangan',
@@ -207,6 +211,7 @@ class Pengajuanproject extends Model
             self::STATUS_DITOLAK_PENGADAAN => 'danger',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 'info',
             self::STATUS_APPROVED_BY_DIREKSI => 'success',
+            self::STATUS_PENDING_DIREKSI => 'warning',
             self::STATUS_REJECT_DIREKSI => 'danger',
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'info',
             self::STATUS_PENDING_KEUANGAN => 'warning',
@@ -329,9 +334,13 @@ class Pengajuanproject extends Model
             ],
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => [
                 self::STATUS_APPROVED_BY_DIREKSI => 'Setujui Direksi',
+                self::STATUS_PENDING_DIREKSI => 'Pending Direksi',
                 self::STATUS_REJECT_DIREKSI => 'Tolak Direksi',
             ],
             self::STATUS_APPROVED_BY_DIREKSI => [
+                self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Kirim ke Keuangan',
+            ],
+            self::STATUS_PENDING_DIREKSI => [  
                 self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 'Kirim ke Keuangan',
             ],
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => [
@@ -367,6 +376,7 @@ class Pengajuanproject extends Model
             self::STATUS_DISETUJUI_PM_DIKIRIM_KE_PENGADAAN => 15,
             self::STATUS_DISETUJUI_PENGADAAN => 25,
             self::STATUS_PENGAJUAN_DIKIRIM_KE_DIREKSI => 30,
+            self::STATUS_PENDING_DIREKSI => 35,
             self::STATUS_APPROVED_BY_DIREKSI => 40,
             self::STATUS_PENGAJUAN_DIKIRIM_KE_KEUANGAN => 45,
             self::STATUS_PENDING_KEUANGAN => 50,

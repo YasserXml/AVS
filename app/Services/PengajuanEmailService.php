@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\PengajuanApprovedMail;
 use App\Mail\PengajuanKeuanganExecuteMail;
+use App\Mail\PengajuanPendingMail;
 use App\Mail\PengajuanReadyPickupMail;
 use App\Mail\PengajuanRejectMail;
 use App\Mail\PengajuanSentToAdminMail;
@@ -32,6 +33,13 @@ class PengajuanEmailService
                     break;
                 case 'approved_direksi':
                     Mail::to($pengaju->email)->queue(new PengajuanApprovedMail($record, 'Direksi', $additionalData));
+                    break;
+                case 'pending_direksi':
+                    Mail::to($pengaju->email)->queue(new PengajuanPendingMail(
+                        $record,
+                        $additionalData ?? 'Pengajuan dipending oleh direksi',
+                        $record->tanggal_pending ?? now()->toDateString()
+                    ));
                     break;
                 case 'rejected_direksi':
                     Mail::to($pengaju->email)->queue(new PengajuanRejectMail($record, 'Direksi', $additionalData));
@@ -93,6 +101,27 @@ class PengajuanEmailService
             foreach ($keuangan as $keu) {
                 if ($keu->email) {
                     Mail::to($keu->email)->queue(new PengajuanSentToKeuanganMail($record));
+                }
+            }
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    public static function sendEmailPendingDireksiToKeuangan($record, $alasanPending, $tanggalPending)
+    {
+        try {
+            $keuangan = User::whereHas('roles', function ($query) {
+                $query->where('name', 'keuangan');
+            })->get();
+
+            foreach ($keuangan as $keu) {
+                if ($keu->email) {
+                    Mail::to($keu->email)->queue(new PengajuanPendingMail(
+                        $record,
+                        $alasanPending,
+                        $tanggalPending
+                    ));
                 }
             }
         } catch (\Exception $e) {

@@ -148,6 +148,22 @@ return [
             'throw' => false,
         ],
 
+        'pengajuan_operasional' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/pengajuan-operasional'),
+            'url' => env('APP_URL') . '/storage/pengajuan-operasional',
+            'visibility' => 'public',
+            'throw' => false,
+        ],
+
+        'pengajuan_project' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/pengajuan-project'),
+            'url' => env('APP_URL') . '/storage/pengajuan-project',
+            'visibility' => 'public',
+            'throw' => false,
+        ],
+
         // Disk backup untuk semua departemen
         'backup' => [
             'driver' => 'local',

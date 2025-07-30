@@ -34,14 +34,9 @@ Route::get('/verify-user/{id}/{hash}', [ControllersUserVerificationController::c
     ->middleware('signed');
 
 Route::middleware(['auth'])->group(function () {
-    // Route untuk download file tunggal
-    Route::post('/download/file', [DownloadController::class, 'downloadFile'])->name('download.file');
-
-    // Route untuk download multiple files sebagai ZIP
-    Route::post('/download/multiple', [DownloadController::class, 'downloadMultipleFiles'])->name('download.multiple');
-
-    // Route untuk preview file
-    Route::get('/preview/file', [DownloadController::class, 'previewFile'])->name('preview.file');
+    Route::post('/download-file', [DownloadController::class, 'downloadFile'])->name('download.file');
+    Route::post('/download-multiple', [DownloadController::class, 'downloadMultipleFiles'])->name('download.multiple');
+    Route::get('/preview-file', [DownloadController::class, 'previewFile'])->name('preview.file');
 });
 
 

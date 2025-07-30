@@ -108,11 +108,11 @@ class PengajuanProjectActions
             ->icon('heroicon-o-x-circle')
             ->color('danger')
             ->visible(function ($record) {
-            $user = filament()->auth()->user();
-            return $record->status === 'pending_pm_review' &&
-                $record->nameproject &&
-                $record->nameproject->user_id === $user->id;
-        })
+                $user = filament()->auth()->user();
+                return $record->status === 'pending_pm_review' &&
+                    $record->nameproject &&
+                    $record->nameproject->user_id === $user->id;
+            })
             ->form([
                 Textarea::make('alasan_penolakan')
                     ->label('Alasan Penolakan')
@@ -331,6 +331,63 @@ class PengajuanProjectActions
             });
     }
 
+    public static function pendingDireksi()
+    {
+        return Action::make('pending_direksi')
+            ->label('Pending')
+            ->icon('heroicon-o-pause')
+            ->color('warning')
+            ->visible(function ($record) {
+                $user = filament()->auth()->user();
+                return $record->status === 'pengajuan_dikirim_ke_direksi' &&
+                    $user->hasRole('direktur_keuangan');
+            })
+            ->form([
+                DatePicker::make('tanggal_pending')
+                    ->label('Tanggal Pending')
+                    ->required()
+                    ->native(false)
+                    ->helperText('Tanggal kapan pengajuan akan dipending'),
+                Textarea::make('catatan')
+                    ->label('Alasan Pending')
+                    ->required()
+                    ->placeholder('Jelaskan alasan mengapa pengajuan ini dipending...')
+                    ->rows(3)
+                    ->helperText('Berikan alasan yang jelas untuk pending.'),
+            ])
+            ->requiresConfirmation()
+            ->modalHeading('Pending Pengajuan')
+            ->modalDescription(function ($record) {
+                return 'Apakah Anda yakin ingin memending pengajuan untuk project: ' . $record->nameproject->nama_project . '?';
+            })
+            ->action(function ($record, array $data) {
+                $record->update([
+                    'status' => 'pending_direksi',
+                    'tanggal_pending' => $data['tanggal_pending'],
+                    'catatan' => $data['catatan'] ?? null,
+                ]);
+
+                $record->addStatusHistory(
+                    'pending_direksi',
+                    filament()->auth()->id(),
+                    'Pengajuan dipending oleh direksi hingga ' . $data['tanggal_pending'] . '. Alasan: ' . $data['catatan']
+                );
+
+                PengajuanEmailProjectService::sendNotificationWithEmail($record, 'pending_direksi', $data['catatan']);
+                PengajuanEmailProjectService::sendEmailPendingDireksiToKeuangan(
+                    $record,
+                    $data['catatan'],
+                    $data['tanggal_pending']
+                );
+
+                Notification::make()
+                    ->title('Pengajuan Dipending')
+                    ->body('Pengajuan berhasil dipending.')
+                    ->warning()
+                    ->send();
+            });
+    }
+
     public static function rejectDireksi()
     {
         return Action::make('reject_direksi')
@@ -387,7 +444,7 @@ class PengajuanProjectActions
             ->color('warning')
             ->visible(function ($record) {
                 $user = filament()->auth()->user();
-                return $record->status === 'approved_by_direksi' &&
+                return in_array($record->status, ['approved_by_direksi', 'pending_direksi']) &&
                     $user->hasRole('direktur_keuangan');
             })
             ->requiresConfirmation()
@@ -750,6 +807,7 @@ class PengajuanProjectActions
             self::tolakPengadaan(),
             self::kirimKeDireksi(),
             self::approveDireksi(),
+            self::pendingDireksi(),
             self::rejectDireksi(),
             self::kirimKeKeuangan(),
             self::reviewKeuangan(),

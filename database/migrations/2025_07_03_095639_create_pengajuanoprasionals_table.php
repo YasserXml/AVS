@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('batch_id')->nullable()->index();
             $table->foreignId('user_id')->constrained('users');
             $table->date('tanggal_pengajuan');
+            $table->date('tanggal_pending')->nullable();
             $table->date('tanggal_dibutuhkan')->nullable();
             $table->json('detail_barang')->nullable();
             $table->json('uploaded_files')->nullable();
@@ -27,6 +28,7 @@ return new class extends Migration
                 'superadmin_approved',
                 'superadmin_rejected',
                 'pengajuan_dikirim_ke_direksi',
+                'pending_direksi',
                 'approved_by_direksi',
                 'approved_at_direksi',
                 'reject_direksi',

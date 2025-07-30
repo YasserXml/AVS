@@ -46,6 +46,16 @@ class PengajuanprojectResource extends Resource
         return 'permintaan/pengajuan-project';
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'success';
+    }
+
     protected static ?string $pluralModelLabel = 'Pengajuan Project';
 
     protected static ?string $modelLabel = 'Pengajuan Project';
@@ -84,6 +94,7 @@ class PengajuanprojectResource extends Resource
             return $query->whereIn('status', [
                 'pengajuan_dikirim_ke_direksi',
                 'approved_by_direksi',
+                'pending_direksi',
                 'reject_direksi',
                 'cancelled'
             ]);
@@ -463,6 +474,7 @@ class PengajuanprojectResource extends Resource
                 PengajuanProjectActions::tolakPengadaan(),
                 PengajuanProjectActions::kirimKeDireksi(),
                 PengajuanProjectActions::approveDireksi(),
+                PengajuanProjectActions::pendingDireksi(),
                 PengajuanProjectActions::rejectDireksi(),
                 PengajuanProjectActions::kirimKeKeuangan(),
                 PengajuanProjectActions::reviewKeuangan(),
