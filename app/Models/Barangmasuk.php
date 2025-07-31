@@ -24,7 +24,7 @@ class Barangmasuk extends Model
 
     protected $casts = [
         'tanggal_masuk_barang' => 'datetime',
-        
+
     ];
 
     public function barang()
@@ -40,5 +40,26 @@ class Barangmasuk extends Model
     public function kategori()
     {
         return $this->belongsTo(Kategori::class, 'kategori_id');
-    }    
+    }
+
+    public function getTotalStockSamaAttribute()
+    {
+        return Barang::where('nama_barang', $this->barang->nama_barang)
+            ->sum('jumlah_barang');
+    }
+
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByKategori($query, $kategoriId)
+    {
+        return $query->where('kategori_id', $kategoriId);
+    }
+
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('tanggal_barang_masuk', [$startDate, $endDate]);
+    }
 }

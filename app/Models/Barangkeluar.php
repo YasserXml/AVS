@@ -45,5 +45,4 @@ class Barangkeluar extends Model
     {
         return $this->belongsTo(Kategori::class);
     }
-
 }

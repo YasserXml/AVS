@@ -27,7 +27,6 @@ class Kategori extends Model
         return $this->hasMany(Barang::class, 'kategori_id');
     }
 
-    // Relationship untuk barang yang tidak terhapus (aktif)
     public function barangAktif()
     {
         return $this->hasMany(Barang::class, 'kategori_id')->whereNull('deleted_at');
@@ -36,11 +35,6 @@ class Kategori extends Model
     public function barangmasuk()
     {
         return $this->hasMany(Barangmasuk::class);
-    }
-
-    public function pengajuan()
-    {
-        return $this->hasMany(Pengajuan::class);
     }
 
     // Accessor untuk menghitung total jenis barang
