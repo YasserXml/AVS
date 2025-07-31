@@ -19,6 +19,12 @@ return new class extends Migration
             $table->integer('qty')->after('nama_barang');
             $table->string('brand')->nullable()->after('qty');
             $table->enum('status', ['pengembalian', 'stok'])->default('stok')->after('brand');
+            $table->enum('status_stok', [
+                'ada',
+                'habis',
+            ])->nullable()->default('ada')->after('status');
+            $table->string('keterangan')->nullable();
+            $table->string('pengalokasian')->nullable();
             $table->string('pic')->nullable()->after('status');
             $table->enum('kondisi', ['baik', 'rusak'])->default('baik')->after('pic');
             $table->softDeletes();

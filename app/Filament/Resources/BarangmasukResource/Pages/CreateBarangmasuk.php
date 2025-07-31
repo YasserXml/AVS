@@ -5,6 +5,8 @@ namespace App\Filament\Resources\BarangmasukResource\Pages;
 use App\Filament\Resources\BarangmasukResource;
 use App\Models\Barang;
 use App\Models\Barangmasuk;
+use App\Models\Kategori;
+use Exception;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -19,84 +21,68 @@ class CreateBarangmasuk extends CreateRecord
     {
         DB::beginTransaction();
         try {
-            // Get the data for processing
-            $tipeTransaksi = $data['tipe_transaksi'];
-
             // Default project_name jika tidak ada
             if ($data['status'] !== 'project' || empty($data['project_name'])) {
-                $data['project_name'] = '-'; // Nilai default
+                $data['project_name'] = '-';
             }
 
-            // Siapkan data user dan tanggal
-            $baseData = [
+            // Siapkan spesifikasi berdasarkan kategori
+            $spesifikasi = [];
+            $kategori = Kategori::find($data['kategori_id']);
+
+            if ($kategori && strtolower($kategori->nama_kategori) === 'komputer') {
+                $spesifikasi = [
+                    'processor' => $data['spec_processor'] ?? null,
+                    'ram' => $data['spec_ram'] ?? null,
+                    'storage' => $data['spec_storage'] ?? null,
+                    'vga' => $data['spec_vga'] ?? null,
+                    'motherboard' => $data['spec_motherboard'] ?? null,
+                    'psu' => $data['spec_psu'] ?? null,
+                ];
+            } elseif ($kategori && strtolower($kategori->nama_kategori) === 'elektronik') {
+                $spesifikasi = [
+                    'brand' => $data['spec_brand'] ?? null,
+                    'model' => $data['spec_model'] ?? null,
+                    'garansi' => $data['spec_garansi'] ?? null,
+                ];
+            }
+
+            // Filter spesifikasi yang tidak null
+            $spesifikasi = array_filter($spesifikasi, fn($value) => !is_null($value) && $value !== '');
+
+            // Buat barang baru terlebih dahulu
+            $barang = Barang::create([
+                'serial_number' => $data['serial_number'],
+                'kode_barang' => $data['kode_barang'],
+                'nama_barang' => $data['nama_barang'],
+                'jumlah_barang' => $data['jumlah_barang_masuk'],
+                'kategori_id' => $data['kategori_id'],
+                'spesifikasi' => !empty($spesifikasi) ? $spesifikasi : null,
+            ]);
+
+            // Buat record BarangMasuk
+            $barangMasuk = static::getModel()::create([
+                'user_id' => $data['user_id'],
+                'barang_id' => $barang->id,
+                'jumlah_barang_masuk' => $data['jumlah_barang_masuk'],
                 'tanggal_barang_masuk' => $data['tanggal_barang_masuk'],
                 'status' => $data['status'],
-                'project_name' => $data['project_name'],
                 'dibeli' => $data['dibeli'],
-                'user_id' => $data['user_id'],
-            ];
-
-            $createdRecords = [];
-
-            if ($tipeTransaksi === 'barang_baru') {
-                // Proses multiple barang baru dari repeater
-                foreach ($data['barang_baru_items'] as $barangBaruItem) {
-                    // Buat barang baru terlebih dahulu
-                    $barang = Barang::create([
-                        'serial_number' => $barangBaruItem['serial_number'],
-                        'kode_barang' => $barangBaruItem['kode_barang'],
-                        'nama_barang' => $barangBaruItem['nama_barang'],
-                        'jumlah_barang' => $barangBaruItem['jumlah_barang_masuk'], // Set stok awal
-                        'kategori_id' => $barangBaruItem['kategori_id'],
-                    ]);
-
-                    // Buat record BarangMasuk untuk barang ini
-                    $barangMasukData = array_merge($baseData, [
-                        'barang_id' => $barang->id,
-                        'jumlah_barang_masuk' => $barangBaruItem['jumlah_barang_masuk'],
-                        'kategori_id' => $barangBaruItem['kategori_id'],
-                    ]);
-
-                    $createdRecords[] = static::getModel()::create($barangMasukData);
-                }
-
-                // Notifikasi sukses
-                Notification::make()
-                    ->title(count($data['barang_baru_items']) . ' barang baru berhasil ditambahkan')
-                    ->success()
-                    ->send();
-            } else {
-                // Proses multiple barang lama dari repeater
-                foreach ($data['barang_lama_items'] as $barangLamaItem) {
-                    // Dapatkan data barang yang ada
-                    $barang = Barang::findOrFail($barangLamaItem['barang_id']);
-
-                    // Update jumlah stok
-                    $barang->jumlah_barang += $barangLamaItem['jumlah_barang_masuk'];
-                    $barang->save();
-
-                    // Buat record BarangMasuk untuk barang ini
-                    $barangMasukData = array_merge($baseData, [
-                        'barang_id' => $barangLamaItem['barang_id'],
-                        'jumlah_barang_masuk' => $barangLamaItem['jumlah_barang_masuk'],
-                        'kategori_id' => $barang->kategori_id, // Ambil dari barang yang sudah ada
-                    ]);
-
-                    $createdRecords[] = static::getModel()::create($barangMasukData);
-                }
-
-                // Notifikasi sukses
-                Notification::make()
-                    ->title(count($data['barang_lama_items']) . ' stok barang berhasil diperbarui')
-                    ->success()
-                    ->send();
-            }
+                'project_name' => $data['project_name'],
+                'kategori_id' => $data['kategori_id'],
+            ]);
 
             DB::commit();
 
-            // Kembalikan record pertama (untuk tujuan redirect)
-            return $createdRecords[0] ?? static::getModel()::latest()->first();
-        } catch (\Exception $e) {
+            // Notifikasi sukses
+            Notification::make()
+                ->title('Barang baru berhasil ditambahkan')
+                ->body("Barang '{$data['nama_barang']}' dengan jumlah {$data['jumlah_barang_masuk']} unit telah berhasil ditambahkan ke inventori.")
+                ->success()
+                ->send();
+
+            return $barangMasuk;
+        } catch (Exception $e) {
             DB::rollBack();
             Notification::make()
                 ->danger()
@@ -136,10 +122,6 @@ class CreateBarangmasuk extends CreateRecord
 
     protected function getCreatedNotification(): ?Notification
     {
-        return Notification::make()
-            ->title('Barang Masuk Berhasil Ditambahkan') 
-            ->success()
-            ->icon('heroicon-o-check')
-            ->body('Data barang masuk telah berhasil ditambahkan.');
+        return null; // Kita sudah handle notifikasi di handleRecordCreation
     }
 }

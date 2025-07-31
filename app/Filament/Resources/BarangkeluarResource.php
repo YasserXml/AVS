@@ -59,7 +59,7 @@ class BarangkeluarResource extends Resource
                     ->icon('heroicon-o-arrow-right-circle')
                     ->collapsible()
                     ->collapsed(false)
-                    ->aside()
+                    
                     ->compact()
                     ->schema([
                         Forms\Components\Grid::make()
@@ -110,7 +110,6 @@ class BarangkeluarResource extends Resource
                                             ->preload()
                                             ->prefixIcon('heroicon-o-user'),
 
-
                                         Forms\Components\TextInput::make('project_name')
                                             ->label('Nama Project')
                                             ->placeholder('Masukkan nama project')
@@ -121,7 +120,6 @@ class BarangkeluarResource extends Resource
                                             ->prefixIcon('heroicon-o-briefcase'),
                                     ]),
                             ]),
-
 
                         // Keterangan
                         Forms\Components\Textarea::make('keterangan')
@@ -138,15 +136,16 @@ class BarangkeluarResource extends Resource
                     ->icon('heroicon-o-cube-transparent')
                     ->collapsible()
                     ->collapsed(false)
-                    ->aside()
+                    
                     ->compact()
                     ->schema([
                         Forms\Components\Repeater::make('barang_items')
                             ->label('Daftar Barang Keluar')
                             ->reactive()
                             ->schema([
-                                Forms\Components\Grid::make(['sm' => 1, 'md' => 4])
+                                Forms\Components\Grid::make(['sm' => 1, 'md' => 6])
                                     ->schema([
+                                        // Pilihan Barang
                                         Forms\Components\Select::make('barang_id')
                                             ->label('Pilih Barang')
                                             ->relationship('barang', 'nama_barang')
@@ -154,18 +153,26 @@ class BarangkeluarResource extends Resource
                                             ->preload()
                                             ->reactive()
                                             ->live()
-                                            ->preload()
                                             ->required()
                                             ->placeholder('Cari atau pilih barang...')
                                             ->prefixIcon('heroicon-o-magnifying-glass')
-                                            ->columnSpan(1)
+                                            ->columnSpan(2)
                                             ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                                 if ($state) {
-                                                    $barang = Barang::find($state);
+                                                    $barang = Barang::with('kategori')->find($state);
                                                     if ($barang) {
+                                                        // Set data dasar barang
                                                         $set('nama_barang_display', $barang->nama_barang);
                                                         $set('stok_tersedia', $barang->jumlah_barang);
                                                         $set('kode_barang_display', $barang->kode_barang);
+                                                        $set('serial_number_display', $barang->serial_number);
+                                                        $set('kategori_display', $barang->kategori?->nama_kategori ?? '-');
+
+                                                        // Set spesifikasi barang
+                                                        $spesifikasi = $barang->spesifikasi ?? [];
+                                                        $set('merek_display', $spesifikasi['merek'] ?? '-');
+                                                        $set('model_display', $spesifikasi['model'] ?? '-');
+                                                        $set('garansi_display', $spesifikasi['garansi'] ?? '-');
 
                                                         // Reset jumlah keluar
                                                         $set('jumlah_barang_keluar', null);
@@ -180,10 +187,28 @@ class BarangkeluarResource extends Resource
                                                                 ->send();
                                                         }
                                                     }
+                                                } else {
+                                                    // Reset semua field jika tidak ada barang dipilih
+                                                    $fieldsToReset = [
+                                                        'nama_barang_display',
+                                                        'stok_tersedia',
+                                                        'kode_barang_display',
+                                                        'serial_number_display',
+                                                        'kategori_display',
+                                                        'merek_display',
+                                                        'model_display',
+                                                        'garansi_display',
+                                                        'jumlah_barang_keluar',
+                                                        'sisa_stok_display'
+                                                    ];
+                                                    foreach ($fieldsToReset as $field) {
+                                                        $set($field, null);
+                                                    }
                                                 }
                                             })
                                             ->getOptionLabelFromRecordUsing(fn($record) => "{$record->nama_barang} (Stok: {$record->jumlah_barang})"),
 
+                                        // Stok Tersedia
                                         Forms\Components\TextInput::make('stok_tersedia')
                                             ->label('Stok Tersedia')
                                             ->numeric()
@@ -194,6 +219,7 @@ class BarangkeluarResource extends Resource
                                             ->columnSpan(1)
                                             ->extraAttributes(['class' => 'text-green-600 font-semibold']),
 
+                                        // Jumlah Keluar
                                         Forms\Components\TextInput::make('jumlah_barang_keluar')
                                             ->label('Jumlah Keluar')
                                             ->numeric()
@@ -236,6 +262,7 @@ class BarangkeluarResource extends Resource
                                                 }
                                             }),
 
+                                        // Sisa Stok
                                         Forms\Components\TextInput::make('sisa_stok_display')
                                             ->label('Sisa Stok')
                                             ->numeric()
@@ -246,10 +273,79 @@ class BarangkeluarResource extends Resource
                                             ->columnSpan(1)
                                             ->extraAttributes(['class' => 'text-blue-600 font-semibold']),
 
-                                        // Hidden fields for display purposes
-                                        Forms\Components\Hidden::make('nama_barang_display'),
-                                        Forms\Components\Hidden::make('kode_barang_display'),
+                                        // Kategori
+                                        Forms\Components\TextInput::make('kategori_display')
+                                            ->label('Kategori')
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->prefixIcon('heroicon-o-tag')
+                                            ->placeholder('-')
+                                            ->columnSpan(1)
+                                            ->extraAttributes(['class' => 'text-gray-600']),
+                                    ]),
+
+                                // Detail Informasi Barang
+                                Forms\Components\Fieldset::make('Detail Informasi Barang')
+                                    ->schema([
+                                        Forms\Components\Grid::make(['sm' => 1, 'md' => 4])
+                                            ->schema([
+                                                Forms\Components\TextInput::make('serial_number_display')
+                                                    ->label('Nomor Serial')
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->prefixIcon('heroicon-o-hashtag')
+                                                    ->placeholder('-'),
+
+                                                Forms\Components\TextInput::make('kode_barang_display')
+                                                    ->label('Kode Barang')
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->prefixIcon('heroicon-o-qr-code')
+                                                    ->placeholder('-'),
+
+                                                Forms\Components\TextInput::make('merek_display')
+                                                    ->label('Merek')
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->prefixIcon('heroicon-o-building-storefront')
+                                                    ->placeholder('-'),
+
+                                                Forms\Components\TextInput::make('model_display')
+                                                    ->label('Model')
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->prefixIcon('heroicon-o-cpu-chip')
+                                                    ->placeholder('-'),
+                                            ]),
+
+                                        Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
+                                            ->schema([
+                                                Forms\Components\TextInput::make('garansi_display')
+                                                    ->label('Garansi')
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->prefixIcon('heroicon-o-shield-check')
+                                                    ->placeholder('-'),
+
+                                                Forms\Components\TextInput::make('nama_barang_display')
+                                                    ->label('Nama Barang')
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->prefixIcon('heroicon-o-cube')
+                                                    ->placeholder('-')
+                                                    ->extraAttributes(['class' => 'font-semibold text-gray-800']),
+                                            ]),
                                     ])
+                                    ->visible(fn(Get $get) => !empty($get('barang_id'))),
+
+                                // Hidden fields untuk menyimpan data
+                                Forms\Components\Hidden::make('nama_barang_display'),
+                                Forms\Components\Hidden::make('kode_barang_display'),
+                                Forms\Components\Hidden::make('serial_number_display'),
+                                Forms\Components\Hidden::make('kategori_display'),
+                                Forms\Components\Hidden::make('merek_display'),
+                                Forms\Components\Hidden::make('model_display'),
+                                Forms\Components\Hidden::make('garansi_display'),
                             ])
                             ->itemLabel(
                                 fn(array $state): ?string =>
@@ -258,6 +354,7 @@ class BarangkeluarResource extends Resource
                                     'Barang Keluar'
                             )
                             ->collapsible()
+                            ->collapsed(fn(array $state): bool => !empty($state['barang_id']))
                             ->defaultItems(1)
                             ->addActionLabel('+ Tambah Barang Keluar')
                             ->reorderableWithButtons()

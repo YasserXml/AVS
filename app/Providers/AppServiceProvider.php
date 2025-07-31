@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Barang;
 use App\Models\Pengajuanoprasional;
 use App\Models\Pengembalian;
 use App\Models\User;
+use App\Observers\BarangObserver;
 use App\Observers\PengajuanoprasionalObserver;
 use App\Observers\PengembalianObserver;
 use App\Observers\UserObserver;
@@ -36,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
        if (config('app.env') === 'production') {
         URL::forceScheme('https');
     } 
+        Barang::observe(BarangObserver::class);
     }
 }
 

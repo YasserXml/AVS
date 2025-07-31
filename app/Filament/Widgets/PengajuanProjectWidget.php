@@ -39,7 +39,8 @@ class PengajuanProjectWidget extends BaseWidget
                 ->description('Semua pengajuan project')
                 ->descriptionIcon('heroicon-m-building-office')
                 ->color('primary')
-                ->chart($this->getPengajuanTrendChart()),
+                ->chart($this->getPengajuanTrendChart())
+                ->url(route(('filament.admin.resources.permintaan.pengajuan-project.index'))),
 
             Stat::make('Menunggu Review', number_format($pengajuanPending, 0, ',', '.'))
                 ->description('Pengajuan yang menunggu persetujuan')

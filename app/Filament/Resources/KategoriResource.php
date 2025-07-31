@@ -20,7 +20,7 @@ class KategoriResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-bookmark';
 
-    protected static ?string $activeNavigationIcon = 'heroicon-s-bookmark'; 
+    protected static ?string $activeNavigationIcon = 'heroicon-s-bookmark';
 
     protected static ?string $navigationGroup = 'Inventory';
 
@@ -37,12 +37,12 @@ class KategoriResource extends Resource
     protected static ?string $pluralModelLabel = 'Kategori Barang';
 
     protected static ?int $navigationSort = 3;
-    
+
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
     }
-    
+
     public static function getNavigationBadgeColor(): ?string
     {
         return 'success';
@@ -58,7 +58,7 @@ class KategoriResource extends Resource
                         Forms\Components\TextInput::make('nama_kategori')
                             ->required()
                             ->maxLength(255)
-                            ->autofocus() 
+                            ->autofocus()
                             ->placeholder('Masukkan nama kategori')
                             ->label('Nama Kategori')
                             ->columnSpanFull(),
@@ -70,17 +70,17 @@ class KategoriResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-         ->recordUrl(
-            fn ($record): string => route('filament.admin.resources.inventory.barang.index', [
-                'tableFilters' => [
-                    'kategori' => [
-                        'value' => $record->id
+            ->recordUrl(
+                fn($record): string => route('filament.admin.resources.inventory.barang.index', [
+                    'tableFilters' => [
+                        'kategori' => [
+                            'value' => $record->id
+                        ]
                     ]
-                ]
-            ])
-        )
+                ])
+            )
             ->columns([
-               Tables\Columns\TextColumn::make('id')
+                Tables\Columns\TextColumn::make('id')
                     ->label('No')
                     ->state(static function ($rowLoop): string {
                         return (string) $rowLoop->iteration;
@@ -90,26 +90,69 @@ class KategoriResource extends Resource
                     ->weight(FontWeight::Bold)
                     ->searchable(false)
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('nama_kategori')
                     ->label('Nama Kategori')
                     ->searchable()
                     ->toggleable()
+                    ->sortable()
+                    ->weight(FontWeight::SemiBold),
+
+                // Kolom untuk total jenis barang
+                Tables\Columns\TextColumn::make('total_barang')
+                    ->label('Jenis Barang')
+                    ->badge()
                     ->alignCenter()
-                    ->sortable(),
-                    
+                    ->color('info')
+                    ->icon('heroicon-m-cube')
+                    ->tooltip('Total jenis/variasi barang dalam kategori ini')
+                    ->sortable(query: function ($query, $direction) {
+                        return $query->withCount('barangAktif as total_barang')
+                            ->orderBy('total_barang', $direction);
+                    }),
+
+                // Kolom untuk total stok
+                Tables\Columns\TextColumn::make('total_stok')
+                    ->label('Total Stok')
+                    ->badge()
+                    ->alignCenter()
+                    ->color(fn($record): string => $record->warna_stok)
+                    ->icon(fn($record): string => match ($record->status_stok) {
+                        'kosong' => 'heroicon-m-x-circle',
+                        'menipis' => 'heroicon-m-exclamation-triangle',
+                        'tersedia' => 'heroicon-m-check-circle',
+                        default => 'heroicon-m-minus-circle'
+                    })
+                    ->tooltip(fn($record): string => "Status: " . ucfirst($record->status_stok))
+                    ->sortable(query: function ($query, $direction) {
+                        return $query->withSum('barangAktif as total_stok', 'jumlah_barang')
+                            ->orderBy('total_stok', $direction);
+                    }),
+
+                // Kolom status stok dalam bentuk badge
+                Tables\Columns\TextColumn::make('status_stok')
+                    ->label('Status Stok')
+                    ->badge()
+                    ->alignCenter()
+                    ->color(fn($record): string => $record->warna_stok)
+                    ->formatStateUsing(fn(string $state): string => ucfirst($state))
+                    ->sortable(query: function ($query, $direction) {
+                        return $query->withSum('barangAktif as total_stok', 'jumlah_barang')
+                            ->orderBy('total_stok', $direction);
+                    }),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat Pada')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Diperbarui Pada')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
+
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->label('Dihapus Pada')
                     ->dateTime('d M Y, H:i')
@@ -118,14 +161,69 @@ class KategoriResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make()
-                ->label('Dihapus'),
+                    ->label('Dihapus'),
+
+                // Filter berdasarkan status stok
+                Tables\Filters\SelectFilter::make('status_stok')
+                    ->label('Status Stok')
+                    ->options([
+                        'kosong' => 'Stok Kosong',
+                        'menipis' => 'Stok Menipis',
+                        'tersedia' => 'Stok Tersedia',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (!isset($data['value'])) {
+                            return $query;
+                        }
+
+                        return $query->withSum('barangAktif as total_stok', 'jumlah_barang')
+                            ->having('total_stok', match ($data['value']) {
+                                'kosong' => '=',
+                                'menipis' => '<',
+                                'tersedia' => '>=',
+                                default => '>='
+                            }, match ($data['value']) {
+                                'kosong' => 0,
+                                'menipis' => 50, // Threshold bisa disesuaikan
+                                'tersedia' => 50,
+                                default => 0
+                            });
+                    })
+                    ->indicator('Status Stok')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
-                    Tables\Actions\RestoreAction::make(),
-                    Tables\Actions\ForceDeleteAction::make(),
+                    Tables\Actions\ViewAction::make()
+                        ->tooltip('Lihat Detail Kategori'),
+
+                    Tables\Actions\EditAction::make()
+                        ->tooltip('Edit Kategori'),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->tooltip('Hapus Kategori'),
+
+                    Tables\Actions\RestoreAction::make()
+                        ->tooltip('Pulihkan Kategori'),
+
+                    Tables\Actions\ForceDeleteAction::make()
+                        ->tooltip('Hapus Permanen'),
+
+                    // Action untuk melihat semua barang dalam kategori
+                    Tables\Actions\Action::make('lihat_barang')
+                        ->label('Lihat Barang')
+                        ->icon('heroicon-m-eye')
+                        ->color('info')
+                        ->url(fn($record): string => route('filament.admin.resources.inventory.barang.index', [
+                            'tableFilters' => [
+                                'kategori' => [
+                                    'value' => $record->id
+                                ]
+                            ]
+                        ]))
+                        ->openUrlInNewTab()
+                        ->tooltip('Lihat semua barang dalam kategori ini'),
                 ]),
             ])
             ->bulkActions([
@@ -135,7 +233,13 @@ class KategoriResource extends Resource
                     Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
             ])
-            ->paginated([10, 25, 50, 100, 'all']);
+            ->defaultSort('nama_kategori', 'asc')
+            ->paginated([10, 25, 50, 100, 'all'])
+            // Tambahkan eager loading untuk performa yang lebih baik
+            ->modifyQueryUsing(function ($query) {
+                return $query->withCount('barangAktif as total_barang')
+                    ->withSum('barangAktif as total_stok', 'jumlah_barang');
+            });
     }
     public static function getRelations(): array
     {
@@ -152,6 +256,4 @@ class KategoriResource extends Resource
             'edit' => Pages\EditKategori::route('/{record}/edit'),
         ];
     }
-
-   
 }

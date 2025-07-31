@@ -39,7 +39,8 @@ class PengajuanOprasionalWidget extends BaseWidget
                 ->description('Semua pengajuan operasional')
                 ->descriptionIcon('heroicon-m-clipboard-document-list')
                 ->color('primary')
-                ->chart($this->getPengajuanTrendChart()),
+                ->chart($this->getPengajuanTrendChart())
+                ->url(route(('filament.admin.resources.permintaan.pengajuan-operasional.index'))),
 
             Stat::make('Menunggu Review', number_format($pengajuanPending, 0, ',', '.'))
                 ->description('Pengajuan yang menunggu persetujuan')

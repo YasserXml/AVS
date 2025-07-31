@@ -44,7 +44,8 @@ class StatsOverviewWidget extends BaseWidget
                     'Semua barang stok aman')
                 ->descriptionIcon($barangHampirHabis > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle')
                 ->color($barangHampirHabis > 0 ? 'warning' : 'success')
-                ->chart($this->getStokTrendChart()),
+                ->chart($this->getStokTrendChart())
+                ->url(route('filament.admin.resources.inventory.barang.index')),
 
             Stat::make('Barang Masuk', number_format($barangMasukBulanIni, 0, ',', '.') . ' Unit')
                 ->description($this->getDescriptionWithTrend(
@@ -53,7 +54,8 @@ class StatsOverviewWidget extends BaseWidget
                 ))
                 ->descriptionIcon($perubahanMasuk >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
                 ->color($perubahanMasuk >= 0 ? 'success' : 'danger')
-                ->chart($this->getBarangMasukChart()),
+                ->chart($this->getBarangMasukChart())
+                ->url(route('filament.admin.resources.flow.barang-masuk.index')),
 
             Stat::make('Barang Keluar', number_format($barangKeluarBulanIni, 0, ',', '.') . ' Unit')
                 ->description($this->getDescriptionWithTrend(
@@ -62,7 +64,8 @@ class StatsOverviewWidget extends BaseWidget
                 ))
                 ->descriptionIcon($perubahanKeluar >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
                 ->color($perubahanKeluar >= 0 ? 'info' : 'success')
-                ->chart($this->getBarangKeluarChart()),
+                ->chart($this->getBarangKeluarChart())
+                ->url(route('filament.admin.resources.flow.barang-keluar.index')),
         ];
     }
 

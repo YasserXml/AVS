@@ -79,11 +79,18 @@ class AsetptResource extends Resource
                             ->helperText('Jumlah unit barang')
                             ->required()
                             ->numeric()
-                            ->minValue(1)
+                            ->minValue(0)
                             ->maxValue(999999)
                             ->default(1)
                             ->suffix('unit')
                             ->step(1)
+                            ->live(debounce: 300)
+                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                // Auto update status_stok based on qty
+                                if ($state !== null) {
+                                    $set('status_stok', (int)$state > 0 ? 'ada' : 'habis');
+                                }
+                            })
                             ->columnSpan(1),
                     ])
                     ->columns(4)
@@ -98,33 +105,21 @@ class AsetptResource extends Resource
                             ->helperText('Merek atau brand dari barang')
                             ->maxLength(255)
                             ->placeholder('Contoh: Dell, HP, Canon')
-                            ->datalist([
-                                'Dell',
-                                'HP',
-                                'Lenovo',
-                                'Asus',
-                                'Canon',
-                                'Epson',
-                                'Samsung',
-                                'LG',
-                                'Sony',
-                                'Panasonic'
-                            ])
                             ->columnSpan(1),
 
                         Forms\Components\TextInput::make('pic')
-                            ->label('Penanggung Jawab (PIC) / Lokasi')
-                            ->helperText('Nama orang yang bertanggung jawab atau lokasi penyimpanan')
+                            ->label('Penanggung Jawab (PIC)')
+                            ->helperText('Nama orang yang bertanggung jawab')
                             ->maxLength(255)
-                            ->placeholder('Contoh: Ahmad Wijaya / Ruang IT Lantai 2')
+                            ->placeholder('Contoh: Ahmad Wijaya')
                             ->columnSpan(1),
 
                         Forms\Components\Select::make('status')
                             ->label('Status Aset')
                             ->helperText('Status ketersediaan aset')
                             ->options([
-                                'stok' => 'Stok Tersedia',
-                                'pengembalian' => 'Dalam Pengembalian',
+                                'stok' => 'Stok',
+                                'pengembalian' => 'Pengembalian',
                             ])
                             ->default('stok')
                             ->required()
@@ -144,49 +139,38 @@ class AsetptResource extends Resource
                             ->native(false)
                             ->searchable()
                             ->columnSpan(1),
+
+                        Forms\Components\Select::make('status_stok')
+                            ->label('Status Stok')
+                            ->helperText('Status ketersediaan stok (otomatis berdasarkan qty)')
+                            ->options([
+                                'ada' => 'Ada',
+                                'habis' => 'Habis',
+                            ])
+                            ->default('ada')
+                            ->required()
+                            ->native(false)
+                            ->disabled() // Disabled karena otomatis dari qty
+                            ->dehydrated() // Tetap disimpan meski disabled
+                            ->columnSpan(2),
+
+                        Forms\Components\Textarea::make('keterangan')
+                            ->label('Keterangan')
+                            ->helperText('Catatan tambahan mengenai aset')
+                            ->maxLength(500)
+                            ->rows(3)
+                            ->placeholder('Masukkan keterangan tambahan jika diperlukan')
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('pengalokasian')
+                            ->label('Pengalokasian')
+                            ->helperText('Informasi mengenai pengalokasian aset')
+                            ->maxLength(255)
+                            ->required()
+                            ->placeholder('Contoh: Departemen IT, Proyek X')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2)
                     ->collapsible(),
-
-                Forms\Components\Section::make('Relasi Barang')
-                    ->description('Hubungkan dengan data master barang (opsional)')
-                    ->icon('heroicon-o-link')
-                    ->schema([
-                        Forms\Components\Select::make('barang_id')
-                            ->label('Pilih dari Master Barang')
-                            ->helperText('Pilih barang dari data master jika tersedia')
-                            ->relationship('barang', 'nama_barang')
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Pilih barang dari master data')
-                            ->createOptionForm([
-                                Forms\Components\TextInput::make('nama_barang')
-                                    ->label('Nama Barang')
-                                    ->required()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('brand')
-                                    ->label('Brand/Merek')
-                                    ->maxLength(255),
-                            ])
-                            ->createOptionUsing(function (array $data) {
-                                return \App\Models\Barang::create($data)->id;
-                            })
-                            ->live()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                if ($state) {
-                                    $barang = \App\Models\Barang::find($state);
-                                    if ($barang) {
-                                        $set('nama_barang', $barang->nama_barang);
-                                        if ($barang->brand) {
-                                            $set('brand', $barang->brand);
-                                        }
-                                    }
-                                }
-                            })
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsible()
-                    ->collapsed(),
             ]);
     }
 
@@ -220,7 +204,7 @@ class AsetptResource extends Resource
                     ->sortable()
                     ->alignCenter()
                     ->suffix(' unit')
-                    ->color('info'),
+                    ->color(fn($record) => $record->qty > 0 ? 'success' : 'danger'),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
@@ -229,8 +213,21 @@ class AsetptResource extends Resource
                         'warning' => 'pengembalian',
                     ])
                     ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'stok' => 'Stok Tersedia',
+                        'stok' => 'Stok',
                         'pengembalian' => 'Pengembalian',
+                        default => ucfirst($state),
+                    })
+                    ->sortable(),
+
+                Tables\Columns\BadgeColumn::make('status_stok')
+                    ->label('Status Stok')
+                    ->colors([
+                        'success' => 'ada',
+                        'danger' => 'habis',
+                    ])
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'ada' => 'Ada',
+                        'habis' => 'Habis',
                         default => ucfirst($state),
                     })
                     ->sortable(),
@@ -249,13 +246,32 @@ class AsetptResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('pic')
-                    ->label('PIC/Lokasi')
+                    ->label('PIC')
                     ->searchable()
                     ->toggleable()
                     ->limit(30)
                     ->placeholder('Belum ditentukan')
                     ->tooltip(function ($record) {
                         return $record->pic;
+                    }),
+
+                Tables\Columns\TextColumn::make('pengalokasian')
+                    ->label('Pengalokasian')
+                    ->searchable()
+                    ->toggleable()
+                    ->limit(30)
+                    ->placeholder('Tidak ada pengalokasian')
+                    ->tooltip(function ($record) {
+                        return $record->pengalokasian;
+                    }),
+
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan')
+                    ->limit(40)
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->placeholder('Tidak ada keterangan')
+                    ->tooltip(function ($record) {
+                        return $record->keterangan;
                     }),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -278,8 +294,18 @@ class AsetptResource extends Resource
                     ->label('Filter Status')
                     ->placeholder('Semua Status')
                     ->options([
-                        'stok' => 'Stok Tersedia',
+                        'stok' => 'Stok',
                         'pengembalian' => 'Pengembalian',
+                    ])
+                    ->native(false)
+                    ->multiple(),
+
+                SelectFilter::make('status_stok')
+                    ->label('Filter Status Stok')
+                    ->placeholder('Semua Status Stok')
+                    ->options([
+                        'ada' => 'Ada',
+                        'habis' => 'Habis',
                     ])
                     ->native(false)
                     ->multiple(),
@@ -298,7 +324,6 @@ class AsetptResource extends Resource
                     ->label('Filter Merek')
                     ->placeholder('Semua Merek')
                     ->options(function () {
-                        // Assuming you have a method to get unique brands
                         return Asetpt::whereNotNull('brand')
                             ->distinct()
                             ->pluck('brand', 'brand')
@@ -306,6 +331,39 @@ class AsetptResource extends Resource
                     })
                     ->searchable()
                     ->multiple(),
+
+                Filter::make('qty')
+                    ->form([
+                        Forms\Components\TextInput::make('qty_min')
+                            ->label('Qty Minimum')
+                            ->numeric()
+                            ->placeholder('0'),
+                        Forms\Components\TextInput::make('qty_max')
+                            ->label('Qty Maksimum')
+                            ->numeric()
+                            ->placeholder('999999'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['qty_min'],
+                                fn(Builder $query, $qty): Builder => $query->where('qty', '>=', $qty),
+                            )
+                            ->when(
+                                $data['qty_max'],
+                                fn(Builder $query, $qty): Builder => $query->where('qty', '<=', $qty),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['qty_min'] ?? null) {
+                            $indicators[] = 'Qty Min: ' . $data['qty_min'];
+                        }
+                        if ($data['qty_max'] ?? null) {
+                            $indicators[] = 'Qty Max: ' . $data['qty_max'];
+                        }
+                        return $indicators;
+                    }),
 
                 Filter::make('tanggal')
                     ->form([
@@ -420,7 +478,7 @@ class AsetptResource extends Resource
                         ->modalHeading('Hapus Permanen')
                         ->modalDescription('Data akan dihapus permanen dan tidak dapat dipulihkan!'),
                 ])
-                    ->label('Aksi '),
+                    ->label('Aksi'),
             ])
             ->defaultSort('created_at', 'desc')
             ->striped()

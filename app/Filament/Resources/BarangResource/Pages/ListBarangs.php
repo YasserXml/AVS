@@ -18,18 +18,6 @@ class ListBarangs extends ListRecords
 {
     protected static string $resource = BarangResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make()
-                ->label('Tambah Barang')
-                ->icon('heroicon-o-plus-circle')
-                ->iconPosition(IconPosition::Before)
-                ->color('success')
-                ->size('lg'),
-        ];
-    }
-
     public function getTabs(): array
     {
         return [

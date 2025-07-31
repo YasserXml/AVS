@@ -41,13 +41,7 @@ class ListBarangkeluars extends ListRecords
             'semua' => Tab::make('Semua Data')
                 ->icon('heroicon-o-rectangle-stack')
                 ->badge(BarangKeluar::count()),
-
-            'manual' => Tab::make('Input Manual')
-                ->icon('heroicon-o-pencil-square')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('sumber', 'manual'))
-                ->badge(BarangKeluar::where('sumber', 'manual')->count())
-                ->badgeColor('primary'),
-                
+            
             'operasional' => Tab::make('Operasional Kantor')
                 ->icon('heroicon-o-building-office')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'oprasional_kantor'))
