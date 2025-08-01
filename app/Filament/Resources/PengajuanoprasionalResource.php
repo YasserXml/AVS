@@ -47,7 +47,7 @@ class PengajuanoprasionalResource extends Resource
 
     protected static ?string $activeNavigationIcon = 'heroicon-s-clipboard-document-list';
 
-    protected static ?string $navigationGroup = 'Permintaan Barang';
+    protected static ?string $navigationGroup = 'Pengajuan Barang';
 
     protected static ?int $navigationSort = 6;
 
@@ -381,7 +381,7 @@ class PengajuanoprasionalResource extends Resource
                     })
                     ->modalFooterActions([
                         Tables\Actions\Action::make('download_all_files')
-                            ->label('Download Semua File')
+                            ->label('Download File')
                             ->icon('heroicon-o-arrow-down-tray')
                             ->color('success')
                             ->visible(fn($record) => !empty($record->uploaded_files))

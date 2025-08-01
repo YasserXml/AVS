@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('barangkeluars', function (Blueprint $table) {
-            $table->foreignId('jenis_id')->nullable()->constrained('jenis')->after('kategori_id');
+        Schema::table('barangmasuks', function (Blueprint $table) {
+            $table->foreignId('subkategori_id')
+                ->nullable()
+                ->constrained('subkategoris')
+                ->onDelete('set null'); // Menambahkan kolom subkategori_id setelah kategori_id
         });
     }
 
@@ -21,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('barangkeluars', function (Blueprint $table) {
+        Schema::table('barangmasuks', function (Blueprint $table) {
             //
         });
     }

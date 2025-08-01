@@ -19,6 +19,7 @@ class Barang extends Model
         'nama_barang',
         'jumlah_barang',
         'harga_barang',
+        'subkategori_id',
         'kategori_id',
         'spesifikasi',
     ];
@@ -42,15 +43,39 @@ class Barang extends Model
     {
         return $this->belongsTo(Kategori::class, 'kategori_id');
     }
-    
+
     public function asetpt()
     {
         return $this->hasMany(Asetpt::class);
     }
 
+    public function subkategori()
+    {
+        return $this->belongsTo(Subkategori::class, 'subkategori_id');
+    }
+
     public function getSpesifikasiAttribute($value)
     {
-        Log::info('Accessor spesifikasi dipanggil:', ['raw_value' => $value, 'decoded' => json_decode($value, true)]);
         return json_decode($value, true);
+    }
+
+    public function getKategoriLengkapAttribute()
+    {
+        $kategori = $this->kategori->nama_kategori ?? '';
+        $subkategori = $this->subkategori->nama_subkategori ?? '';
+
+        return $subkategori ? "{$kategori} - {$subkategori}" : $kategori;
+    }
+
+    // Scope untuk filter berdasarkan kategori
+    public function scopeByKategori($query, $kategoriId)
+    {
+        return $query->where('kategori_id', $kategoriId);
+    }
+
+    // Scope untuk filter berdasarkan subkategori
+    public function scopeBySubkategori($query, $subkategoriId)
+    {
+        return $query->where('subkategori_id', $subkategoriId);
     }
 }

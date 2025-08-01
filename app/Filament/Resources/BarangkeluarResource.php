@@ -59,7 +59,6 @@ class BarangkeluarResource extends Resource
                     ->icon('heroicon-o-arrow-right-circle')
                     ->collapsible()
                     ->collapsed(false)
-                    
                     ->compact()
                     ->schema([
                         Forms\Components\Grid::make()
@@ -120,68 +119,214 @@ class BarangkeluarResource extends Resource
                                             ->prefixIcon('heroicon-o-briefcase'),
                                     ]),
                             ]),
-
-                        // Keterangan
-                        Forms\Components\Textarea::make('keterangan')
-                            ->label('Keterangan')
-                            ->placeholder('Masukkan keterangan barang keluar (opsional)')
-                            ->rows(3)
-                            ->columnSpanFull(),
                     ]),
 
-                // Detail Barang Section
                 Forms\Components\Section::make()
                     ->heading('Detail Barang Keluar')
-                    ->description('Pilih barang yang akan dikeluarkan dari inventori')
+                    ->description('Pilih barang yang akan dikeluarkan dari inventori berdasarkan subkategori')
                     ->icon('heroicon-o-cube-transparent')
                     ->collapsible()
                     ->collapsed(false)
-                    
                     ->compact()
                     ->schema([
                         Forms\Components\Repeater::make('barang_items')
                             ->label('Daftar Barang Keluar')
                             ->reactive()
                             ->schema([
-                                Forms\Components\Grid::make(['sm' => 1, 'md' => 6])
+                                Forms\Components\Grid::make()
+                                    ->columns(['default' => 1, 'sm' => 2, 'md' => 3, 'lg' => 6])
                                     ->schema([
-                                        // Pilihan Barang
-                                        Forms\Components\Select::make('barang_id')
-                                            ->label('Pilih Barang')
-                                            ->relationship('barang', 'nama_barang')
+                                        // Baris 1: Kategori dan Subkategori
+                                        Forms\Components\Select::make('kategori_id')
+                                            ->label('Pilih Kategori')
+                                            ->relationship('kategori', 'nama_kategori')
                                             ->searchable()
+                                            ->reactive()
+                                            ->live()
                                             ->preload()
+                                            ->required()
+                                            ->placeholder('Pilih kategori...')
+                                            ->prefixIcon('heroicon-o-tag')
+                                            ->columnSpan(['default' => 1, 'sm' => 1, 'md' => 2, 'lg' => 2])
+                                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                                // Reset semua pilihan setelah kategori
+                                                $set('subkategori_id', null);
+                                                $set('barang_id', null);
+                                                $fieldsToReset = [
+                                                    'total_stok_subkategori',
+                                                    'stok_tersedia',
+                                                    'kode_barang_display',
+                                                    'serial_number_display',
+                                                    'kategori_display',
+                                                    'nama_barang_display',
+                                                    'merek_display',
+                                                    'model_display',
+                                                    'garansi_display',
+                                                    'processor_display',
+                                                    'ram_display',
+                                                    'storage_display',
+                                                    'jumlah_barang_keluar',
+                                                    'sisa_stok_display'
+                                                ];
+                                                foreach ($fieldsToReset as $field) {
+                                                    $set($field, null);
+                                                }
+                                            }),
+
+                                        Forms\Components\Select::make('subkategori_id')
+                                            ->label('Pilih Subkategori')
+                                            ->options(function (Get $get) {
+                                                $kategoriId = $get('kategori_id');
+                                                if (!$kategoriId) {
+                                                    return [];
+                                                }
+
+                                                return \App\Models\Subkategori::where('kategori_id', $kategoriId)
+                                                    ->with(['barang' => function ($query) {
+                                                        $query->selectRaw('subkategori_id, SUM(jumlah_barang) as total_stok')
+                                                            ->groupBy('subkategori_id');
+                                                    }])
+                                                    ->get()
+                                                    ->mapWithKeys(function ($subkategori) {
+                                                        $totalStok = \App\Models\Barang::where('subkategori_id', $subkategori->id)
+                                                            ->sum('jumlah_barang');
+
+                                                        return [
+                                                            $subkategori->id => "{$subkategori->nama_subkategori} (Total Stok: {$totalStok} unit)"
+                                                        ];
+                                                    });
+                                            })
+                                            ->searchable()
                                             ->reactive()
                                             ->live()
                                             ->required()
-                                            ->placeholder('Cari atau pilih barang...')
-                                            ->prefixIcon('heroicon-o-magnifying-glass')
-                                            ->columnSpan(2)
+                                            ->placeholder('Pilih subkategori...')
+                                            ->prefixIcon('heroicon-o-squares-2x2')
+                                            ->columnSpan(['default' => 1, 'sm' => 1, 'md' => 2, 'lg' => 2])
+                                            ->disabled(fn(Get $get) => !$get('kategori_id'))
                                             ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                                 if ($state) {
-                                                    $barang = Barang::with('kategori')->find($state);
+                                                    // Hitung total stok subkategori
+                                                    $totalStokSubkategori = \App\Models\Barang::where('subkategori_id', $state)
+                                                        ->sum('jumlah_barang');
+                                                    $set('total_stok_subkategori', $totalStokSubkategori);
+
+                                                    // Get nama subkategori untuk display
+                                                    $subkategori = \App\Models\Subkategori::find($state);
+                                                    if ($subkategori) {
+                                                        $set('subkategori_display', $subkategori->nama_subkategori);
+                                                    }
+                                                }
+
+                                                // Reset pilihan barang setelah subkategori berubah
+                                                $set('barang_id', null);
+                                                $fieldsToReset = [
+                                                    'stok_tersedia',
+                                                    'kode_barang_display',
+                                                    'serial_number_display',
+                                                    'nama_barang_display',
+                                                    'merek_display',
+                                                    'model_display',
+                                                    'garansi_display',
+                                                    'processor_display',
+                                                    'ram_display',
+                                                    'storage_display',
+                                                    'jumlah_barang_keluar',
+                                                    'sisa_stok_display'
+                                                ];
+                                                foreach ($fieldsToReset as $field) {
+                                                    $set($field, null);
+                                                }
+                                            }),
+
+                                        // Total Stok Subkategori
+                                        Forms\Components\TextInput::make('total_stok_subkategori')
+                                            ->label('Total Stok Subkategori')
+                                            ->numeric()
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->prefixIcon('heroicon-o-archive-box-arrow-down')
+                                            ->placeholder('0')
+                                            ->columnSpan(['default' => 1, 'sm' => 2, 'md' => 1, 'lg' => 1])
+                                            ->extraAttributes(['class' => 'text-blue-600 font-bold'])
+                                            ->suffix(' unit'),
+
+                                        // Stok Item
+                                        Forms\Components\TextInput::make('stok_tersedia')
+                                            ->label('Stok Item')
+                                            ->numeric()
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->prefixIcon('heroicon-o-archive-box')
+                                            ->placeholder('0')
+                                            ->columnSpan(['default' => 1, 'sm' => 2, 'md' => 1, 'lg' => 1])
+                                            ->extraAttributes(['class' => 'text-green-600 font-semibold'])
+                                            ->suffix(' unit'),
+                                    ]),
+
+                                // Baris 2: Serial Number dan Jumlah Keluar
+                                Forms\Components\Grid::make()
+                                    ->columns(['default' => 1, 'sm' => 1, 'md' => 2, 'lg' => 2])
+                                    ->schema([
+                                        Forms\Components\Select::make('barang_id')
+                                            ->label('Pilih Serial Number')
+                                            ->options(function (Get $get) {
+                                                $subkategoriId = $get('subkategori_id');
+                                                if (!$subkategoriId) {
+                                                    return [];
+                                                }
+
+                                                return \App\Models\Barang::where('subkategori_id', $subkategoriId)
+                                                    ->where('jumlah_barang', '>', 0)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($barang) {
+                                                        return [
+                                                            $barang->id => "{$barang->serial_number} - {$barang->nama_barang} (Stok: {$barang->jumlah_barang})"
+                                                        ];
+                                                    });
+                                            })
+                                            ->searchable()
+                                            ->reactive()
+                                            ->live()
+                                            ->required()
+                                            ->placeholder('Pilih serial number...')
+                                            ->prefixIcon('heroicon-o-hashtag')
+                                            ->columnSpan(1)
+                                            ->disabled(fn(Get $get) => !$get('subkategori_id'))
+                                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                                if ($state) {
+                                                    $barang = \App\Models\Barang::with(['kategori', 'subkategori'])->find($state);
                                                     if ($barang) {
                                                         // Set data dasar barang
-                                                        $set('nama_barang_display', $barang->nama_barang);
                                                         $set('stok_tersedia', $barang->jumlah_barang);
                                                         $set('kode_barang_display', $barang->kode_barang);
                                                         $set('serial_number_display', $barang->serial_number);
+                                                        $set('nama_barang_display', $barang->nama_barang);
                                                         $set('kategori_display', $barang->kategori?->nama_kategori ?? '-');
 
-                                                        // Set spesifikasi barang
+                                                        // Set spesifikasi barang dari JSON
                                                         $spesifikasi = $barang->spesifikasi ?? [];
-                                                        $set('merek_display', $spesifikasi['merek'] ?? '-');
-                                                        $set('model_display', $spesifikasi['model'] ?? '-');
-                                                        $set('garansi_display', $spesifikasi['garansi'] ?? '-');
+
+                                                        // Untuk elektronik
+                                                        $set('merek_display', $spesifikasi['spec_brand'] ?? $spesifikasi['merek'] ?? '-');
+                                                        $set('model_display', $spesifikasi['spec_model'] ?? $spesifikasi['model'] ?? '-');
+                                                        $set('garansi_display', $spesifikasi['spec_garansi'] ?? $spesifikasi['garansi'] ?? '-');
+
+                                                        // Untuk komputer - tampilkan spec yang paling penting
+                                                        if (isset($spesifikasi['spec_processor'])) {
+                                                            $set('processor_display', $spesifikasi['spec_processor']);
+                                                            $set('ram_display', $spesifikasi['spec_ram'] ?? '-');
+                                                            $set('storage_display', $spesifikasi['spec_storage'] ?? '-');
+                                                        }
 
                                                         // Reset jumlah keluar
-                                                        $set('jumlah_barang_keluar', null);
+                                                        $set('jumlah_barang_keluar', 1);
 
-                                                        // Send notification about stock
+                                                        // Notifikasi stok rendah
                                                         if ($barang->jumlah_barang <= 5) {
                                                             Notification::make()
                                                                 ->title('Peringatan Stok Rendah!')
-                                                                ->body("Stok {$barang->nama_barang} tinggal {$barang->jumlah_barang} unit")
+                                                                ->body("Stok {$barang->nama_barang} dengan SN: {$barang->serial_number} tinggal {$barang->jumlah_barang} unit")
                                                                 ->warning()
                                                                 ->persistent()
                                                                 ->send();
@@ -190,14 +335,17 @@ class BarangkeluarResource extends Resource
                                                 } else {
                                                     // Reset semua field jika tidak ada barang dipilih
                                                     $fieldsToReset = [
-                                                        'nama_barang_display',
                                                         'stok_tersedia',
                                                         'kode_barang_display',
                                                         'serial_number_display',
+                                                        'nama_barang_display',
                                                         'kategori_display',
                                                         'merek_display',
                                                         'model_display',
                                                         'garansi_display',
+                                                        'processor_display',
+                                                        'ram_display',
+                                                        'storage_display',
                                                         'jumlah_barang_keluar',
                                                         'sisa_stok_display'
                                                     ];
@@ -205,21 +353,8 @@ class BarangkeluarResource extends Resource
                                                         $set($field, null);
                                                     }
                                                 }
-                                            })
-                                            ->getOptionLabelFromRecordUsing(fn($record) => "{$record->nama_barang} (Stok: {$record->jumlah_barang})"),
+                                            }),
 
-                                        // Stok Tersedia
-                                        Forms\Components\TextInput::make('stok_tersedia')
-                                            ->label('Stok Tersedia')
-                                            ->numeric()
-                                            ->disabled()
-                                            ->dehydrated(false)
-                                            ->prefixIcon('heroicon-o-archive-box')
-                                            ->placeholder('0')
-                                            ->columnSpan(1)
-                                            ->extraAttributes(['class' => 'text-green-600 font-semibold']),
-
-                                        // Jumlah Keluar
                                         Forms\Components\TextInput::make('jumlah_barang_keluar')
                                             ->label('Jumlah Keluar')
                                             ->numeric()
@@ -228,8 +363,9 @@ class BarangkeluarResource extends Resource
                                             ->live()
                                             ->minValue(1)
                                             ->prefixIcon('heroicon-o-minus')
-                                            ->placeholder('0')
+                                            ->placeholder('1')
                                             ->columnSpan(1)
+                                            ->suffix(' unit')
                                             ->rules([
                                                 fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
                                                     $stokTersedia = $get('stok_tersedia');
@@ -261,96 +397,27 @@ class BarangkeluarResource extends Resource
                                                     }
                                                 }
                                             }),
-
-                                        // Sisa Stok
-                                        Forms\Components\TextInput::make('sisa_stok_display')
-                                            ->label('Sisa Stok')
-                                            ->numeric()
-                                            ->disabled()
-                                            ->dehydrated(false)
-                                            ->prefixIcon('heroicon-o-calculator')
-                                            ->placeholder('0')
-                                            ->columnSpan(1)
-                                            ->extraAttributes(['class' => 'text-blue-600 font-semibold']),
-
-                                        // Kategori
-                                        Forms\Components\TextInput::make('kategori_display')
-                                            ->label('Kategori')
-                                            ->disabled()
-                                            ->dehydrated(false)
-                                            ->prefixIcon('heroicon-o-tag')
-                                            ->placeholder('-')
-                                            ->columnSpan(1)
-                                            ->extraAttributes(['class' => 'text-gray-600']),
                                     ]),
-
-                                // Detail Informasi Barang
-                                Forms\Components\Fieldset::make('Detail Informasi Barang')
-                                    ->schema([
-                                        Forms\Components\Grid::make(['sm' => 1, 'md' => 4])
-                                            ->schema([
-                                                Forms\Components\TextInput::make('serial_number_display')
-                                                    ->label('Nomor Serial')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-hashtag')
-                                                    ->placeholder('-'),
-
-                                                Forms\Components\TextInput::make('kode_barang_display')
-                                                    ->label('Kode Barang')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-qr-code')
-                                                    ->placeholder('-'),
-
-                                                Forms\Components\TextInput::make('merek_display')
-                                                    ->label('Merek')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-building-storefront')
-                                                    ->placeholder('-'),
-
-                                                Forms\Components\TextInput::make('model_display')
-                                                    ->label('Model')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-cpu-chip')
-                                                    ->placeholder('-'),
-                                            ]),
-
-                                        Forms\Components\Grid::make(['sm' => 1, 'md' => 2])
-                                            ->schema([
-                                                Forms\Components\TextInput::make('garansi_display')
-                                                    ->label('Garansi')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-shield-check')
-                                                    ->placeholder('-'),
-
-                                                Forms\Components\TextInput::make('nama_barang_display')
-                                                    ->label('Nama Barang')
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->prefixIcon('heroicon-o-cube')
-                                                    ->placeholder('-')
-                                                    ->extraAttributes(['class' => 'font-semibold text-gray-800']),
-                                            ]),
-                                    ])
-                                    ->visible(fn(Get $get) => !empty($get('barang_id'))),
 
                                 // Hidden fields untuk menyimpan data
                                 Forms\Components\Hidden::make('nama_barang_display'),
                                 Forms\Components\Hidden::make('kode_barang_display'),
                                 Forms\Components\Hidden::make('serial_number_display'),
                                 Forms\Components\Hidden::make('kategori_display'),
+                                Forms\Components\Hidden::make('subkategori_display'),
                                 Forms\Components\Hidden::make('merek_display'),
                                 Forms\Components\Hidden::make('model_display'),
                                 Forms\Components\Hidden::make('garansi_display'),
+                                Forms\Components\Hidden::make('processor_display'),
+                                Forms\Components\Hidden::make('ram_display'),
+                                Forms\Components\Hidden::make('storage_display'),
+                                Forms\Components\Hidden::make('total_stok_subkategori'),
                             ])
                             ->itemLabel(
                                 fn(array $state): ?string =>
-                                isset($state['nama_barang_display']) ?
-                                    $state['nama_barang_display'] . ' (' . ($state['jumlah_barang_keluar'] ?? '0') . ' unit keluar)' :
+                                isset($state['subkategori_display']) && isset($state['total_stok_subkategori']) ?
+                                    "{$state['subkategori_display']} - Total Stok: {$state['total_stok_subkategori']} unit" .
+                                    (isset($state['serial_number_display']) ? " | {$state['nama_barang_display']} (SN: {$state['serial_number_display']}) - {$state['jumlah_barang_keluar']} unit" : '') :
                                     'Barang Keluar'
                             )
                             ->collapsible()
@@ -377,7 +444,6 @@ class BarangkeluarResource extends Resource
             ->live()
             ->reactive();
     }
-
     public static function table(Table $table): Table
     {
         return $table
@@ -388,7 +454,6 @@ class BarangkeluarResource extends Resource
                     ->date('d F Y')
                     ->searchable(isIndividual: true)
                     ->sortable()
-                    ->searchable()
                     ->weight(FontWeight::Medium)
                     ->icon('heroicon-o-calendar'),
 
@@ -397,7 +462,7 @@ class BarangkeluarResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::SemiBold)
-                    ->description(fn($record) => 'Kode: ' . $record->barang->kode_barang ?? '-')
+                    ->description(fn($record) => 'SN: ' . ($record->barang->serial_number ?? '-') . ' | Kode: ' . ($record->barang->kode_barang ?? '-'))
                     ->icon('heroicon-o-cube'),
 
                 Tables\Columns\TextColumn::make('barang.kategori.nama_kategori')
@@ -405,7 +470,25 @@ class BarangkeluarResource extends Resource
                     ->badge()
                     ->color('info')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->icon('heroicon-o-tag'),
+
+                Tables\Columns\TextColumn::make('barang.subkategori.nama_subkategori')
+                    ->label('Subkategori')
+                    ->badge()
+                    ->color('success')
+                    ->searchable()
+                    ->sortable()
+                    ->icon('heroicon-o-squares-2x2')
+                    ->description(function ($record) {
+                        if ($record->barang && $record->barang->subkategori) {
+                            // Hitung total stok subkategori saat ini
+                            $totalStok = \App\Models\Barang::where('subkategori_id', $record->barang->subkategori_id)
+                                ->sum('jumlah_barang');
+                            return "Total stok: {$totalStok} unit";
+                        }
+                        return null;
+                    }),
 
                 Tables\Columns\TextColumn::make('jumlah_barang_keluar')
                     ->label('Jumlah Keluar')
@@ -416,6 +499,17 @@ class BarangkeluarResource extends Resource
                     ->color('danger')
                     ->suffix(' unit')
                     ->icon('heroicon-o-minus-circle'),
+
+                Tables\Columns\TextColumn::make('barang.jumlah_barang')
+                    ->label('Sisa Stok Item')
+                    ->numeric()
+                    ->sortable()
+                    ->alignCenter()
+                    ->weight(FontWeight::Medium)
+                    ->color(fn($record) => $record->barang && $record->barang->jumlah_barang <= 5 ? 'danger' : ($record->barang && $record->barang->jumlah_barang <= 10 ? 'warning' : 'success'))
+                    ->suffix(' unit')
+                    ->icon(fn($record) => $record->barang && $record->barang->jumlah_barang <= 5 ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-archive-box')
+                    ->description('Per serial number'),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
@@ -451,6 +545,20 @@ class BarangkeluarResource extends Resource
                     ->toggleable()
                     ->weight(FontWeight::Medium)
                     ->icon('heroicon-o-user'),
+
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->limit(50)
+                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                        $state = $column->getState();
+                        if (strlen($state) <= 50) {
+                            return null;
+                        }
+                        return $state;
+                    })
+                    ->icon('heroicon-o-document-text'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')

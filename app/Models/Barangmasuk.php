@@ -20,11 +20,11 @@ class Barangmasuk extends Model
         'status',
         'dibeli',
         'project_name',
+        'kategori_id', // Ditambahkan untuk sinkronisasi dengan schema
     ];
 
     protected $casts = [
-        'tanggal_masuk_barang' => 'datetime',
-
+        'tanggal_barang_masuk' => 'date', // Diperbaiki dari tanggal_masuk_barang
     ];
 
     public function barang()
@@ -40,6 +40,11 @@ class Barangmasuk extends Model
     public function kategori()
     {
         return $this->belongsTo(Kategori::class, 'kategori_id');
+    }
+
+    public function subkategori()
+    {
+        return $this->belongsTo(Subkategori::class);
     }
 
     public function getTotalStockSamaAttribute()

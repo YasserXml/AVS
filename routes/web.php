@@ -33,11 +33,13 @@ Route::get('/verify-user/{id}/{hash}', [ControllersUserVerificationController::c
     ->name('user.verify')
     ->middleware('signed');
 
-Route::middleware(['auth'])->group(function () {
-    Route::post('/download-file', [DownloadController::class, 'downloadFile'])->name('download.file');
-    Route::post('/download-multiple', [DownloadController::class, 'downloadMultipleFiles'])->name('download.multiple');
-    Route::get('/preview-file', [DownloadController::class, 'previewFile'])->name('preview.file');
-});
+// Routes untuk file operations
+Route::post('download-file', [DownloadController::class, 'downloadFile'])->name('download.file');
+Route::get('preview-file', [DownloadController::class, 'previewFile'])->name('preview.file');
+Route::post('download-multiple', [DownloadController::class, 'downloadMultipleFiles'])->name('download.multiple');
+
+// Debug route (hapus setelah masalah terselesaikan)
+Route::get('debug-file', [DownloadController::class, 'debugFile'])->name('debug.file');
 
 
 Route::middleware(['auth'])->group(function () {

@@ -19,6 +19,10 @@ return new class extends Migration
             $table->json('spesifikasi')->nullable();
             $table->integer('jumlah_barang');
             $table->foreignId('kategori_id')->constrained('kategoris');
+            $table->foreignId('subkategori_id')
+                ->nullable()
+                ->constrained('subkategoris')
+                ->onDelete('set null');
             $table->timestamps();
             $table->softDeletes();
         });

@@ -79,7 +79,6 @@ class BarangmasukResource extends Resource
                     ->icon('heroicon-o-document-text')
                     ->collapsible()
                     ->collapsed(false)
-                    
                     ->compact()
                     ->schema([
                         Forms\Components\Grid::make()
@@ -143,14 +142,13 @@ class BarangmasukResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                // Detail Barang Section - Hanya untuk barang baru
+                // Section untuk menambah barang
                 Forms\Components\Section::make()
-                    ->heading('Detail Barang Baru')
-                    ->description('Masukkan informasi barang baru yang akan ditambahkan ke inventori')
+                    ->heading('Detail Barang')
+                    ->description('Masukkan informasi barang yang akan ditambahkan ke inventori')
                     ->icon('heroicon-o-cube')
                     ->collapsible()
                     ->collapsed(false)
-                    
                     ->compact()
                     ->schema([
                         Forms\Components\Section::make('Identitas Barang')
@@ -170,7 +168,6 @@ class BarangmasukResource extends Resource
                                     ->label('Kode Barang')
                                     ->required()
                                     ->numeric()
-                                    ->unique(table: 'barangs', column: 'kode_barang', ignoreRecord: true)
                                     ->placeholder('Masukkan kode barang')
                                     ->prefixIcon('heroicon-m-qr-code')
                                     ->columnSpan(['default' => 2, 'md' => 1]),
@@ -192,7 +189,7 @@ class BarangmasukResource extends Resource
                             ->collapsible()
                             ->persistCollapsed(),
 
-                        Forms\Components\Section::make('Detail Barang')
+                        Forms\Components\Section::make('Detail Kategori & Jumlah')
                             ->description('Masukkan detail informasi barang')
                             ->icon('heroicon-o-information-circle')
                             ->schema([
@@ -231,7 +228,8 @@ class BarangmasukResource extends Resource
                                     ->columnSpan(['default' => 2, 'md' => 1])
                                     ->live()
                                     ->afterStateUpdated(function ($state, callable $set) {
-                                        // Reset spesifikasi ketika kategori berubah
+                                        // Reset subkategori dan spesifikasi ketika kategori berubah
+                                        $set('subkategori_id', null);
                                         $set('spec_processor', null);
                                         $set('spec_ram', null);
                                         $set('spec_storage', null);
@@ -241,9 +239,51 @@ class BarangmasukResource extends Resource
                                         $set('spec_brand', null);
                                         $set('spec_model', null);
                                         $set('spec_garansi', null);
+                                        $set('spec_material', null);
+                                        $set('spec_dimensi', null);
+                                        $set('spec_warna', null);
+                                        $set('spec_berat', null);
+                                        $set('spec_finishing', null);
+                                        $set('spec_kondisi', null);
                                     }),
+
+                                Forms\Components\Select::make('subkategori_id')
+                                    ->label('Subkategori')
+                                    ->relationship(
+                                        'subkategori',
+                                        'nama_subkategori',
+                                        fn(Builder $query, callable $get) => $query->where('kategori_id', $get('kategori_id'))
+                                    )
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Pilih subkategori barang')
+                                    ->createOptionForm([
+                                        Forms\Components\Hidden::make('kategori_id')
+                                            ->dehydrateStateUsing(fn(callable $get) => $get('../../kategori_id')),
+
+                                        Forms\Components\TextInput::make('nama_subkategori')
+                                            ->label('Nama Subkategori')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->placeholder('Masukkan nama subkategori baru'),
+                                    ])
+                                    ->createOptionUsing(function (array $data, callable $get): int {
+                                        $data['kategori_id'] = $get('kategori_id');
+                                        return \App\Models\Subkategori::create($data)->getKey();
+                                    })
+                                    ->createOptionModalHeading('Tambah Subkategori Baru')
+                                    ->createOptionAction(function (Forms\Components\Actions\Action $action) {
+                                        return $action
+                                            ->modalHeading('Tambah Subkategori Baru')
+                                            ->modalSubmitActionLabel('Simpan')
+                                            ->modalCancelActionLabel('Batal');
+                                    })
+                                    ->prefixIcon('heroicon-m-tag')
+                                    ->columnSpan(['default' => 2, 'md' => 1])
+                                    ->visible(fn(callable $get) => $get('kategori_id') !== null)
+                                    ->live(),
                             ])
-                            ->columns(['default' => 1, 'md' => 2])
+                            ->columns(['default' => 1, 'md' => 3])
                             ->collapsible()
                             ->persistCollapsed(),
 
@@ -320,6 +360,47 @@ class BarangmasukResource extends Resource
                                                 $kategori = \App\Models\Kategori::find($kategoriId);
                                                 return $kategori && strtolower($kategori->nama_kategori) === 'elektronik';
                                             }),
+
+                                        // Spesifikasi untuk Furniture
+                                        Forms\Components\Group::make()
+                                            ->schema([
+                                                Forms\Components\TextInput::make('spec_material')
+                                                    ->label('Material')
+                                                    ->placeholder('Contoh: Kayu Jati, Metal, Plastik')
+                                                    ->prefixIcon('heroicon-m-cube'),
+
+                                                Forms\Components\TextInput::make('spec_dimensi')
+                                                    ->label('Dimensi')
+                                                    ->placeholder('Contoh: 120x60x75 cm')
+                                                    ->prefixIcon('heroicon-m-arrows-pointing-out'),
+
+                                                Forms\Components\TextInput::make('spec_warna')
+                                                    ->label('Warna')
+                                                    ->placeholder('Contoh: Coklat Natural, Hitam')
+                                                    ->prefixIcon('heroicon-m-color-swatch'),
+
+                                                Forms\Components\TextInput::make('spec_berat')
+                                                    ->label('Berat')
+                                                    ->placeholder('Contoh: 25 kg')
+                                                    ->prefixIcon('heroicon-m-scale'),
+
+                                                Forms\Components\TextInput::make('spec_finishing')
+                                                    ->label('Finishing')
+                                                    ->placeholder('Contoh: Polyurethane, Cat Duco')
+                                                    ->prefixIcon('heroicon-m-paint-brush'),
+
+                                                Forms\Components\TextInput::make('spec_kondisi')
+                                                    ->label('Kondisi')
+                                                    ->placeholder('Contoh: Baru, Bekas Baik')
+                                                    ->prefixIcon('heroicon-m-star'),
+                                            ])
+                                            ->columns(2)
+                                            ->visible(function (callable $get) {
+                                                $kategoriId = $get('kategori_id');
+                                                if (!$kategoriId) return false;
+                                                $kategori = \App\Models\Kategori::find($kategoriId);
+                                                return $kategori && strtolower($kategori->nama_kategori) === 'furniture';
+                                            }),
                                     ])
                                     ->visible(fn(callable $get) => $get('kategori_id') !== null),
                             ])
@@ -329,7 +410,8 @@ class BarangmasukResource extends Resource
                             ->live(),
                     ]),
             ])
-            ->live();
+            ->live()
+            ->reactive();
     }
 
     public static function table(Table $table): Table
@@ -680,7 +762,7 @@ class BarangmasukResource extends Resource
                     ->heading('Informasi Penanggung Jawab')
                     ->description('Detail penanggung jawab dan yang menginput data')
                     ->icon('heroicon-o-users')
-                    
+
                     ->schema([
                         Grid::make(['sm' => 1, 'md' => 2])
                             ->schema([
@@ -703,7 +785,7 @@ class BarangmasukResource extends Resource
                     ->heading('Detail Barang')
                     ->description('Informasi lengkap barang yang masuk ke inventori')
                     ->icon('heroicon-o-cube')
-                    
+
                     ->schema([
                         Grid::make(['sm' => 1, 'md' => 2, 'lg' => 3])
                             ->schema([
@@ -740,7 +822,7 @@ class BarangmasukResource extends Resource
                     ->heading('Informasi Sistem')
                     ->description('Data tambahan dan riwayat perubahan')
                     ->icon('heroicon-o-information-circle')
-                    
+
                     ->collapsible()
                     ->collapsed(true)
                     ->schema([

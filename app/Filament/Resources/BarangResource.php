@@ -98,8 +98,8 @@ class BarangResource extends Resource
                     ->collapsible()
                     ->persistCollapsed(),
 
-                Forms\Components\Section::make('Detail Barang')
-                    ->description('Masukkan detail informasi barang')
+                Forms\Components\Section::make('Kategori & Detail Barang')
+                    ->description('Masukkan kategori dan detail informasi barang')
                     ->icon('heroicon-o-information-circle')
                     ->schema([
                         Forms\Components\TextInput::make('jumlah_barang')
@@ -135,11 +135,48 @@ class BarangResource extends Resource
                             ->columnSpan(['default' => 2, 'md' => 1])
                             ->live()
                             ->afterStateUpdated(function ($state, callable $set) {
-                                // Reset spesifikasi ketika kategori berubah
+                                // Reset subkategori dan spesifikasi ketika kategori berubah
+                                $set('subkategori_id', null);
                                 $set('spesifikasi', null);
                             }),
+
+                        Forms\Components\Select::make('subkategori_id')
+                            ->label('Subkategori')
+                            ->relationship(
+                                'subkategori',
+                                'nama_subkategori',
+                                fn(Builder $query, callable $get) => $query->where('kategori_id', $get('kategori_id'))
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Pilih subkategori barang')
+                            ->createOptionForm([
+                                Forms\Components\Hidden::make('kategori_id')
+                                    ->dehydrateStateUsing(fn(callable $get) => $get('../../kategori_id')),
+
+                                Forms\Components\TextInput::make('nama_subkategori')
+                                    ->label('Nama Subkategori')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->placeholder('Masukkan nama subkategori baru'),
+                            ])
+                            ->createOptionUsing(function (array $data, callable $get): int {
+                                $data['kategori_id'] = $get('kategori_id');
+                                return \App\Models\Subkategori::create($data)->getKey();
+                            })
+                            ->createOptionModalHeading('Tambah Subkategori Baru')
+                            ->createOptionAction(function (Forms\Components\Actions\Action $action) {
+                                return $action
+                                    ->modalHeading('Tambah Subkategori Baru')
+                                    ->modalSubmitActionLabel('Simpan')
+                                    ->modalCancelActionLabel('Batal');
+                            })
+                            ->prefixIcon('heroicon-m-tag')
+                            ->columnSpan(['default' => 2, 'md' => 1])
+                            ->visible(fn(callable $get) => $get('kategori_id') !== null)
+                            ->live(),
                     ])
-                    ->columns(['default' => 1, 'md' => 2])
+                    ->columns(['default' => 1, 'md' => 3])
                     ->collapsible()
                     ->persistCollapsed(),
 
@@ -153,7 +190,6 @@ class BarangResource extends Resource
                                 // Spesifikasi untuk Komputer
                                 Forms\Components\Group::make()
                                     ->schema([
-                                        // PENTING: Gunakan nama field yang flat, bukan nested
                                         Forms\Components\TextInput::make('spec_processor')
                                             ->label('Processor')
                                             ->placeholder('Contoh: Intel Core i5-12400F')
@@ -188,7 +224,7 @@ class BarangResource extends Resource
                                     ->visible(function (callable $get) {
                                         $kategoriId = $get('kategori_id');
                                         if (!$kategoriId) return false;
-                                        $kategori = Kategori::find($kategoriId);
+                                        $kategori = \App\Models\Kategori::find($kategoriId);
                                         return $kategori && strtolower($kategori->nama_kategori) === 'komputer';
                                     }),
 
@@ -214,8 +250,49 @@ class BarangResource extends Resource
                                     ->visible(function (callable $get) {
                                         $kategoriId = $get('kategori_id');
                                         if (!$kategoriId) return false;
-                                        $kategori = Kategori::find($kategoriId);
+                                        $kategori = \App\Models\Kategori::find($kategoriId);
                                         return $kategori && strtolower($kategori->nama_kategori) === 'elektronik';
+                                    }),
+
+                                // Spesifikasi untuk Furniture
+                                Forms\Components\Group::make()
+                                    ->schema([
+                                        Forms\Components\TextInput::make('spec_material')
+                                            ->label('Material')
+                                            ->placeholder('Contoh: Kayu Jati, Metal, Plastik')
+                                            ->prefixIcon('heroicon-m-cube'),
+
+                                        Forms\Components\TextInput::make('spec_dimensi')
+                                            ->label('Dimensi')
+                                            ->placeholder('Contoh: 120x60x75 cm')
+                                            ->prefixIcon('heroicon-m-arrows-pointing-out'),
+
+                                        Forms\Components\TextInput::make('spec_warna')
+                                            ->label('Warna')
+                                            ->placeholder('Contoh: Coklat Natural, Hitam')
+                                            ->prefixIcon('heroicon-m-color-swatch'),
+
+                                        Forms\Components\TextInput::make('spec_berat')
+                                            ->label('Berat')
+                                            ->placeholder('Contoh: 25 kg')
+                                            ->prefixIcon('heroicon-m-scale'),
+
+                                        Forms\Components\TextInput::make('spec_finishing')
+                                            ->label('Finishing')
+                                            ->placeholder('Contoh: Polyurethane, Cat Duco')
+                                            ->prefixIcon('heroicon-m-paint-brush'),
+
+                                        Forms\Components\TextInput::make('spec_kondisi')
+                                            ->label('Kondisi')
+                                            ->placeholder('Contoh: Baru, Bekas Baik')
+                                            ->prefixIcon('heroicon-m-star'),
+                                    ])
+                                    ->columns(2)
+                                    ->visible(function (callable $get) {
+                                        $kategoriId = $get('kategori_id');
+                                        if (!$kategoriId) return false;
+                                        $kategori = \App\Models\Kategori::find($kategoriId);
+                                        return $kategori && strtolower($kategori->nama_kategori) === 'furniture';
                                     }),
                             ])
                             ->visible(fn(callable $get) => $get('kategori_id') !== null),
@@ -229,7 +306,7 @@ class BarangResource extends Resource
             ->columns(['default' => 1, 'lg' => 2]);
     }
 
-    
+
     public static function table(Table $table): Table
     {
         return $table
@@ -265,6 +342,13 @@ class BarangResource extends Resource
                     ->alignCenter()
                     ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
                     ->icon(fn(int $state): string => $state > 10 ? 'heroicon-m-check-circle' : ($state > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-x-circle')),
+
+                Tables\Columns\TextColumn::make('subkategori.nama_subkategori')
+                    ->label('Subkategori')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('primary'),
 
                 Tables\Columns\TextColumn::make('kategori.nama_kategori')
                     ->label('Kategori')
@@ -422,6 +506,150 @@ class BarangResource extends Resource
                 ]),
             ])
             ->defaultSort('nama_barang', 'asc');
+    }
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Infolists\Components\Section::make('Informasi Barang')
+                    ->icon('heroicon-o-information-circle')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('serial_number')
+                            ->label('Nomor Serial')
+                            ->copyable()
+                            ->badge()
+                            ->color('primary'),
+
+                        Infolists\Components\TextEntry::make('kode_barang')
+                            ->label('Kode Barang')
+                            ->copyable(),
+
+                        Infolists\Components\TextEntry::make('nama_barang')
+                            ->label('Nama Barang')
+                            ->weight(FontWeight::Bold),
+
+                        Infolists\Components\TextEntry::make('jumlah_barang')
+                            ->label('Jumlah Barang')
+                            ->badge()
+                            ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger')),
+
+                        Infolists\Components\TextEntry::make('kategori.nama_kategori')
+                            ->label('Kategori')
+                            ->badge()
+                            ->icon('heroicon-m-tag')
+                            ->color('success'),
+                    ])
+                    ->columns(2),
+
+                // Section Spesifikasi - Sekarang mengambil dari database
+                Infolists\Components\Section::make('Spesifikasi Barang')
+                    ->icon('heroicon-o-cog-6-tooth')
+                    ->schema([
+                        // Spesifikasi Komputer
+                        Infolists\Components\Group::make([
+                            Infolists\Components\TextEntry::make('processor')
+                                ->label('Processor')
+                                ->icon('heroicon-m-cpu-chip')
+                                ->badge()
+                                ->color('info'),
+
+                            Infolists\Components\TextEntry::make('ram')
+                                ->label('RAM')
+                                ->icon('heroicon-m-cpu-chip')
+                                ->badge()
+                                ->color('info')
+                                ->state(fn($record) => $record->spesifikasi['ram'] ?? '-'),
+
+                            Infolists\Components\TextEntry::make('storage')
+                                ->label('Storage')
+                                ->icon('heroicon-m-server-stack')
+                                ->badge()
+                                ->color('info')
+                                ->state(fn($record) => $record->spesifikasi['storage'] ?? '-'),
+
+                            Infolists\Components\TextEntry::make('vga')
+                                ->label('VGA/GPU')
+                                ->icon('heroicon-m-computer-desktop')
+                                ->badge()
+                                ->color('info')
+                                ->state(fn($record) => $record->spesifikasi['vga'] ?? '-'),
+
+                            Infolists\Components\TextEntry::make('motherboard')
+                                ->label('Motherboard')
+                                ->icon('heroicon-m-cog-8-tooth')
+                                ->badge()
+                                ->color('info')
+                                ->state(fn($record) => $record->spesifikasi['motherboard'] ?? '-'),
+
+                            Infolists\Components\TextEntry::make('psu')
+                                ->label('Power Supply')
+                                ->icon('heroicon-m-bolt')
+                                ->badge()
+                                ->color('info')
+                                ->state(fn($record) => $record->spesifikasi['psu'] ?? '-'),
+                        ])
+                            ->columns(2)
+                            ->visible(fn($record) => strtolower($record->kategori->nama_kategori) === 'komputer'),
+
+                        // Spesifikasi Elektronik
+                        Infolists\Components\Group::make([
+                            Infolists\Components\TextEntry::make('brand')
+                                ->label('Merek')
+                                ->icon('heroicon-m-building-storefront')
+                                ->badge()
+                                ->color('warning')
+                                ->state(fn($record) => $record->spesifikasi['brand'] ?? '-'),
+
+                            Infolists\Components\TextEntry::make('model')
+                                ->label('Model')
+                                ->icon('heroicon-m-device-phone-mobile')
+                                ->badge()
+                                ->color('warning')
+                                ->state(fn($record) => $record->spesifikasi['model'] ?? '-'),
+
+                            Infolists\Components\TextEntry::make('garansi')
+                                ->label('Garansi')
+                                ->icon('heroicon-m-shield-check')
+                                ->badge()
+                                ->color('warning')
+                                ->state(fn($record) => $record->spesifikasi['garansi'] ?? '-'),
+                        ])
+                            ->columns(2)
+                            ->visible(fn($record) => strtolower($record->kategori->nama_kategori) === 'elektronik'),
+                    ])
+                    ->collapsed()
+                    ->collapsible()
+                    ->visible(function ($record) {
+                        $kategori = strtolower($record->kategori->nama_kategori);
+                        return in_array($kategori, ['komputer', 'elektronik']) && !empty($record->spesifikasi);
+                    }),
+
+                Infolists\Components\Section::make('Riwayat')
+                    ->icon('heroicon-o-clock')
+                    ->collapsed()
+                    ->schema([
+                        Infolists\Components\TextEntry::make('created_at')
+                            ->label('Dibuat Pada')
+                            ->dateTime('d M Y H:i')
+                            ->icon('heroicon-m-calendar'),
+
+                        Infolists\Components\TextEntry::make('updated_at')
+                            ->label('Diperbarui Pada')
+                            ->dateTime('d M Y H:i')
+                            ->since()
+                            ->icon('heroicon-m-arrow-path'),
+
+                        Infolists\Components\TextEntry::make('deleted_at')
+                            ->label('Dihapus Pada')
+                            ->dateTime('d M Y H:i')
+                            ->badge()
+                            ->color('danger')
+                            ->icon('heroicon-m-trash')
+                            ->visible(fn($record) => $record->deleted_at !== null),
+                    ])
+                    ->columns(3),
+            ])
+            ->columns(3);
     }
 
     public static function getRelations(): array

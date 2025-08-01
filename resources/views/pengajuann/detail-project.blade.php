@@ -173,19 +173,7 @@
                                                                 </a>
 
                                                                 {{-- Download Button --}}
-                                                                <form action="{{ route('download.project.file') }}"
-                                                                    method="POST" class="inline">
-                                                                    @csrf
-                                                                    <input type="hidden" name="file_path"
-                                                                        value="{{ $file }}">
-                                                                    <button type="submit"
-                                                                        class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-success-500 hover:bg-success-600 text-white transition-colors"
-                                                                        title="Download File">
-                                                                        <x-filament::icon
-                                                                            icon="heroicon-o-arrow-down-tray"
-                                                                            class="w-4 h-4" />
-                                                                    </button>
-                                                                </form>
+                                                                
                                                             </div>
                                                         </div>
 
@@ -280,17 +268,7 @@
                                             </a>
 
                                             {{-- Download Button --}}
-                                            <form action="{{ route('download.project.file') }}" method="POST"
-                                                class="inline">
-                                                @csrf
-                                                <input type="hidden" name="file_path" value="{{ $file }}">
-                                                <button type="submit"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-success-500 hover:bg-success-600 text-white transition-colors"
-                                                    title="Download File">
-                                                    <x-filament::icon icon="heroicon-o-arrow-down-tray"
-                                                        class="w-4 h-4" />
-                                                </button>
-                                            </form>
+                                           
                                         </div>
                                     </div>
 

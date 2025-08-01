@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('pengajuanprojects', function (Blueprint $table) {
-            $table->date('tanggal_pending')->nullable()->after('status');
+        Schema::table('barangs', function (Blueprint $table) {
+            $table->foreignId('subkategori_id')
+                ->nullable()
+                ->constrained('subkategoris')
+                ->onDelete('set null');
         });
     }
 
@@ -21,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('pengajuanprojects', function (Blueprint $table) {
+        Schema::table('barangs', function (Blueprint $table) {
             //
         });
     }

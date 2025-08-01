@@ -4,64 +4,54 @@ namespace App\Observers;
 
 use App\Models\Barang;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class BarangObserver
 {
     /**
-     * Handle the Barang "created" event.
+     * Handle the Barang "creating" event.
      */
-    public function created(Barang $barang): void
+    public function creating(Barang $barang): void
     {
-        $this->clearKategoriCache($barang);
+        $this->processSpesifikasi($barang);
     }
 
     /**
-     * Handle the Barang "updated" event.
+     * Handle the Barang "updating" event.
      */
-    public function updated(Barang $barang): void
+    public function updating(Barang $barang): void
     {
-        $this->clearKategoriCache($barang);
+        $this->processSpesifikasi($barang);
+    }
 
-        // Jika kategori berubah, clear cache untuk kategori lama juga
-        if ($barang->isDirty('kategori_id')) {
-            $originalKategoriId = $barang->getOriginal('kategori_id');
-            if ($originalKategoriId) {
-                Cache::forget("kategori_stats_{$originalKategoriId}");
+    /**
+     * Process spesifikasi data from flat fields to JSON
+     */
+    private function processSpesifikasi(Barang $barang): void
+    {
+        $spesifikasi = [];
+
+        // Get all attributes
+        $attributes = $barang->getAttributes();
+
+        // Extract spec_ fields
+        foreach ($attributes as $key => $value) {
+            if (strpos($key, 'spec_') === 0 && !empty($value)) {
+                $spesifikasi[$key] = $value;
+                // Remove from main attributes since we'll store in JSON
+                unset($barang->{$key});
             }
         }
-    }
 
-    /**
-     * Handle the Barang "deleted" event.
-     */
-    public function deleted(Barang $barang): void
-    {
-        $this->clearKategoriCache($barang);
-    }
-
-    /**
-     * Handle the Barang "restored" event.
-     */
-    public function restored(Barang $barang): void
-    {
-        $this->clearKategoriCache($barang);
-    }
-
-    /**
-     * Handle the Barang "force deleted" event.
-     */
-    public function forceDeleted(Barang $barang): void
-    {
-        $this->clearKategoriCache($barang);
-    }
-
-    /**
-     * Clear cache untuk kategori terkait
-     */
-    private function clearKategoriCache(Barang $barang): void
-    {
-        if ($barang->kategori_id) {
-            Cache::forget("kategori_stats_{$barang->kategori_id}");
+        // Only set spesifikasi if we have spec data
+        if (!empty($spesifikasi)) {
+            $barang->setAttribute('spesifikasi', $spesifikasi);
         }
+
+        Log::info('Processed spesifikasi for barang', [
+            'barang_id' => $barang->id ?? 'new',
+            'serial_number' => $barang->serial_number,
+            'spesifikasi' => $spesifikasi
+        ]);
     }
 }

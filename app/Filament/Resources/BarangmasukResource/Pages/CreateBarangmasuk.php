@@ -26,16 +26,14 @@ class CreateBarangmasuk extends CreateRecord
                 $data['project_name'] = '-';
             }
 
-            $barang = null;
-            $isBarangBaru = $data['jenis_barang'] === 'barang_baru';
+            // Siapkan spesifikasi berdasarkan kategori
+            $spesifikasi = [];
+            $kategori = Kategori::find($data['kategori_id']);
 
-            if ($isBarangBaru) {
-                // === BARANG BARU ===
-                // Siapkan spesifikasi berdasarkan kategori
-                $spesifikasi = [];
-                $kategori = Kategori::find($data['kategori_id']);
+            if ($kategori) {
+                $kategoriNama = strtolower($kategori->nama_kategori);
 
-                if ($kategori && strtolower($kategori->nama_kategori) === 'komputer') {
+                if ($kategoriNama === 'komputer') {
                     $spesifikasi = [
                         'processor' => $data['spec_processor'] ?? null,
                         'ram' => $data['spec_ram'] ?? null,
@@ -44,76 +42,37 @@ class CreateBarangmasuk extends CreateRecord
                         'motherboard' => $data['spec_motherboard'] ?? null,
                         'psu' => $data['spec_psu'] ?? null,
                     ];
-                } elseif ($kategori && strtolower($kategori->nama_kategori) === 'elektronik') {
+                } elseif ($kategoriNama === 'elektronik') {
                     $spesifikasi = [
                         'brand' => $data['spec_brand'] ?? null,
                         'model' => $data['spec_model'] ?? null,
                         'garansi' => $data['spec_garansi'] ?? null,
                     ];
-                }
-
-                // Filter spesifikasi yang tidak null
-                $spesifikasi = array_filter($spesifikasi, fn($value) => !is_null($value) && $value !== '');
-
-                // Buat barang baru
-                $barang = Barang::create([
-                    'serial_number' => $data['serial_number'],
-                    'kode_barang' => $data['kode_barang'],
-                    'nama_barang' => $data['nama_barang'],
-                    'jumlah_barang' => $data['jumlah_barang_masuk'],
-                    'kategori_id' => $data['kategori_id'],
-                    'spesifikasi' => !empty($spesifikasi) ? $spesifikasi : null,
-                ]);
-
-                $pesanNotifikasi = "Barang baru '{$data['nama_barang']}' dengan serial number '{$data['serial_number']}' berhasil ditambahkan ke inventori.";
-            } else {
-                // === BARANG EXISTING ===
-                // Ambil barang existing sebagai referensi
-                $barangExisting = Barang::find($data['barang_existing_id']);
-
-                if (!$barangExisting) {
-                    throw new Exception('Barang existing tidak ditemukan');
-                }
-
-                // Siapkan spesifikasi - ambil dari existing atau dari form jika ada perubahan
-                $spesifikasi = [];
-                $kategoriNama = strtolower($barangExisting->kategori->nama_kategori);
-
-                if ($kategoriNama === 'komputer') {
+                } elseif ($kategoriNama === 'furniture') {
                     $spesifikasi = [
-                        'processor' => $data['spec_processor'] ?? $barangExisting->spesifikasi['processor'] ?? null,
-                        'ram' => $data['spec_ram'] ?? $barangExisting->spesifikasi['ram'] ?? null,
-                        'storage' => $data['spec_storage'] ?? $barangExisting->spesifikasi['storage'] ?? null,
-                        'vga' => $data['spec_vga'] ?? $barangExisting->spesifikasi['vga'] ?? null,
-                        'motherboard' => $data['spec_motherboard'] ?? $barangExisting->spesifikasi['motherboard'] ?? null,
-                        'psu' => $data['spec_psu'] ?? $barangExisting->spesifikasi['psu'] ?? null,
-                    ];
-                } elseif ($kategoriNama === 'elektronik') {
-                    $spesifikasi = [
-                        'brand' => $data['spec_brand'] ?? $barangExisting->spesifikasi['brand'] ?? null,
-                        'model' => $data['spec_model'] ?? $barangExisting->spesifikasi['model'] ?? null,
-                        'garansi' => $data['spec_garansi'] ?? $barangExisting->spesifikasi['garansi'] ?? null,
+                        'material' => $data['spec_material'] ?? null,
+                        'dimensi' => $data['spec_dimensi'] ?? null,
+                        'warna' => $data['spec_warna'] ?? null,
+                        'berat' => $data['spec_berat'] ?? null,
+                        'finishing' => $data['spec_finishing'] ?? null,
+                        'kondisi' => $data['spec_kondisi'] ?? null,
                     ];
                 }
-
-                // Filter spesifikasi yang tidak null
-                $spesifikasi = array_filter($spesifikasi, fn($value) => !is_null($value) && $value !== '');
-
-                // Buat barang baru dengan nama sama tapi serial number berbeda
-                $barang = Barang::create([
-                    'serial_number' => $data['serial_number'],
-                    'kode_barang' => $data['kode_barang'],
-                    'nama_barang' => $barangExisting->nama_barang, // Ambil dari existing
-                    'jumlah_barang' => $data['jumlah_barang_masuk'],
-                    'kategori_id' => $barangExisting->kategori_id, // Ambil dari existing
-                    'spesifikasi' => !empty($spesifikasi) ? $spesifikasi : null,
-                ]);
-
-                // Update jumlah barang existing (menambah stock total untuk nama barang yang sama)
-                $barangExisting->increment('jumlah_barang', $data['jumlah_barang_masuk']);
-
-                $pesanNotifikasi = "Unit baru '{$barangExisting->nama_barang}' dengan serial number '{$data['serial_number']}' berhasil ditambahkan. Total stock sekarang: " . ($barangExisting->jumlah_barang + $data['jumlah_barang_masuk']) . " unit.";
             }
+
+            // Filter spesifikasi yang tidak null atau kosong
+            $spesifikasi = array_filter($spesifikasi, fn($value) => !is_null($value) && $value !== '');
+
+            // Buat barang baru
+            $barang = Barang::create([
+                'serial_number' => $data['serial_number'],
+                'kode_barang' => $data['kode_barang'],
+                'nama_barang' => $data['nama_barang'],
+                'jumlah_barang' => $data['jumlah_barang_masuk'],
+                'kategori_id' => $data['kategori_id'],
+                'subkategori_id' => $data['subkategori_id'] ?? null,
+                'spesifikasi' => !empty($spesifikasi) ? $spesifikasi : null,
+            ]);
 
             // Buat record BarangMasuk
             $barangMasuk = static::getModel()::create([
@@ -124,15 +83,15 @@ class CreateBarangmasuk extends CreateRecord
                 'status' => $data['status'],
                 'dibeli' => $data['dibeli'],
                 'project_name' => $data['project_name'],
-                'kategori_id' => $barang->kategori_id,
+                'kategori_id' => $data['kategori_id'],
             ]);
 
             DB::commit();
 
             // Notifikasi sukses
             Notification::make()
-                ->title($isBarangBaru ? 'Barang baru berhasil ditambahkan' : 'Unit barang existing berhasil ditambahkan')
-                ->body($pesanNotifikasi)
+                ->title('Barang berhasil ditambahkan')
+                ->body("Barang '{$data['nama_barang']}' dengan serial number '{$data['serial_number']}' berhasil ditambahkan ke inventori dengan jumlah {$data['jumlah_barang_masuk']} unit.")
                 ->success()
                 ->duration(5000)
                 ->send();
@@ -182,5 +141,28 @@ class CreateBarangmasuk extends CreateRecord
     protected function getCreatedNotification(): ?Notification
     {
         return null; // Kita sudah handle notifikasi di handleRecordCreation
+    }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        // Konversi field spesifikasi flat ke struktur JSON
+        $spesifikasi = [];
+
+        // Ambil semua field yang dimulai dengan 'spec_'
+        foreach ($data as $key => $value) {
+            if (str_starts_with($key, 'spec_')) {
+                $specKey = str_replace('spec_', '', $key);
+                if (!empty($value)) {
+                    $spesifikasi[$specKey] = $value;
+                }
+                // Hapus field flat dari data utama
+                unset($data[$key]);
+            }
+        }
+
+        // Set spesifikasi ke data untuk disimpan di barang nanti
+        $data['spesifikasi'] = !empty($spesifikasi) ? $spesifikasi : null;
+
+        return $data;
     }
 }
