@@ -16,7 +16,8 @@ class BarangExporter
 {
     protected $data;
     protected $spreadsheet;
-    protected $selectedRecords = null; // Tambahkan property untuk menyimpan data terpilih
+    protected $selectedRecords = null; // Property untuk menyimpan data terpilih
+    protected $groupedData; // Property untuk data yang sudah digroup
 
     public function __construct()
     {
@@ -31,6 +32,7 @@ class BarangExporter
         }
 
         $this->loadData();
+        $this->groupDataBySubkategori();
         $this->setupSpreadsheet();
 
         return $this->downloadResponse();
@@ -43,15 +45,31 @@ class BarangExporter
     {
         // Jika ada data terpilih, gunakan data tersebut
         if ($this->selectedRecords !== null) {
-            // Pastikan relasi kategori di-load
-            $this->data = $this->selectedRecords->load('kategori');
+            // Pastikan relasi kategori dan subkategori di-load
+            $this->data = $this->selectedRecords->load(['kategori', 'subkategori']);
         } else {
             // Jika tidak ada data terpilih, ambil semua data
-            $this->data = Barang::with('kategori')
+            $this->data = Barang::with(['kategori', 'subkategori'])
                 ->whereNull('deleted_at')
+                ->orderBy('subkategori_id')
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
+
+        return $this;
+    }
+
+    /**
+     * Group data berdasarkan subkategori
+     */
+    protected function groupDataBySubkategori()
+    {
+        $this->groupedData = $this->data->groupBy(function ($item) {
+            if ($item->subkategori) {
+                return $item->subkategori->nama_subkategori;
+            }
+            return 'Tanpa Subkategori';
+        });
 
         return $this;
     }
@@ -60,7 +78,7 @@ class BarangExporter
     {
         // Hanya bisa digunakan jika tidak ada selected records
         if ($this->selectedRecords === null) {
-            $query = Barang::with('kategori')->whereNull('deleted_at');
+            $query = Barang::with(['kategori', 'subkategori'])->whereNull('deleted_at');
             $queryCallback($query);
             $this->data = $query->get();
         }
@@ -111,10 +129,10 @@ class BarangExporter
         $sheet->setCellValue('C4', 'Telp: (022) 63183003 | Email: support@avsimulator.com');
 
         // Merge sel untuk header
-        $sheet->mergeCells('C1:F1');
-        $sheet->mergeCells('C2:F2');
-        $sheet->mergeCells('C3:F3');
-        $sheet->mergeCells('C4:F4');
+        $sheet->mergeCells('C1:G1');
+        $sheet->mergeCells('C2:G2');
+        $sheet->mergeCells('C3:G3');
+        $sheet->mergeCells('C4:G4');
 
         // Tambahkan garis bawah dan atas untuk header
         $styleArray = [
@@ -125,7 +143,7 @@ class BarangExporter
                 ],
             ],
         ];
-        $sheet->getStyle('B1:F4')->applyFromArray($styleArray);
+        $sheet->getStyle('B1:G4')->applyFromArray($styleArray);
 
         // Style untuk teks header
         $sheet->getStyle('C1')->getFont()->setBold(true)->setSize(14);
@@ -137,8 +155,7 @@ class BarangExporter
         // Tambahkan jarak sebelum judul utama
         $sheet->getRowDimension(5)->setRowHeight(10);
 
-        // Modifikasi judul laporan berdasarkan jenis export
-        // Judul laporan tetap sama
+        // Judul laporan
         $sheet->setCellValue('A6', 'LAPORAN KETERSEDIAAN BARANG');
 
         $subtitleText = $this->selectedRecords !== null
@@ -146,8 +163,8 @@ class BarangExporter
             : 'Per Tanggal: ' . now()->format('d-m-Y');
         $sheet->setCellValue('A7', $subtitleText);
 
-        $sheet->mergeCells('A6:F6');
-        $sheet->mergeCells('A7:F7');
+        $sheet->mergeCells('A6:G6');
+        $sheet->mergeCells('A7:G7');
 
         // Style untuk judul laporan
         $sheet->getStyle('A6')->getFont()->setBold(true)->setSize(14);
@@ -169,7 +186,8 @@ class BarangExporter
             'Kode Barang',
             'Nama Barang',
             'Jumlah Barang',
-            'Kategori'
+            'Kategori',
+            'Subkategori'
         ];
 
         $column = 'A';
@@ -180,7 +198,7 @@ class BarangExporter
         }
 
         // Style headers dengan gradient biru yang elegan
-        $headerRange = 'A9:F9';
+        $headerRange = 'A9:G9';
         $sheet->getStyle($headerRange)->getFont()->setBold(true)->setSize(12)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_WHITE));
         $sheet->getStyle($headerRange)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_GRADIENT_LINEAR)
             ->setStartColor(new \PhpOffice\PhpSpreadsheet\Style\Color('1F497D'))
@@ -190,71 +208,92 @@ class BarangExporter
         $sheet->getStyle($headerRange)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
         $sheet->getRowDimension(9)->setRowHeight(25);
 
-        // Tambahkan data
+        // Tambahkan data dengan grouping
         $row = 10;
-        $startRow = $row;
         $no = 1;
 
-        foreach ($this->data as $item) {
-            $sheet->setCellValue('A' . $row, $no++);
-            $sheet->setCellValue('B' . $row, strtoupper($item->serial_number));
-            $sheet->setCellValue('C' . $row, $item->kode_barang);
-            $sheet->setCellValue('D' . $row, $item->nama_barang);
+        foreach ($this->groupedData as $subkategoriNama => $items) {
+            // Hitung total jumlah barang untuk subkategori ini
+            $totalJumlahBarang = $items->sum('jumlah_barang');
 
-            // Format jumlah barang dengan conditional formatting
-            $jumlahBarang = (int)$item->jumlah_barang;
-            $sheet->setCellValue('E' . $row, $jumlahBarang);
-            $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            // Tambahkan header subkategori
+            $sheet->setCellValue('A' . $row, $subkategoriNama . ' (Total: ' . number_format($totalJumlahBarang) . ')');
+            $sheet->mergeCells('A' . $row . ':G' . $row);
 
-            // Kategori dengan styling
-            $kategoriNama = $item->kategori?->nama_kategori ?? '-';
-            $sheet->setCellValue('F' . $row, $kategoriNama);
+            // Style untuk header subkategori
+            $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+            $sheet->getStyle('A' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E7F3FF');
+            $sheet->getStyle('A' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle('A' . $row)->getAlignment()->setIndent(1);
+            $sheet->getRowDimension($row)->setRowHeight(22);
 
-            // Style baris bergantian dengan warna yang lebih soft
-            if ($row % 2 === 0) {
-                $sheet->getStyle('A' . $row . ':F' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8F9FA');
-            } else {
-                $sheet->getStyle('A' . $row . ':F' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFFFF');
+            $row++;
+
+            // Tambahkan data items dalam subkategori
+            foreach ($items as $item) {
+                $sheet->setCellValue('A' . $row, $no++);
+                $sheet->setCellValue('B' . $row, strtoupper($item->serial_number));
+
+                // Set kode_barang sebagai text untuk mempertahankan format seperti 02
+                $sheet->setCellValueExplicit('C' . $row, (string)$item->kode_barang, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+
+                $sheet->setCellValue('D' . $row, $item->nama_barang);
+
+                // Format jumlah barang
+                $jumlahBarang = (int)$item->jumlah_barang;
+                $sheet->setCellValue('E' . $row, $jumlahBarang);
+                $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+
+                // Kategori
+                $kategoriNama = $item->kategori?->nama_kategori ?? '-';
+                $sheet->setCellValue('F' . $row, $kategoriNama);
+
+                // Subkategori
+                $subkategoriItemNama = $item->subkategori?->nama_subkategori ?? '-';
+                $sheet->setCellValue('G' . $row, $subkategoriItemNama);
+
+                // Style baris bergantian dengan warna yang lebih soft
+                if ($row % 2 === 0) {
+                    $sheet->getStyle('A' . $row . ':G' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8F9FA');
+                } else {
+                    $sheet->getStyle('A' . $row . ':G' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFFFF');
+                }
+
+                // Tambahkan border untuk setiap baris
+                $sheet->getStyle('A' . $row . ':G' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                // Set row height untuk konsistensi
+                $sheet->getRowDimension($row)->setRowHeight(18);
+
+                $row++;
             }
 
-            // Tambahkan border untuk setiap baris
-            $sheet->getStyle('A' . $row . ':F' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-
-            // Set row height untuk konsistensi
-            $sheet->getRowDimension($row)->setRowHeight(18);
-
+            // Tambahkan baris kosong setelah setiap group (opsional)
+            $sheet->getRowDimension($row)->setRowHeight(8);
             $row++;
         }
 
         $endRow = $row - 1;
 
         // Style sel data
-        $dataRange = 'A' . $startRow . ':F' . $endRow;
+        $dataRange = 'A10:G' . $endRow;
         $sheet->getStyle($dataRange)->getFont()->setSize(11);
         $sheet->getStyle($dataRange)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
         // Ratakan kolom-kolom tertentu ke tengah
-        $sheet->getStyle('A' . $startRow . ':A' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('B' . $startRow . ':B' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('C' . $startRow . ':C' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('E' . $startRow . ':E' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A10:A' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('B10:B' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('C10:C' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('E10:E' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Ratakan kolom nama barang dan kategori ke kiri dengan indent
-        $sheet->getStyle('D' . $startRow . ':D' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('D' . $startRow . ':D' . $endRow)->getAlignment()->setIndent(1);
-        $sheet->getStyle('F' . $startRow . ':F' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('F' . $startRow . ':F' . $endRow)->getAlignment()->setIndent(1);
-
-        // Hitung total barang dan statistik
-        $totalBarang = $this->data->sum('jumlah_barang');
-        $totalKategori = $this->data->pluck('kategori.nama_kategori')->filter()->unique()->count();
-        $stokAman = $this->data->where('jumlah_barang', '>', 10)->count();
-        $stokRendah = $this->data->where('jumlah_barang', '<=', 10)->where('jumlah_barang', '>', 0)->count();
-        $stokHabis = $this->data->where('jumlah_barang', '<=', 0)->count();
-
-        // Tambahkan separator line
-        $row++;
-        $sheet->getStyle('A' . $row . ':F' . $row)->getBorders()->getTop()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        // Ratakan kolom nama barang, kategori, dan subkategori ke kiri dengan indent
+        $sheet->getStyle('D10:D' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('D10:D' . $endRow)->getAlignment()->setIndent(1);
+        $sheet->getStyle('F10:F' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('F10:F' . $endRow)->getAlignment()->setIndent(1);
+        $sheet->getStyle('G10:G' . $endRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('G10:G' . $endRow)->getAlignment()->setIndent(1);
 
         // Atur lebar kolom yang lebih optimal
         $sheet->getColumnDimension('A')->setWidth(6);   // No
@@ -263,17 +302,15 @@ class BarangExporter
         $sheet->getColumnDimension('D')->setWidth(32);  // Nama Barang
         $sheet->getColumnDimension('E')->setWidth(14);  // Jumlah Barang
         $sheet->getColumnDimension('F')->setWidth(18);  // Kategori
+        $sheet->getColumnDimension('G')->setWidth(18);  // Subkategori
 
         // Set print area dan page setup
-        $sheet->getPageSetup()->setPrintArea('A1:F' . ($row + 1));
+        $sheet->getPageSetup()->setPrintArea('A1:G' . ($row + 1));
         $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT);
         $sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
         $sheet->getPageSetup()->setFitToPage(true);
         $sheet->getPageSetup()->setFitToWidth(1);
         $sheet->getPageSetup()->setFitToHeight(0);
-
-        // Set margins
-        // (You can add margin settings here if needed)
     }
 
     /**
@@ -283,7 +320,7 @@ class BarangExporter
      */
     protected function downloadResponse()
     {
-        $filenamePrefix = $this->selectedRecords !== null ? 'Laporan-Ketersediaan-Barang' : 'Laporan-Ketersediaan-Barang-';
+        $filenamePrefix = $this->selectedRecords !== null ? 'Laporan-Ketersediaan-Barang-Terpilih-' : 'Laporan-Ketersediaan-Barang-';
         $filename = $filenamePrefix . now()->format('d-m-Y') . '.xlsx';
 
         return new StreamedResponse(function () {

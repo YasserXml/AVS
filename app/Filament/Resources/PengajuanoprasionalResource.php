@@ -105,6 +105,7 @@ class PengajuanoprasionalResource extends Resource
         if ($user->hasRole('direktur_keuangan')) {
             return $query->whereIn('status', [
                 'pengajuan_dikirim_ke_direksi',
+                'pending_direksi',
                 'approved_by_direksi',
                 'cancelled',
             ]);
@@ -114,6 +115,7 @@ class PengajuanoprasionalResource extends Resource
         if ($user->hasRole('keuangan')) {
             return $query->whereIn('status', [
                 'pengajuan_dikirim_ke_keuangan',
+                'pending_direksi',
                 'pending_keuangan',
                 'process_keuangan',
                 'execute_keuangan',
@@ -438,6 +440,7 @@ class PengajuanoprasionalResource extends Resource
                 PengajuanActions::rejectSuperAdmin(),
                 PengajuanActions::kirimKeDireksi(),
                 PengajuanActions::approveDireksi(),
+                PengajuanActions::pendingDireksi(),
                 PengajuanActions::rejectDireksi(),
                 PengajuanActions::kirimKeKeuangan(),
                 PengajuanActions::reviewKeuangan(),

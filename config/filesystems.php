@@ -44,7 +44,7 @@ return [
         ],
 
         // Disk untuk setiap departemen
-        'direktorat' => [
+        'direktorat_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/direktorat'),
             'url' => env('APP_URL') . '/storage/direktorat',
@@ -52,7 +52,7 @@ return [
             'throw' => false,
         ],
 
-        'hrd_ga' => [
+        'hrd_ga_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/hrd-ga'),
             'url' => env('APP_URL') . '/storage/divisi/hrd-ga',
@@ -60,7 +60,7 @@ return [
             'throw' => false,
         ],
 
-        'sekretariat' => [
+        'sekretariat_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/sekretariat'),
             'url' => env('APP_URL') . '/storage/divisi/sekretariat',
@@ -68,7 +68,7 @@ return [
             'throw' => false,
         ],
 
-        'purchasing' => [
+        'purchasing_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/purchasing'),
             'url' => env('APP_URL') . '/storage/divisi/purchasing',
@@ -76,7 +76,7 @@ return [
             'throw' => false,
         ],
 
-        'keuangan' => [
+        'keuangan_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/keuangan'),
             'url' => env('APP_URL') . '/storage/divisi/keuangan',
@@ -92,7 +92,7 @@ return [
             'throw' => false,
         ],
 
-        'rnd' => [
+        'rnd_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/rnd'),
             'url' => env('APP_URL') . '/storage/divisi/rnd',
@@ -100,7 +100,7 @@ return [
             'throw' => false,
         ],
 
-        'software' => [
+        'software_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/game-programming'),
             'url' => env('APP_URL') . '/storage/divisi/game-programming',
@@ -108,7 +108,7 @@ return [
             'throw' => false,
         ],
 
-        'elektro' => [
+        'elektro_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/system-engineering'),
             'url' => env('APP_URL') . '/storage/divisi/system-engineering',
@@ -116,7 +116,7 @@ return [
             'throw' => false,
         ],
 
-        '3d' => [
+        '3d_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/3d'),
             'url' => env('APP_URL') . '/storage/divisi/3d',
@@ -124,7 +124,7 @@ return [
             'throw' => false,
         ],
 
-        'mekanik' => [
+        'mekanik_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/mekanik'),
             'url' => env('APP_URL') . '/storage/divisi/mekanik',
@@ -132,7 +132,7 @@ return [
             'throw' => false,
         ],
 
-        'pmo' => [
+        'pmo_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/pmo'),
             'url' => env('APP_URL') . '/storage/divisi/pmo',
@@ -140,7 +140,7 @@ return [
             'throw' => false,
         ],
 
-        'bisnis_marketing' => [
+        'bisnis_marketing_media' => [
             'driver' => 'local',
             'root' => storage_path('app/public/divisi/bisnis-marketing'),
             'url' => env('APP_URL') . '/storage/divisi/bisnis-marketing',

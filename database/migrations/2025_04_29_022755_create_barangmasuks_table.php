@@ -21,8 +21,12 @@ return new class extends Migration
             $table->string('dibeli')->nullable();
             $table->string('project_name')->nullable();
             $table->foreignId('kategori_id')->nullable()->constrained('kategoris')->onDelete('cascade');
+            $table->foreignId('subkategori_id')
+                ->nullable()
+                ->constrained('subkategoris')
+                ->onDelete('set null');
             $table->timestamps();
-            $table->softDeletes(); 
+            $table->softDeletes();
         });
     }
 

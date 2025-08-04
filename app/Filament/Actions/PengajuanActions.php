@@ -368,11 +368,11 @@ class PengajuanActions
             ->label('Kirim ke Keuangan')
             ->icon('heroicon-o-arrow-up-tray')
             ->color('warning')
-            ->visible(
-                fn($record) =>
-                $record->status === 'approved_by_direksi' &&
-                    filament()->auth()->user()->hasRole('direktur_keuangan')
-            )
+            ->visible(function ($record) {
+                $user = filament()->auth()->user();
+                return in_array($record->status, ['approved_by_direksi', 'pending_direksi']) &&
+                    $user->hasRole('direktur_keuangan');
+            })
             ->requiresConfirmation()
             ->modalHeading('Kirim ke Keuangan')
             ->modalDescription('Apakah Anda yakin ingin mengirim pengajuan ini ke keuangan?')

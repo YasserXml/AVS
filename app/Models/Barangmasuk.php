@@ -20,11 +20,12 @@ class Barangmasuk extends Model
         'status',
         'dibeli',
         'project_name',
-        'kategori_id', // Ditambahkan untuk sinkronisasi dengan schema
+        'kategori_id',
+        'subkategori_id',
     ];
 
     protected $casts = [
-        'tanggal_barang_masuk' => 'date', // Diperbaiki dari tanggal_masuk_barang
+        'tanggal_barang_masuk' => 'date', // Diperbaiki    tanggal_masuk_barang
     ];
 
     public function barang()

@@ -258,9 +258,6 @@ class PengajuanProjectActions
             })
             ->requiresConfirmation()
             ->modalHeading('Kirim ke Direksi')
-            ->modalDescription(function ($record) {
-                return 'Apakah Anda yakin ingin mengirim pengajuan untuk project: ' . $record->nameproject->nama_project . ' ke direksi?';
-            })
             ->action(function ($record) {
                 $record->update([
                     'status' => 'pengajuan_dikirim_ke_direksi',

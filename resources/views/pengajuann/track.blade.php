@@ -114,7 +114,7 @@
         ],
         'completed' => [
             'label' => 'Selesai',
-            'icon' => '🎉',
+            'icon' => '✅',
             'description' => 'Pengajuan telah selesai',
             'percentage' => 100,
             'actor' => 'Admin',
@@ -189,6 +189,9 @@
     if ($isRejected) {
         // Jika ditolak, tampilkan semua step yang ada di history
         $visibleSteps = $completedStatuses;
+    } elseif ($status === 'completed') {
+        // JIKA STATUS COMPLETED, HANYA TAMPILKAN STATUS SELESAI
+        $visibleSteps = ['completed'];
     } else {
         // Step-step yang selalu ditampilkan (sebelum direksi)
         $alwaysVisibleSteps = [
@@ -248,24 +251,6 @@
             if ($shouldShow) {
                 $visibleSteps[] = $statusKey;
             }
-        }
-
-        // Khusus untuk status completed - pastikan step yang diperlukan ditampilkan
-        if ($status === 'completed') {
-            foreach ($afterDireksiSteps as $stepKey) {
-                if (!in_array($stepKey, $visibleSteps) && $stepKey !== 'completed') {
-                    $visibleSteps[] = $stepKey;
-                }
-            }
-
-            // Urutkan ulang
-            $orderedSteps = [];
-            foreach ($statusKeys as $statusKey) {
-                if (in_array($statusKey, $visibleSteps)) {
-                    $orderedSteps[] = $statusKey;
-                }
-            }
-            $visibleSteps = $orderedSteps;
         }
     }
 @endphp
@@ -465,6 +450,16 @@
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
     }
 
+    /* Style khusus untuk status completed */
+    .step-icon.final-completed {
+        background: #10b981;
+        border-color: #10b981;
+        color: white;
+        transform: scale(1.3);
+        box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5);
+        animation: finalCompletedPulse 3s infinite;
+    }
+
     .step-content {
         flex: 1;
         padding-top: 5px;
@@ -493,6 +488,13 @@
 
     .step-label.rejected {
         color: #ef4444;
+    }
+
+    /* Style khusus untuk label final completed */
+    .step-label.final-completed {
+        color: #10b981;
+        font-weight: 700;
+        font-size: 16px;
     }
 
     .step-description {
@@ -563,6 +565,15 @@
         background: #fef2f2;
     }
 
+    /* Style khusus untuk status final completed */
+    .step-status.final-completed {
+        color: #10b981;
+        background: #ecfdf5;
+        font-weight: 600;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
     .tracking-footer {
         margin-top: 20px;
         padding-top: 15px;
@@ -621,6 +632,18 @@
     .dark .project-badge {
         background: #1e3a8a;
         color: #bfdbfe;
+    }
+
+    /* Animasi khusus untuk status completed */
+    @keyframes finalCompletedPulse {
+        0%, 100% {
+            transform: scale(1.3);
+            box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5);
+        }
+        50% {
+            transform: scale(1.4);
+            box-shadow: 0 12px 40px rgba(16, 185, 129, 0.7);
+        }
     }
 
     @keyframes slideUp {
@@ -696,6 +719,10 @@
         .step-icon.completed {
             transform: scale(1.05);
         }
+
+        .step-icon.final-completed {
+            transform: scale(1.25);
+        }
     }
 </style>
 
@@ -754,18 +781,20 @@
                     $statusInfo = $statusFlow[$statusKey];
                     $isCurrentStatus = $statusKey === $status;
 
-                    // Tentukan status step berdasarkan posisi dalam workflow
-                    $statusKeys = array_keys($statusFlow);
-                    $currentIndex = array_search($status, $statusKeys);
-                    $stepIndex = array_search($statusKey, $statusKeys);
-
-                    // Jika status adalah completed, semua step menjadi completed
-                    if ($status === 'completed') {
-                        $stepCompleted = true;
+                    // Untuk status completed, pastikan ditampilkan sebagai final completed
+                    if ($status === 'completed' && $statusKey === 'completed') {
+                        $stepCompleted = false;
                         $stepActive = false;
+                        $finalCompleted = true;
                     } else {
+                        // Tentukan status step berdasarkan posisi dalam workflow
+                        $statusKeys = array_keys($statusFlow);
+                        $currentIndex = array_search($status, $statusKeys);
+                        $stepIndex = array_search($statusKey, $statusKeys);
+
                         $stepCompleted = $stepIndex < $currentIndex;
                         $stepActive = $stepIndex === $currentIndex;
+                        $finalCompleted = false;
                     }
                 @endphp
 
@@ -775,8 +804,10 @@
                         </div>
                     @endif
 
-                    <div class="step-icon {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
-                        @if ($stepCompleted)
+                    <div class="step-icon {{ $finalCompleted ? 'final-completed' : ($stepCompleted ? 'completed' : ($stepActive ? 'active' : '')) }}">
+                        @if ($finalCompleted)
+                            🎉
+                        @elseif ($stepCompleted)
                             ✓
                         @else
                             {{ $statusInfo['icon'] }}
@@ -784,7 +815,7 @@
                     </div>
 
                     <div class="step-content">
-                        <div class="step-label {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
+                        <div class="step-label {{ $finalCompleted ? 'final-completed' : ($stepCompleted ? 'completed' : ($stepActive ? 'active' : '')) }}">
                             {{ $statusInfo['label'] }}
                         </div>
                         <div class="step-description">
@@ -795,8 +826,35 @@
                             👤 {{ $statusInfo['actor'] }}
                         </div>
 
-                        <div class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
-                            @if ($stepCompleted)
+                        @if ($finalCompleted)
+                            @php
+                                $completedHistoryInfo = null;
+                                if ($record && method_exists($record, 'getStatusHistoryByStatus')) {
+                                    $completedHistoryInfo = $record->getStatusHistoryByStatus('completed');
+                                }
+                            @endphp
+
+                            @if ($completedHistoryInfo)
+                                <div class="step-timestamp">
+                                    @if ($record && method_exists($record, 'formatIndonesianDate'))
+                                        📅 {{ $record->formatIndonesianDate($completedHistoryInfo['created_at']) }}
+                                    @else
+                                        📅 {{ $completedHistoryInfo['created_at'] }}
+                                    @endif
+                                </div>
+
+                                @if (isset($completedHistoryInfo['note']) && !empty($completedHistoryInfo['note']))
+                                    <div class="step-note">
+                                        💬 {{ $completedHistoryInfo['note'] }}
+                                    </div>
+                                @endif
+                            @endif
+                        @endif
+
+                        <div class="step-status {{ $finalCompleted ? 'final-completed' : ($stepCompleted ? 'completed' : ($stepActive ? 'active' : '')) }}">
+                            @if ($finalCompleted)
+                                ✅  Pengajuan Selesai
+                            @elseif ($stepCompleted)
                                 ✅ Selesai
                             @elseif ($stepActive)
                                 ⏳ Sedang Berlangsung

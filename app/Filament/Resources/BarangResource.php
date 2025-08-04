@@ -64,10 +64,11 @@ class BarangResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Identitas Barang')
-                    ->description('Masukkan informasi identitas barang')
+                Forms\Components\Section::make('Informasi Barang')
+                    ->description('Masukkan informasi barang sesuai urutan')
                     ->icon('heroicon-o-identification')
                     ->schema([
+                        // 1. Serial Number
                         Forms\Components\TextInput::make('serial_number')
                             ->label('Nomor Serial')
                             ->required()
@@ -77,39 +78,16 @@ class BarangResource extends Resource
                             ->prefixIcon('heroicon-m-hashtag')
                             ->columnSpan(['default' => 2, 'md' => 1]),
 
+                        // 2. Kode Barang
                         Forms\Components\TextInput::make('kode_barang')
                             ->label('Kode Barang')
                             ->required()
-                            ->numeric()
+                            ->rule('regex:/^[A-Za-z0-9\-_]+$/')
                             ->placeholder('Masukkan kode barang')
                             ->prefixIcon('heroicon-m-qr-code')
                             ->columnSpan(['default' => 2, 'md' => 1]),
 
-                        Forms\Components\TextInput::make('nama_barang')
-                            ->label('Nama Barang')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('Masukkan nama barang')
-                            ->prefixIcon('heroicon-m-cube')
-                            ->columnSpan(['default' => 2, 'md' => 2])
-                            ->autocapitalize(),
-                    ])
-                    ->columns(['default' => 1, 'md' => 2])
-                    ->collapsible()
-                    ->persistCollapsed(),
-
-                Forms\Components\Section::make('Kategori & Detail Barang')
-                    ->description('Masukkan kategori dan detail informasi barang')
-                    ->icon('heroicon-o-information-circle')
-                    ->schema([
-                        Forms\Components\TextInput::make('jumlah_barang')
-                            ->label('Jumlah Barang')
-                            ->required()
-                            ->numeric()
-                            ->minValue(0)
-                            ->placeholder('Masukkan jumlah barang')
-                            ->columnSpan(['default' => 2, 'md' => 1]),
-
+                        // 3. Kategori
                         Forms\Components\Select::make('kategori_id')
                             ->label('Kategori')
                             ->relationship('kategori', 'nama_kategori')
@@ -140,6 +118,7 @@ class BarangResource extends Resource
                                 $set('spesifikasi', null);
                             }),
 
+                        // 4. Subkategori
                         Forms\Components\Select::make('subkategori_id')
                             ->label('Subkategori')
                             ->relationship(
@@ -175,8 +154,50 @@ class BarangResource extends Resource
                             ->columnSpan(['default' => 2, 'md' => 1])
                             ->visible(fn(callable $get) => $get('kategori_id') !== null)
                             ->live(),
+
+                        // 5. Nama Barang
+                        Forms\Components\TextInput::make('nama_barang')
+                            ->label('Nama Barang')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder(function (callable $get) {
+                                $kategori = null;
+                                $subkategori = null;
+
+                                if ($kategoriId = $get('kategori_id')) {
+                                    $kategoriModel = \App\Models\Kategori::find($kategoriId);
+                                    $kategori = $kategoriModel?->nama_kategori;
+                                }
+
+                                if ($subkategoriId = $get('subkategori_id')) {
+                                    $subkategoriModel = \App\Models\Subkategori::find($subkategoriId);
+                                    $subkategori = $subkategoriModel?->nama_subkategori;
+                                }
+
+                                if ($kategori && $subkategori) {
+                                    return "Masukkan nama {$subkategori} {$kategori}";
+                                } elseif ($kategori) {
+                                    return "Masukkan nama {$kategori}";
+                                }
+
+                                return 'Masukkan nama barang';
+                            })
+                            ->prefixIcon('heroicon-m-cube')
+                            ->columnSpan(['default' => 2, 'md' => 2])
+                            ->autocapitalize()
+                            ->live(),
+
+                        // 6. Jumlah Barang
+                        Forms\Components\TextInput::make('jumlah_barang')
+                            ->label('Jumlah Barang')
+                            ->required()
+                            ->numeric()
+                            ->minValue(0)
+                            ->placeholder('Masukkan jumlah barang')
+                            ->prefixIcon('heroicon-m-calculator')
+                            ->columnSpan(['default' => 2, 'md' => 1]),
                     ])
-                    ->columns(['default' => 1, 'md' => 3])
+                    ->columns(['default' => 1, 'md' => 2])
                     ->collapsible()
                     ->persistCollapsed(),
 
@@ -277,11 +298,6 @@ class BarangResource extends Resource
                                             ->placeholder('Contoh: 25 kg')
                                             ->prefixIcon('heroicon-m-scale'),
 
-                                        Forms\Components\TextInput::make('spec_finishing')
-                                            ->label('Finishing')
-                                            ->placeholder('Contoh: Polyurethane, Cat Duco')
-                                            ->prefixIcon('heroicon-m-paint-brush'),
-
                                         Forms\Components\TextInput::make('spec_kondisi')
                                             ->label('Kondisi')
                                             ->placeholder('Contoh: Baru, Bekas Baik')
@@ -311,8 +327,22 @@ class BarangResource extends Resource
     {
         return $table
             ->poll('15s')
-            ->defaultGroup('kategori.nama_kategori')
             ->recordUrl(null)
+            ->defaultGroup(
+                Tables\Grouping\Group::make('subkategori.nama_subkategori')
+                    ->label('Subkategori')
+                    ->collapsible()
+                    ->getTitleFromRecordUsing(function ($record) {
+                        $subkategori = $record->subkategori;
+                        if (!$subkategori) return 'Tanpa Subkategori';
+
+                        // Hitung total barang untuk subkategori ini
+                        $total = \App\Models\Barang::where('subkategori_id', $subkategori->id)
+                            ->sum('jumlah_barang');
+
+                        return "{$subkategori->nama_subkategori} ({$total})";
+                    })
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('serial_number')
                     ->label('Serial Number')
@@ -338,22 +368,14 @@ class BarangResource extends Resource
                     ->label('Jumlah Barang')
                     ->sortable()
                     ->numeric()
-                    ->badge()
-                    ->alignCenter()
-                    ->color(fn(int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
-                    ->icon(fn(int $state): string => $state > 10 ? 'heroicon-m-check-circle' : ($state > 0 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-x-circle')),
-
-                Tables\Columns\TextColumn::make('subkategori.nama_subkategori')
-                    ->label('Subkategori')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color('primary'),
+                    ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('kategori.nama_kategori')
                     ->label('Kategori')
                     ->searchable()
                     ->sortable()
+                    ->badge()
+                    ->color('primary')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')

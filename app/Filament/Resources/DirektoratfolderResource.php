@@ -6,6 +6,7 @@ use App\Filament\Resources\DirektoratfolderResource\Pages;
 use App\Filament\Resources\DirektoratfolderResource\RelationManagers;
 use App\Models\Direktoratfolder;
 use Filament\Forms;
+use Filament\Forms\Components\Actions\Action as ActionsAction;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -98,7 +99,7 @@ class DirektoratfolderResource extends Resource
                             ->unique()
                             ->placeholder('Masukkan nama kategori baru')
                     ])
-                    ->createOptionAction(function (Action $action) {
+                    ->createOptionAction(function (ActionsAction $action) {
                         return $action
                             ->modalHeading('Buat Kategori Baru')
                             ->modalSubmitActionLabel('Buat')

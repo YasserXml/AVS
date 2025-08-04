@@ -29,7 +29,6 @@ class Barangkeluar extends Model
         'tanggal_keluar_barang' => 'date',
     ];
 
-    // Relationships
     public function barang()
     {
         return $this->belongsTo(Barang::class);

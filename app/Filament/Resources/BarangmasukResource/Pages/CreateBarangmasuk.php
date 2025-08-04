@@ -8,6 +8,7 @@ use App\Models\Barangmasuk;
 use App\Models\Kategori;
 use Exception;
 use Filament\Actions;
+use Filament\Forms\Components\Group;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -26,77 +27,90 @@ class CreateBarangmasuk extends CreateRecord
                 $data['project_name'] = '-';
             }
 
-            // Siapkan spesifikasi berdasarkan kategori
-            $spesifikasi = [];
             $kategori = Kategori::find($data['kategori_id']);
+            $barangMasukRecords = collect();
+            $totalBarang = 0;
 
-            if ($kategori) {
-                $kategoriNama = strtolower($kategori->nama_kategori);
+            // Loop untuk setiap item dalam repeater
+            foreach ($data['items'] as $itemData) {
+                // Siapkan spesifikasi berdasarkan kategori
+                $spesifikasi = [];
 
-                if ($kategoriNama === 'komputer') {
-                    $spesifikasi = [
-                        'processor' => $data['spec_processor'] ?? null,
-                        'ram' => $data['spec_ram'] ?? null,
-                        'storage' => $data['spec_storage'] ?? null,
-                        'vga' => $data['spec_vga'] ?? null,
-                        'motherboard' => $data['spec_motherboard'] ?? null,
-                        'psu' => $data['spec_psu'] ?? null,
-                    ];
-                } elseif ($kategoriNama === 'elektronik') {
-                    $spesifikasi = [
-                        'brand' => $data['spec_brand'] ?? null,
-                        'model' => $data['spec_model'] ?? null,
-                        'garansi' => $data['spec_garansi'] ?? null,
-                    ];
-                } elseif ($kategoriNama === 'furniture') {
-                    $spesifikasi = [
-                        'material' => $data['spec_material'] ?? null,
-                        'dimensi' => $data['spec_dimensi'] ?? null,
-                        'warna' => $data['spec_warna'] ?? null,
-                        'berat' => $data['spec_berat'] ?? null,
-                        'finishing' => $data['spec_finishing'] ?? null,
-                        'kondisi' => $data['spec_kondisi'] ?? null,
-                    ];
+                if ($kategori) {
+                    $kategoriNama = strtolower($kategori->nama_kategori);
+
+                    if ($kategoriNama === 'komputer') {
+                        $spesifikasi = [
+                            'processor' => $itemData['spec_processor'] ?? null,
+                            'ram' => $itemData['spec_ram'] ?? null,
+                            'storage' => $itemData['spec_storage'] ?? null,
+                            'vga' => $itemData['spec_vga'] ?? null,
+                            'motherboard' => $itemData['spec_motherboard'] ?? null,
+                            'psu' => $itemData['spec_psu'] ?? null,
+                        ];
+                    } elseif ($kategoriNama === 'elektronik') {
+                        $spesifikasi = [
+                            'brand' => $itemData['spec_brand'] ?? null,
+                            'model' => $itemData['spec_model'] ?? null,
+                            'garansi' => $itemData['spec_garansi'] ?? null,
+                        ];
+                    } elseif ($kategoriNama === 'furniture') {
+                        $spesifikasi = [
+                            'material' => $itemData['spec_material'] ?? null,
+                            'dimensi' => $itemData['spec_dimensi'] ?? null,
+                            'warna' => $itemData['spec_warna'] ?? null,
+                            'berat' => $itemData['spec_berat'] ?? null,
+                            'finishing' => $itemData['spec_finishing'] ?? null,
+                            'kondisi' => $itemData['spec_kondisi'] ?? null,
+                        ];
+                    }
                 }
+
+                // Filter spesifikasi yang tidak null atau kosong
+                $spesifikasi = array_filter($spesifikasi, fn($value) => !is_null($value) && $value !== '');
+
+                // Buat barang baru untuk setiap item
+                $barang = Barang::create([
+                    'serial_number' => $itemData['serial_number'],
+                    'kode_barang' => $itemData['kode_barang'],
+                    'nama_barang' => $itemData['nama_barang'],
+                    'jumlah_barang' => 1, // Setiap item adalah 1 unit
+                    'kategori_id' => $data['kategori_id'],
+                    'subkategori_id' => $data['subkategori_id'] ?? null,
+                    'spesifikasi' => !empty($spesifikasi) ? $spesifikasi : null,
+                ]);
+
+                // Buat record BarangMasuk untuk setiap barang
+                $barangMasuk = static::getModel()::create([
+                    'user_id' => $data['user_id'],
+                    'barang_id' => $barang->id,
+                    'jumlah_barang_masuk' => 1, // Setiap item adalah 1 unit
+                    'tanggal_barang_masuk' => $data['tanggal_barang_masuk'],
+                    'status' => $data['status'],
+                    'dibeli' => $data['dibeli'],
+                    'project_name' => $data['project_name'],
+                    'kategori_id' => $data['kategori_id'],
+                    'subkategori_id' => $data['subkategori_id'] ?? null,
+                ]);
+
+                $barangMasukRecords->push($barangMasuk);
+                $totalBarang++;
             }
-
-            // Filter spesifikasi yang tidak null atau kosong
-            $spesifikasi = array_filter($spesifikasi, fn($value) => !is_null($value) && $value !== '');
-
-            // Buat barang baru
-            $barang = Barang::create([
-                'serial_number' => $data['serial_number'],
-                'kode_barang' => $data['kode_barang'],
-                'nama_barang' => $data['nama_barang'],
-                'jumlah_barang' => $data['jumlah_barang_masuk'],
-                'kategori_id' => $data['kategori_id'],
-                'subkategori_id' => $data['subkategori_id'] ?? null,
-                'spesifikasi' => !empty($spesifikasi) ? $spesifikasi : null,
-            ]);
-
-            // Buat record BarangMasuk
-            $barangMasuk = static::getModel()::create([
-                'user_id' => $data['user_id'],
-                'barang_id' => $barang->id,
-                'jumlah_barang_masuk' => $data['jumlah_barang_masuk'],
-                'tanggal_barang_masuk' => $data['tanggal_barang_masuk'],
-                'status' => $data['status'],
-                'dibeli' => $data['dibeli'],
-                'project_name' => $data['project_name'],
-                'kategori_id' => $data['kategori_id'],
-            ]);
 
             DB::commit();
 
-            // Notifikasi sukses
+            // Notifikasi sukses dengan detail total barang
+            $namaBarangList = collect($data['items'])->pluck('nama_barang')->join(', ');
+
             Notification::make()
                 ->title('Barang berhasil ditambahkan')
-                ->body("Barang '{$data['nama_barang']}' dengan serial number '{$data['serial_number']}' berhasil ditambahkan ke inventori dengan jumlah {$data['jumlah_barang_masuk']} unit.")
+                ->body("Berhasil menambahkan {$totalBarang} barang ke inventori: {$namaBarangList}")
                 ->success()
                 ->duration(5000)
                 ->send();
 
-            return $barangMasuk;
+            // Return salah satu record BarangMasuk (untuk redirect)
+            return $barangMasukRecords->first();
         } catch (Exception $e) {
             DB::rollBack();
 
@@ -145,24 +159,59 @@ class CreateBarangmasuk extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // Konversi field spesifikasi flat ke struktur JSON
-        $spesifikasi = [];
+        // Validasi bahwa items ada dan tidak kosong
+        if (!isset($data['items']) || empty($data['items'])) {
+            throw new \Exception('Data barang tidak boleh kosong.');
+        }
 
-        // Ambil semua field yang dimulai dengan 'spec_'
-        foreach ($data as $key => $value) {
-            if (str_starts_with($key, 'spec_')) {
-                $specKey = str_replace('spec_', '', $key);
-                if (!empty($value)) {
-                    $spesifikasi[$specKey] = $value;
-                }
-                // Hapus field flat dari data utama
-                unset($data[$key]);
+        // Validasi jumlah items sesuai dengan jumlah yang diinput
+        $expectedCount = intval($data['jumlah_barang_masuk'] ?? 0);
+        $actualCount = count($data['items']);
+
+        if ($actualCount !== $expectedCount) {
+            throw new \Exception("Jumlah detail barang ({$actualCount}) tidak sesuai dengan jumlah yang diinput ({$expectedCount}).");
+        }
+
+        // Validasi serial number unik
+        $serialNumbers = collect($data['items'])->pluck('serial_number')->filter();
+        $duplicates = $serialNumbers->duplicates();
+
+        if ($duplicates->isNotEmpty()) {
+            throw new \Exception('Serial number tidak boleh duplikat: ' . $duplicates->join(', '));
+        }
+
+        // Validasi serial number belum ada di database
+        foreach ($serialNumbers as $serialNumber) {
+            if (Barang::where('serial_number', $serialNumber)->exists()) {
+                throw new \Exception("Serial number '{$serialNumber}' sudah ada dalam database.");
             }
         }
 
-        // Set spesifikasi ke data untuk disimpan di barang nanti
-        $data['spesifikasi'] = !empty($spesifikasi) ? $spesifikasi : null;
-
         return $data;
+    }
+
+    // Method untuk validasi form
+    protected function getFormSchema(): array
+    {
+        return [
+            Group::make()
+                ->afterStateUpdated(function (callable $get, callable $set) {
+                    $jumlah = intval($get('jumlah_barang_masuk') ?? 0);
+                    $items = $get('items') ?? [];
+
+                    // Pastikan jumlah items sesuai dengan jumlah yang diinput
+                    if (count($items) !== $jumlah) {
+                        $newItems = [];
+                        for ($i = 0; $i < $jumlah; $i++) {
+                            $newItems[] = $items[$i] ?? [
+                                'serial_number' => '',
+                                'kode_barang' => '',
+                                'nama_barang' => '',
+                            ];
+                        }
+                        $set('items', $newItems);
+                    }
+                })
+        ];
     }
 }

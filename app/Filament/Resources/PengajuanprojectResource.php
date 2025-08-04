@@ -72,6 +72,7 @@ class PengajuanprojectResource extends Resource
                 'disetujui_pengadaan',
                 'ditolak_pengadaan',
                 'pengajuan_dikirim_ke_pengadaan_final',
+                'completed',
                 'cancelled'
             ]);
         }
@@ -110,27 +111,36 @@ class PengajuanprojectResource extends Resource
                 'cancelled'
             ]);
         }
+
+        // Cek apakah user adalah Project Manager
         $isProjectManager = DB::table('nameprojects')->where('user_id', $user->id)->exists();
 
         if ($isProjectManager) {
             // User adalah PM, dapat melihat pengajuan dari project yang mereka kelola
-            // dan pengajuan yang mereka buat sendiri
+            // dan pengajuan yang mereka buat sendiri (dengan semua status)
             return $query->where(function ($q) use ($user) {
-                $q->whereHas('nameproject', function ($projectQuery) use ($user) {
-                    $projectQuery->where('user_id', $user->id); // Project yang dia kelola sebagai PM
+                $q->where(function ($subQ) use ($user) {
+                    // Pengajuan yang dia buat sendiri - tampilkan semua status
+                    $subQ->where('user_id', $user->id);
                 })
-                    ->orWhere('user_id', $user->id); // Pengajuan yang dia buat sendiri
-            })
-                ->whereIn('status', [
-                    'pengajuan_terkirim',
-                    'pending_pm_review',
-                    'disetujui_pm_dikirim_ke_pengadaan',
-                    'ditolak_pm',
-                    'cancelled'
-                ]);
+                    ->orWhere(function ($subQ) use ($user) {
+                        // Project yang dia kelola sebagai PM - hanya status yang relevan untuk PM
+                        $subQ->whereHas('nameproject', function ($projectQuery) use ($user) {
+                            $projectQuery->where('user_id', $user->id);
+                        })
+                            ->where('user_id', '!=', $user->id) // Bukan pengajuan yang dia buat sendiri
+                            ->whereIn('status', [
+                                'pengajuan_terkirim',
+                                'pending_pm_review',
+                                'disetujui_pm_dikirim_ke_pengadaan',
+                                'ditolak_pm',
+                                'cancelled'
+                            ]);
+                    });
+            });
         }
 
-        // User biasa - hanya dapat melihat pengajuan mereka sendiri
+        // User biasa - dapat melihat semua pengajuan mereka sendiri dengan semua status
         return $query->where('user_id', $user->id);
     }
 

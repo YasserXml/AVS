@@ -35,7 +35,7 @@ class SekretariatfolderResource extends Resource
 
     protected static ?string $navigationGroup = 'Arsip';
 
-    protected static ?string $navigationLabel = 'Divisi Sekretariat';
+    protected static ?string $navigationLabel = 'Sekretariat';
 
     public static function getPluralLabel(): ?string
     {

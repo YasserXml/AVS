@@ -17,6 +17,9 @@ class Subkategori extends Model
         'kategori_id',
     ];
 
+    // Tambahan appends untuk otomatis load attribute
+    protected $appends = ['total_barang'];
+
     public function kategori()
     {
         return $this->belongsTo(Kategori::class);
@@ -25,5 +28,34 @@ class Subkategori extends Model
     public function barang()
     {
         return $this->hasMany(Barang::class);
+    }
+
+    public function barangkeluar()
+    {
+        return $this->hasMany(BarangKeluar::class);
+    }
+
+    public function barangmasuk()
+    {
+        return $this->hasMany(BarangMasuk::class);
+    }
+
+    // Method untuk menghitung total barang di subkategori ini
+    public function getTotalBarangAttribute()
+    {
+        return $this->barang()->sum('jumlah_barang');
+    }
+
+    // Method scope untuk eager loading dengan total
+    public function scopeWithTotalBarang($query)
+    {
+        return $query->withSum('barang', 'jumlah_barang');
+    }
+
+    // Method untuk mendapatkan nama dengan total
+    public function getNamaWithTotalAttribute()
+    {
+        $total = $this->total_barang;
+        return "{$this->nama_subkategori} ({$total})";
     }
 }

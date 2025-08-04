@@ -1,7 +1,10 @@
+{{-- resource/views/pengajuann/progress.blade.php--}}
 @php
     $percentage = $getState()['percentage'] ?? 0;
     $color = $getState()['color'] ?? 'gray';
     $status = $getState()['status'] ?? '';
+    $statusHistory = $getState()['status_history'] ?? [];
+    $record = $getState()['record'] ?? null;
 
     // Definisi semua status dalam urutan workflow yang benar
     $statusFlow = [
@@ -10,96 +13,112 @@
             'icon' => '📤',
             'description' => 'Pengajuan berhasil dikirim',
             'percentage' => 5,
+            'actor' => 'User',
         ],
         'pending_admin_review' => [
             'label' => 'Review Admin',
             'icon' => '👀',
             'description' => 'Sedang direview oleh admin',
             'percentage' => 10,
+            'actor' => 'Admin',
         ],
         'diajukan_ke_superadmin' => [
             'label' => 'Dikirim ke Pengadaan',
             'icon' => '📋',
             'description' => 'Dikirim ke tim pengadaan',
             'percentage' => 15,
+            'actor' => 'Admin',
         ],
         'superadmin_approved' => [
             'label' => 'Disetujui Pengadaan',
             'icon' => '✅',
             'description' => 'Disetujui oleh tim pengadaan',
             'percentage' => 20,
+            'actor' => 'Pengadaan',
         ],
         'pengajuan_dikirim_ke_direksi' => [
             'label' => 'Dikirim ke Direksi',
             'icon' => '🏢',
             'description' => 'Dikirim ke direksi',
             'percentage' => 25,
+            'actor' => 'Pengadaan',
         ],
         'pending_direksi' => [
             'label' => 'Pending Direksi',
             'icon' => '👔',
             'description' => 'Pengajuan dipending oleh direksi hingga tanggal tertentu',
-            'percentage' => 30, // Sesuaikan persentase
+            'percentage' => 30,
+            'actor' => 'Direktur Keuangan',
         ],
         'approved_by_direksi' => [
             'label' => 'Disetujui Direksi',
             'icon' => '👔',
             'description' => 'Disetujui oleh direksi',
-            'percentage' => 35, //Tingkatkan persentase
+            'percentage' => 35,
+            'actor' => 'Direktur Keuangan',
         ],
         'pengajuan_dikirim_ke_keuangan' => [
             'label' => 'Dikirim ke Keuangan',
             'icon' => '💰',
             'description' => 'Dikirim ke bagian keuangan',
-            'percentage' => 40, //Sesuaikan persentase
+            'percentage' => 40,
+            'actor' => 'Direktur Keuangan',
         ],
         'pending_keuangan' => [
             'label' => 'Review Keuangan',
             'icon' => '🔍',
             'description' => 'Sedang direview keuangan',
-            'percentage' => 45, //Sesuaikan persentase
+            'percentage' => 45,
+            'actor' => 'Keuangan',
         ],
         'process_keuangan' => [
             'label' => 'Proses Keuangan',
             'icon' => '⚙️',
             'description' => 'Sedang diproses keuangan',
-            'percentage' => 50, //Sesuaikan persentase
+            'percentage' => 50,
+            'actor' => 'Keuangan',
         ],
         'execute_keuangan' => [
             'label' => 'Selesai Proses Keuangan',
             'icon' => '💸',
             'description' => 'Proses keuangan selesai',
-            'percentage' => 55, //Sesuaikan persentase
+            'percentage' => 55,
+            'actor' => 'Keuangan',
         ],
         'pengajuan_dikirim_ke_pengadaan' => [
             'label' => 'Dikirim ke Pengadaan',
             'icon' => '🛒',
             'description' => 'Dikirim ke bagian pengadaan',
-            'percentage' => 65, //Sesuaikan persentase
+            'percentage' => 65,
+            'actor' => 'Keuangan',
         ],
         'pengajuan_dikirim_ke_admin' => [
             'label' => 'Dikirim ke Admin',
             'icon' => '👤',
             'description' => 'Dikirim kembali ke admin',
             'percentage' => 70,
+            'actor' => 'Pengadaan',
         ],
         'processing' => [
             'label' => 'Sedang Diproses',
             'icon' => '⚙️',
             'description' => 'Dalam tahap pengerjaan',
             'percentage' => 80,
+            'actor' => 'Admin',
         ],
         'ready_pickup' => [
             'label' => 'Siap Diambil',
             'icon' => '📦',
             'description' => 'Siap untuk diambil',
             'percentage' => 95,
+            'actor' => 'Admin',
         ],
         'completed' => [
             'label' => 'Selesai',
             'icon' => '🎉',
             'description' => 'Pengajuan selesai',
             'percentage' => 100,
+            'actor' => 'Admin',
         ],
     ];
 
@@ -107,21 +126,125 @@
     $rejectedStatuses = ['superadmin_rejected', 'reject_direksi', 'cancelled'];
     $isRejected = in_array($status, $rejectedStatuses);
 
-    // Tentukan status yang sudah selesai
-    $currentStatusIndex = array_search($status, array_keys($statusFlow));
+    // Dapatkan status history yang sudah terjadi dari database
+    $completedStatuses = [];
+    if ($statusHistory && is_array($statusHistory)) {
+        foreach ($statusHistory as $history) {
+            if (isset($history['status'])) {
+                $completedStatuses[] = $history['status'];
+            }
+        }
+    }
+
+    // PENTING: Pastikan status saat ini juga ada di completedStatuses
+    if (!empty($status) && !in_array($status, $completedStatuses)) {
+        $completedStatuses[] = $status;
+    }
+
+    // Analisis jalur yang diambil untuk direksi
+    $hasPendingDireksi = in_array('pending_direksi', $completedStatuses);
+    $hasApprovedDireksi = in_array('approved_by_direksi', $completedStatuses);
+    $hasKeuangan = in_array('pengajuan_dikirim_ke_keuangan', $completedStatuses);
+
+    // Tentukan jalur direksi yang diambil
+    $direksiPath = 'none';
+    if ($status === 'pending_direksi') {
+        $direksiPath = 'pending';
+    } elseif ($status === 'approved_by_direksi') {
+        $direksiPath = 'approved';
+    } elseif ($hasKeuangan) {
+        if ($hasPendingDireksi && !$hasApprovedDireksi) {
+            $direksiPath = 'pending';
+        } elseif ($hasApprovedDireksi && !$hasPendingDireksi) {
+            $direksiPath = 'approved';
+        }
+    } elseif ($hasPendingDireksi) {
+        $direksiPath = 'pending';
+    } elseif ($hasApprovedDireksi) {
+        $direksiPath = 'approved';
+    }
+
+    // Buat array step yang akan ditampilkan (sama seperti track.blade.php)
+    $visibleSteps = [];
+
+    if ($isRejected) {
+        $visibleSteps = $completedStatuses;
+    } else {
+        $alwaysVisibleSteps = [
+            'pengajuan_terkirim',
+            'pending_admin_review',
+            'diajukan_ke_superadmin',
+            'superadmin_approved',
+            'pengajuan_dikirim_ke_direksi',
+        ];
+
+        $afterDireksiSteps = [
+            'pengajuan_dikirim_ke_keuangan',
+            'pending_keuangan',
+            'process_keuangan',
+            'execute_keuangan',
+            'pengajuan_dikirim_ke_pengadaan',
+            'pengajuan_dikirim_ke_admin',
+            'processing',
+            'ready_pickup',
+            'completed',
+        ];
+
+        $statusKeys = array_keys($statusFlow);
+        $currentStatusIndex = array_search($status, $statusKeys);
+
+        foreach ($statusKeys as $index => $statusKey) {
+            $shouldShow = false;
+
+            // Step sebelum direksi
+            if (in_array($statusKey, $alwaysVisibleSteps)) {
+                if (
+                    in_array($statusKey, $completedStatuses) ||
+                    $statusKey === $status ||
+                    ($currentStatusIndex !== false && $index < $currentStatusIndex)
+                ) {
+                    $shouldShow = true;
+                }
+            }
+            // Step direksi
+            elseif ($statusKey === 'pending_direksi') {
+                if ($direksiPath === 'pending') {
+                    $shouldShow = true;
+                }
+            } elseif ($statusKey === 'approved_by_direksi') {
+                if ($direksiPath === 'approved') {
+                    $shouldShow = true;
+                }
+            }
+            // Step setelah direksi
+            elseif (in_array($statusKey, $afterDireksiSteps)) {
+                if (in_array($statusKey, $completedStatuses) || $statusKey === $status) {
+                    $shouldShow = true;
+                }
+            }
+
+            if ($shouldShow) {
+                $visibleSteps[] = $statusKey;
+            }
+        }
+
+        // Khusus untuk status completed - hanya tampilkan step "Selesai" saja
+        if ($status === 'completed') {
+            $visibleSteps = ['completed'];
+        }
+    }
+
+    // Hitung persentase berdasarkan status aktif
     $currentPercentage = $statusFlow[$status]['percentage'] ?? 0;
 
-    // Cek apakah sudah completed (selesai)
-    $isCompleted = $status === 'completed';
-
-    // Untuk status yang ditolak, tampilkan persentase berdasarkan di mana penolakan terjadi
+    // Untuk status yang ditolak
     if ($isRejected) {
         if ($status === 'superadmin_rejected') {
-            $currentPercentage = 15; // Ditolak di tahap review pengadaan
+            $currentPercentage = 15;
         } elseif ($status === 'reject_direksi') {
-            $currentPercentage = 30; // ✅ PERBAIKAN: Ditolak di tahap direksi (sesuai dengan approved_by_direksi)
+            $currentPercentage = 30;
         } else {
-            $currentPercentage = 0; // Cancelled
+            $currentPercentage = 0;
         }
     }
 
@@ -204,7 +327,21 @@
         align-items: flex-start;
         position: relative;
         padding: 8px 0;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: slideUp 0.5s ease forwards;
     }
+
+    .tracking-step:nth-child(1) { animation-delay: 0.1s; }
+    .tracking-step:nth-child(2) { animation-delay: 0.2s; }
+    .tracking-step:nth-child(3) { animation-delay: 0.3s; }
+    .tracking-step:nth-child(4) { animation-delay: 0.4s; }
+    .tracking-step:nth-child(5) { animation-delay: 0.5s; }
+    .tracking-step:nth-child(6) { animation-delay: 0.6s; }
+    .tracking-step:nth-child(7) { animation-delay: 0.7s; }
+    .tracking-step:nth-child(8) { animation-delay: 0.8s; }
+    .tracking-step:nth-child(9) { animation-delay: 0.9s; }
+    .tracking-step:nth-child(10) { animation-delay: 1.0s; }
 
     .step-connector {
         position: absolute;
@@ -242,6 +379,7 @@
         flex-shrink: 0;
         border: 2px solid #e5e7eb;
         background: #fff;
+        transition: all 0.3s ease;
     }
 
     .dark .step-icon {
@@ -300,10 +438,44 @@
         font-size: 11px;
         color: #6b7280;
         line-height: 1.4;
+        margin-bottom: 4px;
     }
 
     .dark .step-description {
         color: #9ca3af;
+    }
+
+    .step-actor {
+        font-size: 10px;
+        color: #3b82f6;
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+
+    .step-timestamp {
+        font-size: 10px;
+        color: #6b7280;
+        font-style: italic;
+        margin-bottom: 2px;
+    }
+
+    .dark .step-timestamp {
+        color: #9ca3af;
+    }
+
+    .step-note {
+        font-size: 10px;
+        color: #374151;
+        margin-top: 4px;
+        padding: 4px 8px;
+        background: #f3f4f6;
+        border-radius: 4px;
+        border-left: 2px solid #10b981;
+    }
+
+    .dark .step-note {
+        color: #d1d5db;
+        background: #374151;
     }
 
     .step-status {
@@ -370,13 +542,21 @@
         color: #ef4444;
     }
 
-    @keyframes pulse {
-
-        0%,
+    @keyframes slideUp {
+        0% {
+            opacity: 0;
+            transform: translateY(10px);
+        }
         100% {
             opacity: 1;
+            transform: translateY(0);
         }
+    }
 
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
         50% {
             opacity: 0.8;
         }
@@ -436,22 +616,42 @@
         </div>
     @endif
 
-    <!-- Steps -->
+    <!-- Steps - Dinamis berdasarkan status history -->
     <div class="tracking-steps">
         @if (!$isRejected)
-            @foreach ($statusFlow as $statusKey => $statusInfo)
+            @foreach ($visibleSteps as $statusKey)
                 @php
-                    $itemIndex = array_search($statusKey, array_keys($statusFlow));
+                    $statusInfo = $statusFlow[$statusKey];
+                    $isCurrentStatus = $statusKey === $status;
 
-                    // Logika: jika status completed, semua step dianggap completed
-                    $stepCompleted = $isCompleted || $itemIndex < $currentStatusIndex;
-                    $stepActive = !$isCompleted && $statusKey === $status;
-                    $stepPending = !$isCompleted && $itemIndex > $currentStatusIndex;
-                    $isLast = $statusKey === array_key_last($statusFlow);
+                    // Tentukan status step berdasarkan posisi dalam workflow
+                    $statusKeys = array_keys($statusFlow);
+                    $currentIndex = array_search($status, $statusKeys);
+                    $stepIndex = array_search($statusKey, $statusKeys);
+
+                    // Jika status adalah completed, semua step menjadi completed
+                    if ($status === 'completed') {
+                        $stepCompleted = true;
+                        $stepActive = false;
+                    } else {
+                        $stepCompleted = $stepIndex < $currentIndex;
+                        $stepActive = $stepIndex === $currentIndex;
+                    }
+
+                    // Cari informasi dari history jika ada
+                    $statusHistoryInfo = null;
+                    if ($statusHistory && is_array($statusHistory)) {
+                        foreach ($statusHistory as $history) {
+                            if (isset($history['status']) && $history['status'] === $statusKey) {
+                                $statusHistoryInfo = $history;
+                                break;
+                            }
+                        }
+                    }
                 @endphp
 
                 <div class="tracking-step">
-                    @if (!$isLast)
+                    @if (!$loop->last)
                         <div class="step-connector {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : '') }}">
                         </div>
                     @endif
@@ -471,8 +671,28 @@
                         <div class="step-description">
                             {{ $statusInfo['description'] }}
                         </div>
-                        <div
-                            class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : 'pending') }}">
+
+                        <div class="step-actor">
+                            👤 {{ $statusInfo['actor'] }}
+                        </div>
+
+                        @if ($statusHistoryInfo)
+                            <div class="step-timestamp">
+                                @if ($record && method_exists($record, 'formatIndonesianDate'))
+                                    📅 {{ $record->formatIndonesianDate($statusHistoryInfo['created_at']) }}
+                                @else
+                                    📅 {{ date('d M Y H:i', strtotime($statusHistoryInfo['created_at'])) }}
+                                @endif
+                            </div>
+
+                            @if (isset($statusHistoryInfo['note']) && !empty($statusHistoryInfo['note']))
+                                <div class="step-note">
+                                    💬 {{ $statusHistoryInfo['note'] }}
+                                </div>
+                            @endif
+                        @endif
+
+                        <div class="step-status {{ $stepCompleted ? 'completed' : ($stepActive ? 'active' : 'pending') }}">
                             @if ($stepCompleted)
                                 ✓ Selesai
                             @elseif($stepActive)
@@ -485,7 +705,68 @@
                 </div>
             @endforeach
         @else
-            <!-- Single rejected step -->
+            <!-- Tampilkan langkah yang sudah selesai sebelum penolakan -->
+            @foreach ($visibleSteps as $statusKey)
+                @if (isset($statusFlow[$statusKey]))
+                    @php
+                        $statusInfo = $statusFlow[$statusKey];
+                        $statusHistoryInfo = null;
+                        if ($statusHistory && is_array($statusHistory)) {
+                            foreach ($statusHistory as $history) {
+                                if (isset($history['status']) && $history['status'] === $statusKey) {
+                                    $statusHistoryInfo = $history;
+                                    break;
+                                }
+                            }
+                        }
+                    @endphp
+
+                    <div class="tracking-step">
+                        @if (!$loop->last)
+                            <div class="step-connector completed"></div>
+                        @endif
+
+                        <div class="step-icon completed">
+                            ✓
+                        </div>
+
+                        <div class="step-content">
+                            <div class="step-label completed">
+                                {{ $statusInfo['label'] }}
+                            </div>
+                            <div class="step-description">
+                                {{ $statusInfo['description'] }}
+                            </div>
+
+                            <div class="step-actor">
+                                👤 {{ $statusInfo['actor'] }}
+                            </div>
+
+                            @if ($statusHistoryInfo)
+                                <div class="step-timestamp">
+                                    @if ($record && method_exists($record, 'formatIndonesianDate'))
+                                        📅 {{ $record->formatIndonesianDate($statusHistoryInfo['created_at']) }}
+                                    @else
+                                        📅 {{ date('d M Y H:i', strtotime($statusHistoryInfo['created_at'])) }}
+                                    @endif
+                                </div>
+
+                                @if (isset($statusHistoryInfo['note']) && !empty($statusHistoryInfo['note']))
+                                    <div class="step-note">
+                                        💬 {{ $statusHistoryInfo['note'] }}
+                                    </div>
+                                @endif
+                            @endif
+
+                            <div class="step-status completed">
+                                ✅ Selesai
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            @endforeach
+
+            <!-- Tampilkan langkah penolakan -->
             <div class="tracking-step">
                 <div class="step-icon rejected">
                     ❌
@@ -503,6 +784,35 @@
                     <div class="step-description">
                         Pengajuan tidak dapat dilanjutkan
                     </div>
+
+                    @php
+                        $rejectedHistoryInfo = null;
+                        if ($statusHistory && is_array($statusHistory)) {
+                            foreach ($statusHistory as $history) {
+                                if (isset($history['status']) && $history['status'] === $status) {
+                                    $rejectedHistoryInfo = $history;
+                                    break;
+                                }
+                            }
+                        }
+                    @endphp
+
+                    @if ($rejectedHistoryInfo)
+                        <div class="step-timestamp">
+                            @if ($record && method_exists($record, 'formatIndonesianDate'))
+                                📅 {{ $record->formatIndonesianDate($rejectedHistoryInfo['created_at']) }}
+                            @else
+                                📅 {{ date('d M Y H:i', strtotime($rejectedHistoryInfo['created_at'])) }}
+                            @endif
+                        </div>
+
+                        @if (isset($rejectedHistoryInfo['note']) && !empty($rejectedHistoryInfo['note']))
+                            <div class="step-note" style="border-left-color: #ef4444; background: #fef2f2;">
+                                💬 {{ $rejectedHistoryInfo['note'] }}
+                            </div>
+                        @endif
+                    @endif
+
                     <div class="step-status rejected">
                         ❌ Ditolak
                     </div>
